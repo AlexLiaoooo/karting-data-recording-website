@@ -662,11 +662,18 @@ h2 {
 .modal-backdrop {
   align-items: flex-end;
   background: rgba(20, 32, 51, 0.5);
+  bottom: auto;
   display: flex;
-  inset: 0;
+  height: 100vh;
+  height: var(--visual-viewport-height, 100dvh);
   justify-content: center;
-  padding: 12px;
+  left: 0;
+  overflow-y: auto;
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom));
   position: fixed;
+  right: 0;
+  top: var(--visual-viewport-offset-top, 0px);
+  -webkit-overflow-scrolling: touch;
   z-index: 40;
 }
 
@@ -682,8 +689,13 @@ h2 {
 
 .modal-sheet {
   max-height: calc(100vh - 24px);
-  overflow: auto;
+  max-height: calc(var(--visual-viewport-height, 100dvh) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px;
+  scroll-padding-block: 18px 96px;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-compact {

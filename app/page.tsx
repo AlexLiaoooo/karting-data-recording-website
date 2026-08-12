@@ -22,7 +22,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData, validateImport } from "@/lib/database";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, TyreCorner } from "@/lib/types";
 
@@ -151,6 +151,31 @@ export default function HomePage() {
     const timer = window.setTimeout(() => setToast(""), 2200);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!showEventForm && !showSessionForm) return;
+
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    const listenerOptions = { passive: true } as const;
+    const updateViewport = () => {
+      root.style.setProperty("--visual-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+      root.style.setProperty("--visual-viewport-offset-top", `${viewport?.offsetTop ?? 0}px`);
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport, listenerOptions);
+
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      root.style.removeProperty("--visual-viewport-height");
+      root.style.removeProperty("--visual-viewport-offset-top");
+    };
+  }, [showEventForm, showSessionForm]);
 
   const selectedEvent = useMemo(() => data.events.find((event) => event.id === eventId), [data.events, eventId]);
   const selectedSession = useMemo(
@@ -628,6 +653,15 @@ function NumberInput({ unit, ...props }: React.InputHTMLAttributes<HTMLInputElem
   return <span className="input-with-unit"><input className="input" inputMode="decimal" {...props} />{unit && <span>{unit}</span>}</span>;
 }
 
+function keepFocusedFieldVisible(event: ReactFocusEvent<HTMLFormElement>) {
+  const field = event.target;
+  if (!(field instanceof HTMLElement)) return;
+
+  window.setTimeout(() => {
+    field.scrollIntoView({ block: "center", inline: "nearest" });
+  }, 350);
+}
+
 function NewEventModal({ onClose, onCreate }: { onClose: () => void; onCreate: (event: Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">) => void }) {
   const [form, setForm] = useState({
     name: "",
@@ -650,7 +684,7 @@ function NewEventModal({ onClose, onCreate }: { onClose: () => void; onCreate: (
 
   return (
     <div className="modal-backdrop">
-      <form className="modal-sheet" onSubmit={submit}>
+      <form className="modal-sheet" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
         <div className="modal-head"><div><p className="eyebrow">NEW EVENT</p><h2>Create event</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
           <Field label="Event name" className="field-full"><TextInput required autoFocus placeholder="e.g. Whilton Mill Practice" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
@@ -680,7 +714,7 @@ function NewSessionModal({ event, onClose, onCreate }: { event: EventRecord; onC
   }
   return (
     <div className="modal-backdrop">
-      <form className="modal-sheet modal-compact" onSubmit={submit}>
+      <form className="modal-sheet modal-compact" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
         <div className="modal-head"><div><p className="eyebrow">{event.name}</p><h2>Add session</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
           <Field label="Session name" className="field-full"><TextInput required autoFocus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
