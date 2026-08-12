@@ -14,7 +14,22 @@ async function listFiles(directory) {
   return nested.flat();
 }
 
-const files = (await listFiles(outputDirectory))
+let outputFiles;
+
+try {
+  outputFiles = await listFiles(outputDirectory);
+} catch (error) {
+  if (error?.code === "ENOENT") {
+    console.log(
+      "Skipping service worker precache generation because the static export directory is managed by the deployment platform.",
+    );
+    process.exit(0);
+  }
+
+  throw error;
+}
+
+const files = outputFiles
   .map((file) => `/${relative(outputDirectory, file).split(sep).join("/")}`)
   .filter((file) => file !== "/sw.js" && !file.endsWith(".map"));
 
@@ -63,4 +78,3 @@ self.addEventListener("fetch", (event) => {
 
 await writeFile(join(outputDirectory, "sw.js"), serviceWorker, "utf8");
 console.log(`Generated service worker with ${precache.length} precached files.`);
-
