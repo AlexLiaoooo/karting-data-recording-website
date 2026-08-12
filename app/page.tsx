@@ -12,6 +12,7 @@ import {
   Gauge,
   History,
   MessageSquareText,
+  Pencil,
   Plus,
   Route,
   Settings,
@@ -28,6 +29,7 @@ import { AppData, createRun, EventRecord, RunRecord, SessionRecord, TyreCorner }
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings";
 type DeleteTarget = { kind: "event" | "session" | "run"; id: string; name: string };
+type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
 const eventTypes: EventRecord["type"][] = ["Practice", "Test", "Race", "Other"];
@@ -118,6 +120,7 @@ export default function HomePage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [toast, setToast] = useState("");
@@ -249,6 +252,36 @@ export default function HomePage() {
     setData((current) => ({ ...current, events: [event, ...current.events], lastEventId: event.id }));
     setShowEventForm(false);
     openEvent(event.id);
+  }
+
+  function openNewEventForm() {
+    setEditingEventId(null);
+    setShowEventForm(true);
+  }
+
+  function openEditEventForm(id: string) {
+    setEditingEventId(id);
+    setShowEventForm(true);
+  }
+
+  function closeEventForm() {
+    setShowEventForm(false);
+    setEditingEventId(null);
+  }
+
+  function saveEvent(input: EventFormData) {
+    if (!editingEventId) {
+      createEvent(input);
+      return;
+    }
+
+    updateEvent(editingEventId, (event) => ({
+      ...event,
+      ...input,
+      updatedAt: new Date().toISOString(),
+    }));
+    closeEventForm();
+    flash("Event updated");
   }
 
   function createSession(input: Pick<SessionRecord, "name" | "type" | "startTime" | "notes">) {
@@ -447,11 +480,11 @@ export default function HomePage() {
               icon={<Flag />}
               title="No events yet"
               text="Your records stay on this device and work without an account."
-              action={<button className="button button-primary" onClick={() => setShowEventForm(true)}><Plus /> New event</button>}
+              action={<button className="button button-primary" onClick={openNewEventForm}><Plus /> New event</button>}
             />
           )}
 
-          {activeEvent && <button className="button button-secondary button-block standalone-action" onClick={() => setShowEventForm(true)}><Plus /> New event</button>}
+          {activeEvent && <button className="button button-secondary button-block standalone-action" onClick={openNewEventForm}><Plus /> New event</button>}
 
           {data.events.length > 0 && (
             <section className="list-section">
@@ -475,7 +508,7 @@ export default function HomePage() {
       <>
         <TopBar title="All events" subtitle={`${data.events.length} ${data.events.length === 1 ? "event" : "events"}`} onBack={() => setScreen("home")} />
         <div className="page-content">
-          <div className="section-heading"><h1>Events</h1><button className="button button-primary button-small" onClick={() => setShowEventForm(true)}><Plus /> New</button></div>
+          <div className="section-heading"><h1>Events</h1><button className="button button-primary button-small" onClick={openNewEventForm}><Plus /> New</button></div>
           {data.events.length ? (
             <div className="item-list">
               {data.events.map((event) => (
@@ -499,7 +532,12 @@ export default function HomePage() {
           title={selectedEvent.name}
           subtitle={formatDate(selectedEvent.startDate)}
           onBack={() => setScreen("home")}
-          action={<IconButton label="Delete event" onClick={() => requestDelete({ kind: "event", id: selectedEvent.id, name: selectedEvent.name })}><Trash2 /></IconButton>}
+          action={
+            <>
+              <IconButton label="Edit event" onClick={() => openEditEventForm(selectedEvent.id)}><Pencil /></IconButton>
+              <IconButton label="Delete event" onClick={() => requestDelete({ kind: "event", id: selectedEvent.id, name: selectedEvent.name })}><Trash2 /></IconButton>
+            </>
+          }
         />
         <div className="page-content">
           <article className="summary-card">
@@ -629,7 +667,13 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <div className="phone-shell">{content}</div>
-      {showEventForm && <NewEventModal onClose={() => setShowEventForm(false)} onCreate={createEvent} />}
+      {showEventForm && (
+        <EventModal
+          event={editingEventId ? data.events.find((event) => event.id === editingEventId) : undefined}
+          onClose={closeEventForm}
+          onSave={saveEvent}
+        />
+      )}
       {showSessionForm && selectedEvent && <NewSessionModal event={selectedEvent} onClose={() => setShowSessionForm(false)} onCreate={createSession} />}
       {deleteTarget && <DeleteModal target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check /> {toast}</div>}
@@ -662,30 +706,42 @@ function keepFocusedFieldVisible(event: ReactFocusEvent<HTMLFormElement>) {
   }, 350);
 }
 
-function NewEventModal({ onClose, onCreate }: { onClose: () => void; onCreate: (event: Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">) => void }) {
-  const [form, setForm] = useState({
+function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: () => void; onSave: (event: EventFormData) => void }) {
+  const isEditing = Boolean(event);
+  const [form, setForm] = useState<EventFormData>(() => event ? {
+    name: event.name,
+    track: event.track,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    type: event.type,
+    weather: event.weather,
+    ambientTemperature: event.ambientTemperature,
+    trackTemperature: event.trackTemperature,
+    condition: event.condition,
+    notes: event.notes,
+  } : {
     name: "",
     track: "",
     startDate: todayDate(),
     endDate: "",
-    type: "Practice" as EventRecord["type"],
+    type: "Practice",
     weather: "",
     ambientTemperature: "",
     trackTemperature: "",
-    condition: "Dry" as EventRecord["condition"],
+    condition: "Dry",
     notes: "",
   });
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!form.name.trim()) return;
-    onCreate({ ...form, name: form.name.trim(), track: form.track.trim() });
+    onSave({ ...form, name: form.name.trim(), track: form.track.trim() });
   }
 
   return (
     <div className="modal-backdrop">
       <form className="modal-sheet" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
-        <div className="modal-head"><div><p className="eyebrow">NEW EVENT</p><h2>Create event</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
+        <div className="modal-head"><div><p className="eyebrow">{isEditing ? "EDIT EVENT" : "NEW EVENT"}</p><h2>{isEditing ? "Edit event" : "Create event"}</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
           <Field label="Event name" className="field-full"><TextInput required autoFocus placeholder="e.g. Whilton Mill Practice" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label="Track" className="field-full"><TextInput placeholder="Circuit name" value={form.track} onChange={(event) => setForm({ ...form, track: event.target.value })} /></Field>
@@ -698,7 +754,7 @@ function NewEventModal({ onClose, onCreate }: { onClose: () => void; onCreate: (
           <Field label="Track temperature"><NumberInput unit="°C" value={form.trackTemperature} onChange={(event) => setForm({ ...form, trackTemperature: event.target.value })} /></Field>
           <Field label="Notes" className="field-full"><textarea className="textarea" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field>
         </div>
-        <button className="button button-primary button-block" type="submit"><Plus /> Create event</button>
+        <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? "Save changes" : "Create event"}</button>
       </form>
     </div>
   );
