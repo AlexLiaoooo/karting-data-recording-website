@@ -2,6 +2,12 @@
 
 A mobile-first, local-first web application for recording competition karting tyre data, chassis setup, performance and driver feedback at the circuit.
 
+**Live website:** [Open Kart Data](https://karting-data-recording-website.vercel.app)
+
+## User guide
+
+- [中文用户操作手册](USER_GUIDE.zh-CN.md)
+
 ## Current features
 
 - Event → Session → Run record hierarchy.
