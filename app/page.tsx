@@ -15,7 +15,9 @@ import {
   Pencil,
   Plus,
   Route,
+  Save,
   Settings,
+  Share2,
   Timer,
   Trash2,
   Trophy,
@@ -24,12 +26,15 @@ import {
   X,
 } from "lucide-react";
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { emptyAppData, loadData, saveData, validateImport } from "@/lib/database";
-import { AppData, createRun, EventRecord, RunRecord, SessionRecord, TyreCorner } from "@/lib/types";
+import { emptyAppData, loadData, normalizeAppData, saveData, validateImport } from "@/lib/database";
+import { buildCsv } from "@/lib/csv";
+import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings";
-type DeleteTarget = { kind: "event" | "session" | "run"; id: string; name: string };
+type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
+type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes">;
+type HistoricalRun = { run: RunRecord; eventName: string; sessionName: string };
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
 const eventTypes: EventRecord["type"][] = ["Practice", "Test", "Race", "Other"];
@@ -122,9 +127,16 @@ export default function HomePage() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showSessionForm, setShowSessionForm] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [showRunHistoryForm, setShowRunHistoryForm] = useState(false);
+  const [showSaveTemplateForm, setShowSaveTemplateForm] = useState(false);
+  const [showApplyTemplateForm, setShowApplyTemplateForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [pendingImport, setPendingImport] = useState<AppData | null>(null);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
 
@@ -156,7 +168,15 @@ export default function HomePage() {
   }, [toast]);
 
   useEffect(() => {
-    if (!showEventForm && !showSessionForm) return;
+    const timer = window.setTimeout(() => {
+      setIsStandalone(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
+      setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!showEventForm && !showSessionForm && !showRunHistoryForm && !showSaveTemplateForm && !showApplyTemplateForm && !pendingImport) return;
 
     const root = document.documentElement;
     const viewport = window.visualViewport;
@@ -178,7 +198,7 @@ export default function HomePage() {
       root.style.removeProperty("--visual-viewport-height");
       root.style.removeProperty("--visual-viewport-offset-top");
     };
-  }, [showEventForm, showSessionForm]);
+  }, [pendingImport, showApplyTemplateForm, showEventForm, showRunHistoryForm, showSaveTemplateForm, showSessionForm]);
 
   const selectedEvent = useMemo(() => data.events.find((event) => event.id === eventId), [data.events, eventId]);
   const selectedSession = useMemo(
@@ -190,6 +210,9 @@ export default function HomePage() {
     [selectedSession, runId],
   );
   const activeEvent = data.events.find((event) => event.id === data.lastEventId) ?? data.events[0];
+  const historicalRuns = useMemo<HistoricalRun[]>(() => data.events.flatMap((event) =>
+    event.sessions.flatMap((session) => session.runs.map((run) => ({ run, eventName: event.name, sessionName: session.name }))),
+  ), [data.events]);
 
   function flash(message: string) {
     setToast(message);
@@ -284,7 +307,7 @@ export default function HomePage() {
     flash("Event updated");
   }
 
-  function createSession(input: Pick<SessionRecord, "name" | "type" | "startTime" | "notes">) {
+  function createSession(input: SessionFormData) {
     if (!selectedEvent) return;
     const session: SessionRecord = {
       ...input,
@@ -302,14 +325,64 @@ export default function HomePage() {
     setScreen("session");
   }
 
-  function addRun(duplicate = false) {
+  function openNewSessionForm() {
+    setEditingSessionId(null);
+    setShowSessionForm(true);
+  }
+
+  function openEditSessionForm(id: string) {
+    setEditingSessionId(id);
+    setShowSessionForm(true);
+  }
+
+  function closeSessionForm() {
+    setShowSessionForm(false);
+    setEditingSessionId(null);
+  }
+
+  function saveSession(input: SessionFormData) {
+    if (!editingSessionId) {
+      createSession(input);
+      return;
+    }
+
+    updateSession(editingSessionId, (session) => ({ ...session, ...input }));
+    closeSessionForm();
+    flash("Session updated");
+  }
+
+  function addRun(source?: RunRecord) {
     if (!selectedSession) return;
-    const previous = selectedSession.runs.at(-1);
-    const run = createRun(selectedSession.runs.length + 1, duplicate ? previous : undefined);
+    const run = createRun(selectedSession.runs.length + 1, source);
     updateSession(selectedSession.id, (session) => ({ ...session, runs: [...session.runs, run] }));
     setRunId(run.id);
     setScreen("run");
-    if (duplicate && previous) flash(`Setup copied from Run ${String(previous.number).padStart(2, "0")}`);
+    setShowRunHistoryForm(false);
+    if (source) flash(`Tyres and setup copied from Run ${String(source.number).padStart(2, "0")}`);
+  }
+
+  function saveSetupTemplate(name: string) {
+    if (!selectedRun) return;
+    const now = new Date().toISOString();
+    const template: SetupTemplate = {
+      id: crypto.randomUUID(),
+      name,
+      setup: structuredClone(selectedRun.setup),
+      createdAt: now,
+      updatedAt: now,
+    };
+    setData((current) => ({ ...current, setupTemplates: [...current.setupTemplates, template] }));
+    setShowSaveTemplateForm(false);
+    flash(`${name} saved as a setup template`);
+  }
+
+  function applySetupTemplate(id: string) {
+    if (!selectedRun) return;
+    const template = data.setupTemplates.find((candidate) => candidate.id === id);
+    if (!template) return;
+    updateRun(selectedRun.id, (run) => ({ ...run, setup: structuredClone(template.setup) }));
+    setShowApplyTemplateForm(false);
+    flash(`${template.name} applied`);
   }
 
   function requestDelete(target: DeleteTarget) {
@@ -344,6 +417,11 @@ export default function HomePage() {
       }));
       setScreen("session");
       setRunId(null);
+    } else if (deleteTarget.kind === "template") {
+      setData((current) => ({
+        ...current,
+        setupTemplates: current.setupTemplates.filter((template) => template.id !== deleteTarget.id),
+      }));
     }
     flash(`${deleteTarget.name} deleted`);
     setDeleteTarget(null);
@@ -366,53 +444,8 @@ export default function HomePage() {
   }
 
   function exportCsv() {
-    const header = [
-      "Event",
-      "Track",
-      "Date",
-      "Session",
-      "Run",
-      "Laps",
-      "Fastest lap",
-      "FL cold PSI",
-      "FL hot PSI",
-      "FR cold PSI",
-      "FR hot PSI",
-      "RL cold PSI",
-      "RL hot PSI",
-      "RR cold PSI",
-      "RR hot PSI",
-      "Balance",
-      "Comments",
-    ];
-    const rows = data.events.flatMap((event) =>
-      event.sessions.flatMap((session) =>
-        session.runs.map((run) => [
-          event.name,
-          event.track,
-          event.startDate,
-          session.name,
-          run.number,
-          run.laps,
-          run.fastestLap,
-          run.tyres.fl.coldPressure,
-          run.tyres.fl.hotPressure,
-          run.tyres.fr.coldPressure,
-          run.tyres.fr.hotPressure,
-          run.tyres.rl.coldPressure,
-          run.tyres.rl.hotPressure,
-          run.tyres.rr.coldPressure,
-          run.tyres.rr.hotPressure,
-          run.balance,
-          run.comments,
-        ]),
-      ),
-    );
-    const csv = [header, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
-      .join("\n");
-    downloadFile(`kart-data-${todayDate()}.csv`, csv, "text/csv;charset=utf-8");
-    flash("CSV exported");
+    downloadFile(`kart-data-${todayDate()}.csv`, buildCsv(data), "text/csv;charset=utf-8");
+    flash("Excel-ready CSV exported");
   }
 
   async function importBackup(event: ChangeEvent<HTMLInputElement>) {
@@ -422,15 +455,23 @@ export default function HomePage() {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       if (!validateImport(parsed)) throw new Error("Invalid backup");
-      setData(parsed);
-      setEventId(null);
-      setSessionId(null);
-      setRunId(null);
-      setScreen("home");
-      flash("Backup restored");
+      const normalized = normalizeAppData(parsed);
+      if (!normalized) throw new Error("Invalid backup");
+      setPendingImport(normalized);
     } catch {
       flash("That file is not a valid Kart Data backup");
     }
+  }
+
+  function confirmImport() {
+    if (!pendingImport) return;
+    setData(pendingImport);
+    setPendingImport(null);
+    setEventId(null);
+    setSessionId(null);
+    setRunId(null);
+    setScreen("home");
+    flash("Backup restored");
   }
 
   if (!ready) {
@@ -564,7 +605,7 @@ export default function HomePage() {
             ) : (
               <EmptyState icon={<Timer />} title="No sessions yet" text="Add the first practice, qualifying, heat or final session." />
             )}
-            <button className="button button-primary button-block standalone-action" onClick={() => setShowSessionForm(true)}><Plus /> Add session</button>
+            <button className="button button-primary button-block standalone-action" onClick={openNewSessionForm}><Plus /> Add session</button>
           </section>
         </div>
       </>
@@ -576,7 +617,12 @@ export default function HomePage() {
           title={selectedSession.name}
           subtitle={selectedEvent.name}
           onBack={() => setScreen("event")}
-          action={<IconButton label="Delete session" onClick={() => requestDelete({ kind: "session", id: selectedSession.id, name: selectedSession.name })}><Trash2 /></IconButton>}
+          action={
+            <>
+              <IconButton label="Edit session" onClick={() => openEditSessionForm(selectedSession.id)}><Pencil /></IconButton>
+              <IconButton label="Delete session" onClick={() => requestDelete({ kind: "session", id: selectedSession.id, name: selectedSession.name })}><Trash2 /></IconButton>
+            </>
+          }
         />
         <div className="page-content">
           <article className="summary-card">
@@ -588,8 +634,9 @@ export default function HomePage() {
             </div>
           </article>
           <div className="action-stack">
-            <button className="button button-primary button-block" onClick={() => addRun(false)}><Plus /> Add Run {String(selectedSession.runs.length + 1).padStart(2, "0")}</button>
-            {selectedSession.runs.length > 0 && <button className="button button-soft button-block" onClick={() => addRun(true)}><Copy /> Duplicate last run</button>}
+            <button className="button button-primary button-block" onClick={() => addRun()}><Plus /> Add blank Run {String(selectedSession.runs.length + 1).padStart(2, "0")}</button>
+            {selectedSession.runs.length > 0 && <button className="button button-soft button-block" onClick={() => addRun(selectedSession.runs.at(-1))}><Copy /> Duplicate last run</button>}
+            {historicalRuns.length > 0 && <button className="button button-secondary button-block" onClick={() => setShowRunHistoryForm(true)}><History /> Copy a historical run</button>}
             {selectedSession.runs.length > 1 && <button className="button button-secondary button-block" onClick={startCompare}><CircleGauge /> Compare runs</button>}
           </div>
           <section className="list-section">
@@ -625,6 +672,9 @@ export default function HomePage() {
           setScreen("session");
           flash(`Run ${String(selectedRun.number).padStart(2, "0")} completed`);
         }}
+        templates={data.setupTemplates}
+        onSaveTemplate={() => setShowSaveTemplateForm(true)}
+        onApplyTemplate={() => setShowApplyTemplateForm(true)}
       />
     );
   } else if (screen === "compare" && selectedSession) {
@@ -638,10 +688,36 @@ export default function HomePage() {
             <div className="settings-heading"><span className="list-icon"><Database /></span><div><h1>Backup your data</h1><p>Without an account, this device is the only copy until you export a backup.</p></div></div>
             <div className="action-stack">
               <button className="button button-primary button-block" onClick={exportJson}><Download /> Export full backup</button>
-              <button className="button button-secondary button-block" onClick={exportCsv}><Download /> Export CSV</button>
+              <button className="button button-secondary button-block" onClick={exportCsv}><Download /> Export Excel-ready CSV</button>
               <button className="button button-secondary button-block" onClick={() => importRef.current?.click()}><Upload /> Restore JSON backup</button>
               <input className="visually-hidden" ref={importRef} type="file" accept="application/json,.json" onChange={importBackup} />
             </div>
+          </section>
+          <section className="settings-section">
+            <div className="settings-heading"><span className="list-icon"><Wrench /></span><div><h1>Setup templates</h1><p>Save a chassis setup from any Run, then apply it to a future Run in one tap.</p></div></div>
+            {data.setupTemplates.length ? (
+              <div className="template-list">
+                {data.setupTemplates.map((template) => (
+                  <div className="template-item" key={template.id}>
+                    <span className="list-copy"><strong>{template.name}</strong><span>{template.setup.axleType || "Axle not set"} · {template.setup.rearSprocket ? `${template.setup.rearSprocket}T rear` : "Sprocket not set"}</span></span>
+                    <IconButton label={`Delete ${template.name}`} onClick={() => requestDelete({ kind: "template", id: template.id, name: template.name })}><Trash2 /></IconButton>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="help-text">No templates yet. Open a Run, expand Chassis setup, then choose Save as template.</p>}
+          </section>
+          <section className="settings-section">
+            <div className="settings-heading"><span className="list-icon"><Share2 /></span><div><h1>Install on iPhone</h1><p>{isStandalone ? "Kart Data is running from your Home Screen." : "Install it for a full-screen, app-like trackside experience."}</p></div></div>
+            {isStandalone ? (
+              <div className="install-status"><Check /> Installed</div>
+            ) : (
+              <ol className="install-steps">
+                <li>Open this website in Chrome or Safari.</li>
+                <li>Tap the Share button.</li>
+                <li>Choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</li>
+              </ol>
+            )}
+            {!isIOS && !isStandalone && <p className="help-text">On another device, use the browser&apos;s Install or Add to Home Screen option.</p>}
           </section>
           <section className="settings-section">
             <h2>Current storage</h2>
@@ -674,7 +750,18 @@ export default function HomePage() {
           onSave={saveEvent}
         />
       )}
-      {showSessionForm && selectedEvent && <NewSessionModal event={selectedEvent} onClose={() => setShowSessionForm(false)} onCreate={createSession} />}
+      {showSessionForm && selectedEvent && (
+        <SessionModal
+          event={selectedEvent}
+          session={editingSessionId ? selectedEvent.sessions.find((session) => session.id === editingSessionId) : undefined}
+          onClose={closeSessionForm}
+          onSave={saveSession}
+        />
+      )}
+      {showRunHistoryForm && <RunHistoryModal runs={historicalRuns} onClose={() => setShowRunHistoryForm(false)} onCopy={addRun} />}
+      {showSaveTemplateForm && selectedRun && <SaveTemplateModal run={selectedRun} onClose={() => setShowSaveTemplateForm(false)} onSave={saveSetupTemplate} />}
+      {showApplyTemplateForm && <ApplyTemplateModal templates={data.setupTemplates} onClose={() => setShowApplyTemplateForm(false)} onApply={applySetupTemplate} />}
+      {pendingImport && <ImportConfirmModal data={pendingImport} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
       {deleteTarget && <DeleteModal target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check /> {toast}</div>}
     </main>
@@ -760,26 +847,100 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
   );
 }
 
-function NewSessionModal({ event, onClose, onCreate }: { event: EventRecord; onClose: () => void; onCreate: (session: Pick<SessionRecord, "name" | "type" | "startTime" | "notes">) => void }) {
+function SessionModal({ event, session, onClose, onSave }: { event: EventRecord; session?: SessionRecord; onClose: () => void; onSave: (session: SessionFormData) => void }) {
+  const isEditing = Boolean(session);
   const nextPractice = event.sessions.filter((session) => session.type === "Practice").length + 1;
-  const [form, setForm] = useState({ name: `Practice ${nextPractice}`, type: "Practice" as SessionRecord["type"], startTime: "", notes: "" });
+  const [form, setForm] = useState<SessionFormData>(() => session ? {
+    name: session.name,
+    type: session.type,
+    startTime: session.startTime,
+    notes: session.notes,
+  } : { name: `Practice ${nextPractice}`, type: "Practice", startTime: "", notes: "" });
   function submit(submitEvent: FormEvent) {
     submitEvent.preventDefault();
     if (!form.name.trim()) return;
-    onCreate({ ...form, name: form.name.trim() });
+    onSave({ ...form, name: form.name.trim() });
   }
   return (
     <div className="modal-backdrop">
       <form className="modal-sheet modal-compact" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
-        <div className="modal-head"><div><p className="eyebrow">{event.name}</p><h2>Add session</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
+        <div className="modal-head"><div><p className="eyebrow">{event.name}</p><h2>{isEditing ? "Edit session" : "Add session"}</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
           <Field label="Session name" className="field-full"><TextInput required autoFocus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
-          <Field label="Type"><select className="select" value={form.type} onChange={(event) => { const type = event.target.value as SessionRecord["type"]; setForm({ ...form, type, name: type === "Practice" ? `Practice ${nextPractice}` : type }); }}>{sessionTypes.map((type) => <option key={type}>{type}</option>)}</select></Field>
+          <Field label="Type"><select className="select" value={form.type} onChange={(event) => { const type = event.target.value as SessionRecord["type"]; setForm({ ...form, type, name: isEditing ? form.name : type === "Practice" ? `Practice ${nextPractice}` : type }); }}>{sessionTypes.map((type) => <option key={type}>{type}</option>)}</select></Field>
           <Field label="Start time"><TextInput type="time" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></Field>
           <Field label="Notes" className="field-full"><textarea className="textarea" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field>
         </div>
-        <button className="button button-primary button-block" type="submit"><Plus /> Add session</button>
+        <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? "Save changes" : "Add session"}</button>
       </form>
+    </div>
+  );
+}
+
+function RunHistoryModal({ runs, onClose, onCopy }: { runs: HistoricalRun[]; onClose: () => void; onCopy: (run: RunRecord) => void }) {
+  const [runId, setRunId] = useState(runs.at(-1)?.run.id ?? "");
+  const selected = runs.find((item) => item.run.id === runId);
+  return (
+    <div className="modal-backdrop">
+      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="copy-run-title">
+        <div className="modal-head"><div><p className="eyebrow">NEW RUN</p><h2 id="copy-run-title">Copy a historical run</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
+        <p className="help-text">Tyre readings and chassis setup will be copied. Lap times and driver feedback start blank.</p>
+        <Field label="Source run" className="field-full">
+          <select className="select" value={runId} onChange={(event) => setRunId(event.target.value)}>
+            {runs.map(({ run, eventName, sessionName }) => <option key={run.id} value={run.id}>{eventName} · {sessionName} · Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}
+          </select>
+        </Field>
+        <button className="button button-primary button-block" disabled={!selected} onClick={() => selected && onCopy(selected.run)}><Copy /> Copy into new run</button>
+      </section>
+    </div>
+  );
+}
+
+function SaveTemplateModal({ run, onClose, onSave }: { run: RunRecord; onClose: () => void; onSave: (name: string) => void }) {
+  const [name, setName] = useState(run.label ? `${run.label} setup` : `Run ${String(run.number).padStart(2, "0")} setup`);
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (name.trim()) onSave(name.trim());
+  }
+  return (
+    <div className="modal-backdrop">
+      <form className="modal-sheet modal-compact" onSubmit={submit}>
+        <div className="modal-head"><div><p className="eyebrow">CHASSIS SETUP</p><h2>Save setup template</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
+        <Field label="Template name"><TextInput required autoFocus value={name} onChange={(event) => setName(event.target.value)} /></Field>
+        <button className="button button-primary button-block" type="submit"><Save /> Save template</button>
+      </form>
+    </div>
+  );
+}
+
+function ApplyTemplateModal({ templates, onClose, onApply }: { templates: SetupTemplate[]; onClose: () => void; onApply: (id: string) => void }) {
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
+  return (
+    <div className="modal-backdrop">
+      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="apply-template-title">
+        <div className="modal-head"><div><p className="eyebrow">CHASSIS SETUP</p><h2 id="apply-template-title">Apply setup template</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
+        <p className="help-text">This replaces every chassis setup field in the current Run. Tyres, performance and feedback are unchanged.</p>
+        <Field label="Template"><select className="select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
+        <button className="button button-primary button-block" disabled={!templateId} onClick={() => onApply(templateId)}><Wrench /> Apply template</button>
+      </section>
+    </div>
+  );
+}
+
+function ImportConfirmModal({ data, onCancel, onConfirm }: { data: AppData; onCancel: () => void; onConfirm: () => void }) {
+  const sessionCount = data.events.reduce((sum, event) => sum + event.sessions.length, 0);
+  const runCount = data.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0);
+  return (
+    <div className="modal-backdrop modal-centered">
+      <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="restore-title">
+        <span className="danger-icon"><Upload /></span>
+        <h2 id="restore-title">Replace current data?</h2>
+        <p>This backup contains {data.events.length} events, {sessionCount} sessions and {runCount} runs. Restoring it replaces all data currently stored on this device.</p>
+        <div className="action-stack">
+          <button className="button button-primary button-block" onClick={onConfirm}>Restore backup</button>
+          <button className="button button-secondary button-block" onClick={onCancel}>Cancel</button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -801,7 +962,7 @@ function DeleteModal({ target, onCancel, onConfirm }: { target: DeleteTarget; on
   );
 }
 
-function RunEditor({ run, session, saveState, onBack, onUpdate, onDelete, onComplete }: { run: RunRecord; session: SessionRecord; saveState: string; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void }) {
+function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
   function setTyre(corner: TyreCorner, field: keyof RunRecord["tyres"][TyreCorner], value: string) {
     onUpdate((current) => ({ ...current, tyres: { ...current.tyres, [corner]: { ...current.tyres[corner], [field]: value } } }));
   }
@@ -842,6 +1003,10 @@ function RunEditor({ run, session, saveState, onBack, onUpdate, onDelete, onComp
           <details className="editor-section">
             <summary><span><Wrench /> Chassis setup</span><ChevronRight /></summary>
             <div className="editor-body form-grid">
+              <div className="template-actions field-full">
+                <button className="button button-soft button-small" type="button" onClick={onSaveTemplate}><Save /> Save as template</button>
+                <button className="button button-secondary button-small" type="button" disabled={!templates.length} onClick={onApplyTemplate}><Wrench /> Apply template</button>
+              </div>
               <Field label="Front track / spacers"><TextInput value={run.setup.frontTrack} onChange={(event) => setSetup("frontTrack", event.target.value)} /></Field>
               <Field label="Rear track width"><NumberInput unit="mm" value={run.setup.rearTrack} onChange={(event) => setSetup("rearTrack", event.target.value)} /></Field>
               <Field label="Front ride height"><TextInput value={run.setup.frontRideHeight} onChange={(event) => setSetup("frontRideHeight", event.target.value)} /></Field>
@@ -891,35 +1056,120 @@ function RunEditor({ run, session, saveState, onBack, onUpdate, onDelete, onComp
 }
 
 function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord; ids: [string, string]; setIds: (ids: [string, string]) => void; onBack: () => void }) {
+  const [differencesOnly, setDifferencesOnly] = useState(false);
   const runA = session.runs.find((run) => run.id === ids[0]);
   const runB = session.runs.find((run) => run.id === ids[1]);
-  const values: Array<{ label: string; a: string; b: string }> = runA && runB ? [
-    { label: "Fastest lap", a: runA.fastestLap || "—", b: runB.fastestLap || "—" },
-    { label: "Balance", a: runA.balance || "—", b: runB.balance || "—" },
-    { label: "FL hot pressure", a: unit(runA.tyres.fl.hotPressure, "PSI"), b: unit(runB.tyres.fl.hotPressure, "PSI") },
-    { label: "FR hot pressure", a: unit(runA.tyres.fr.hotPressure, "PSI"), b: unit(runB.tyres.fr.hotPressure, "PSI") },
-    { label: "RL hot pressure", a: unit(runA.tyres.rl.hotPressure, "PSI"), b: unit(runB.tyres.rl.hotPressure, "PSI") },
-    { label: "RR hot pressure", a: unit(runA.tyres.rr.hotPressure, "PSI"), b: unit(runB.tyres.rr.hotPressure, "PSI") },
-    { label: "Front track", a: runA.setup.frontTrack || "—", b: runB.setup.frontTrack || "—" },
-    { label: "Rear track", a: runA.setup.rearTrack || "—", b: runB.setup.rearTrack || "—" },
-    { label: "Axle type", a: runA.setup.axleType || "—", b: runB.setup.axleType || "—" },
-    { label: "Rear sprocket", a: runA.setup.rearSprocket || "—", b: runB.setup.rearSprocket || "—" },
-  ] : [];
+  const sections = runA && runB ? comparisonSections(runA, runB) : [];
+  const fastestDelta = numericComparisonDelta(runA?.fastestLap, runB?.fastestLap, "s");
   return (
     <>
       <TopBar title="Compare runs" subtitle={session.name} onBack={onBack} />
       <div className="page-content">
         <div className="compare-selectors">
-          <Field label="First run"><select className="select" value={ids[0]} onChange={(event) => setIds([event.target.value, ids[1]])}>{session.runs.map((run) => <option key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}</option>)}</select></Field>
-          <Field label="Second run"><select className="select" value={ids[1]} onChange={(event) => setIds([ids[0], event.target.value])}>{session.runs.map((run) => <option key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}</option>)}</select></Field>
+          <Field label="First run"><select className="select" value={ids[0]} onChange={(event) => setIds([event.target.value, ids[1]])}>{session.runs.map((run) => <option disabled={run.id === ids[1]} key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}</select></Field>
+          <Field label="Second run"><select className="select" value={ids[1]} onChange={(event) => setIds([ids[0], event.target.value])}>{session.runs.map((run) => <option disabled={run.id === ids[0]} key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}</select></Field>
+        </div>
+        <div className="compare-summary">
+          <div><span>Fastest-lap change</span><strong>{fastestDelta}</strong><small>Run {runB?.number} compared with Run {runA?.number}</small></div>
+          <label className="difference-toggle"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} /> Differences only</label>
         </div>
         <div className="compare-table" role="table" aria-label="Run comparison">
           <div className="compare-row compare-head" role="row"><span>Measurement</span><strong>Run {runA?.number}</strong><strong>Run {runB?.number}</strong></div>
-          {values.map((value) => <div className={`compare-row ${value.a !== value.b ? "changed" : ""}`} role="row" key={value.label}><span>{value.label}</span><strong>{value.a}</strong><strong>{value.b}</strong></div>)}
+          {sections.map((section) => {
+            const values = differencesOnly ? section.values.filter((value) => value.a !== value.b) : section.values;
+            if (!values.length) return null;
+            return (
+              <div className="compare-section" role="rowgroup" key={section.title}>
+                <div className="compare-group-title">{section.title}</div>
+                {values.map((value) => <div className={`compare-row ${value.a !== value.b ? "changed" : ""}`} role="row" key={value.label}><span>{value.label}</span><strong>{value.a}</strong><strong>{value.b}</strong></div>)}
+              </div>
+            );
+          })}
         </div>
       </div>
     </>
   );
+}
+
+type CompareValue = { label: string; a: string; b: string };
+
+function comparisonSections(runA: RunRecord, runB: RunRecord): Array<{ title: string; values: CompareValue[] }> {
+  const value = (label: string, a: string | number | boolean, b: string | number | boolean): CompareValue => ({
+    label,
+    a: a === "" ? "—" : String(a),
+    b: b === "" ? "—" : String(b),
+  });
+  const tyreSections = tyreCorners.map(({ key, label }) => ({
+    title: `${label} tyre`,
+    values: [
+      value("Cold pressure", unit(runA.tyres[key].coldPressure, "PSI"), unit(runB.tyres[key].coldPressure, "PSI")),
+      value("Hot pressure", unit(runA.tyres[key].hotPressure, "PSI"), unit(runB.tyres[key].hotPressure, "PSI")),
+      value("Pressure gain", measurementGain(runA.tyres[key].coldPressure, runA.tyres[key].hotPressure, "PSI"), measurementGain(runB.tyres[key].coldPressure, runB.tyres[key].hotPressure, "PSI")),
+      value("Cold temperature", unit(runA.tyres[key].coldTemperature, "°C"), unit(runB.tyres[key].coldTemperature, "°C")),
+      value("Hot temperature", unit(runA.tyres[key].hotTemperature, "°C"), unit(runB.tyres[key].hotTemperature, "°C")),
+      value("Temperature gain", measurementGain(runA.tyres[key].coldTemperature, runA.tyres[key].hotTemperature, "°C"), measurementGain(runB.tyres[key].coldTemperature, runB.tyres[key].hotTemperature, "°C")),
+    ],
+  }));
+
+  return [
+    {
+      title: "Performance",
+      values: [
+        value("Run label", runA.label, runB.label),
+        value("Completed", runA.completed ? "Yes" : "No", runB.completed ? "Yes" : "No"),
+        value("Laps", runA.laps, runB.laps),
+        value("Fastest lap", unit(runA.fastestLap, "s"), unit(runB.fastestLap, "s")),
+        value("Average lap", unit(runA.averageLap, "s"), unit(runB.averageLap, "s")),
+        value("Position", runA.position, runB.position),
+      ],
+    },
+    ...tyreSections,
+    {
+      title: "Chassis setup",
+      values: [
+        value("Front track / spacers", runA.setup.frontTrack, runB.setup.frontTrack),
+        value("Rear track width", unit(runA.setup.rearTrack, "mm"), unit(runB.setup.rearTrack, "mm")),
+        value("Front ride height", runA.setup.frontRideHeight, runB.setup.frontRideHeight),
+        value("Rear ride height", runA.setup.rearRideHeight, runB.setup.rearRideHeight),
+        value("Front toe", runA.setup.frontToe, runB.setup.frontToe),
+        value("Front camber", runA.setup.frontCamber, runB.setup.frontCamber),
+        value("Caster", runA.setup.caster, runB.setup.caster),
+        value("Axle type", runA.setup.axleType, runB.setup.axleType),
+        value("Rear hub", runA.setup.rearHub, runB.setup.rearHub),
+        value("Front torsion bar", runA.setup.frontTorsionBar, runB.setup.frontTorsionBar),
+        value("Seat stays", runA.setup.seatStays, runB.setup.seatStays),
+        value("Wheel / rim type", runA.setup.wheelType, runB.setup.wheelType),
+        value("Front sprocket", runA.setup.frontSprocket, runB.setup.frontSprocket),
+        value("Rear sprocket", runA.setup.rearSprocket, runB.setup.rearSprocket),
+        value("Setup notes", runA.setup.notes, runB.setup.notes),
+      ],
+    },
+    {
+      title: "Driver feedback",
+      values: [
+        value("Balance", runA.balance, runB.balance),
+        value("Grip", runA.grip, runB.grip),
+        value("Braking", runA.braking, runB.braking),
+        value("Corner entry", runA.cornerEntry, runB.cornerEntry),
+        value("Mid-corner", runA.midCorner, runB.midCorner),
+        value("Corner exit / traction", runA.cornerExit, runB.cornerExit),
+        value("General comments", runA.comments, runB.comments),
+      ],
+    },
+  ];
+}
+
+function measurementGain(cold: string, hot: string, suffix: string) {
+  if (!cold || !hot) return "—";
+  const delta = Number(hot) - Number(cold);
+  return Number.isFinite(delta) ? `${delta >= 0 ? "+" : ""}${delta.toFixed(2)} ${suffix}` : "—";
+}
+
+function numericComparisonDelta(first?: string, second?: string, suffix = "") {
+  if (!first || !second) return "Not enough data";
+  const delta = Number(second) - Number(first);
+  if (!Number.isFinite(delta)) return "Not enough data";
+  return `${delta >= 0 ? "+" : ""}${delta.toFixed(3)} ${suffix}`;
 }
 
 function unit(value: string, suffix: string) {

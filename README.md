@@ -8,12 +8,14 @@ A mobile-first, local-first web application for recording competition karting ty
 - Cold/hot tyre pressure and temperature for all four corners.
 - Kart-specific chassis setup fields.
 - Performance and driver feedback recording.
-- Duplicate the previous Run's tyre and setup values.
-- Compare two Runs.
+- Create a blank Run, duplicate the previous Run, or copy any historical Run's tyre and setup values.
+- Compare every recorded performance, tyre, setup and feedback field, with differences highlighted.
 - Automatic IndexedDB saving without an account.
-- JSON backup/restore and CSV export.
+- Versioned JSON backup/restore with confirmation and a complete Excel-ready CSV export.
+- Reusable chassis setup templates.
 - Explicit confirmation for cascading Event, Session and Run deletion.
-- Installable PWA shell with offline caching in production.
+- Editable Event and Session details.
+- Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
 - Static production output suitable for Vercel.
 
 ## Local development

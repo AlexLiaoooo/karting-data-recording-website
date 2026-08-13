@@ -1,8 +1,8 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v0.4  
-**Last updated:** 2026-08-12  
-**Deployment target:** Vercel  
+**Document status:** Implemented prototype v0.5
+**Last updated:** 2026-08-13
+**Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
 
@@ -413,6 +413,16 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v0.5 — 2026-08-13
+
+- Expanded CSV export to include the complete Event, Session, Run, tyre, setup, performance and feedback dataset, including calculated pressure and temperature gains.
+- Added a confirmation and automatic version migration to JSON restore so existing version 1 browser data remains compatible.
+- Added Session editing without affecting its existing Runs.
+- Added blank Run creation, one-tap previous Run duplication and arbitrary historical Run copying.
+- Expanded Run comparison to every recorded field, grouped by category, with a differences-only filter and fastest-lap delta.
+- Added reusable chassis setup templates that can be saved from and applied to any Run.
+- Added dedicated iPhone installation instructions, Apple touch artwork and standards-based PNG manifest icons.
 
 ### Implemented prototype v0.4 — 2026-08-12
 

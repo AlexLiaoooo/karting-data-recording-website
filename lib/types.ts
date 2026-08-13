@@ -25,6 +25,14 @@ export type ChassisSetup = {
   notes: string;
 };
 
+export type SetupTemplate = {
+  id: string;
+  name: string;
+  setup: ChassisSetup;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RunRecord = {
   id: string;
   number: number;
@@ -75,9 +83,10 @@ export type EventRecord = {
 };
 
 export type AppData = {
-  version: 1;
+  version: 2;
   events: EventRecord[];
   lastEventId: string | null;
+  setupTemplates: SetupTemplate[];
 };
 
 export const emptyTyre = (): TyreReading => ({
@@ -131,4 +140,3 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     updatedAt: now,
   };
 };
-
