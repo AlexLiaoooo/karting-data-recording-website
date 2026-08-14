@@ -661,6 +661,49 @@ h2 {
   transform: translateY(-50%);
 }
 
+.weather-fetch {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.weather-fetch .button {
+  min-height: 43px;
+  width: 100%;
+}
+
+.weather-fetch .button svg {
+  height: 17px;
+  width: 17px;
+}
+
+.weather-message {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.weather-message a {
+  color: var(--blue);
+}
+
+.weather-error {
+  color: var(--red);
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+  display: inline-flex;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .complete-button {
   margin-top: 14px;
 }

@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: "Trackside kart setup, tyre and session recorder.",
   applicationName: "Kart Data",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

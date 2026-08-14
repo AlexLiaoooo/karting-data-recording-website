@@ -11,6 +11,8 @@ import {
   Flag,
   Gauge,
   History,
+  LocateFixed,
+  LoaderCircle,
   MessageSquareText,
   Pencil,
   Plus,
@@ -35,6 +37,7 @@ type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes">;
 type HistoricalRun = { run: RunRecord; eventName: string; sessionName: string };
+type WeatherState = "idle" | "loading" | "success" | "error";
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
 const eventTypes: EventRecord["type"][] = ["Practice", "Test", "Race", "Other"];
@@ -64,6 +67,25 @@ function bestLap(session: SessionRecord) {
 
 function totalLaps(session: SessionRecord) {
   return session.runs.reduce((total, run) => total + (Number(run.laps) || 0), 0);
+}
+
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      maximumAge: 5 * 60 * 1000,
+      timeout: 12 * 1000,
+    });
+  });
+}
+
+function locationErrorMessage(error: unknown) {
+  if (error instanceof GeolocationPositionError) {
+    if (error.code === error.PERMISSION_DENIED) return "Location access was denied. Allow location access in your browser settings, or enter the temperature manually.";
+    if (error.code === error.POSITION_UNAVAILABLE) return "Your current location is unavailable. Check your location settings or enter the temperature manually.";
+    if (error.code === error.TIMEOUT) return "Location lookup timed out. Try again, or enter the temperature manually.";
+  }
+  return "Current temperature could not be loaded. Check your connection and try again.";
 }
 
 function IconButton({ label, children, onClick }: { label: string; children: ReactNode; onClick: () => void }) {
@@ -795,6 +817,8 @@ function keepFocusedFieldVisible(event: ReactFocusEvent<HTMLFormElement>) {
 
 function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: () => void; onSave: (event: EventFormData) => void }) {
   const isEditing = Boolean(event);
+  const [weatherState, setWeatherState] = useState<WeatherState>("idle");
+  const [weatherMessage, setWeatherMessage] = useState("Uses your device location. You can still enter a value manually.");
   const [form, setForm] = useState<EventFormData>(() => event ? {
     name: event.name,
     track: event.track,
@@ -825,6 +849,45 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
     onSave({ ...form, name: form.name.trim(), track: form.track.trim() });
   }
 
+  async function loadAmbientTemperature() {
+    if (!("geolocation" in navigator)) {
+      setWeatherState("error");
+      setWeatherMessage("This browser does not support location access. Enter the temperature manually.");
+      return;
+    }
+
+    setWeatherState("loading");
+    setWeatherMessage("Finding your current location…");
+
+    try {
+      const position = await getCurrentPosition();
+      setWeatherMessage("Reading the current local temperature…");
+
+      const query = new URLSearchParams({
+        latitude: position.coords.latitude.toString(),
+        longitude: position.coords.longitude.toString(),
+        current: "temperature_2m",
+        temperature_unit: "celsius",
+      });
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query.toString()}`);
+      if (!response.ok) throw new Error(`Weather request failed with ${response.status}`);
+
+      const result: unknown = await response.json();
+      const temperature = typeof result === "object" && result !== null && "current" in result
+        && typeof result.current === "object" && result.current !== null && "temperature_2m" in result.current
+        ? result.current.temperature_2m
+        : undefined;
+      if (typeof temperature !== "number" || !Number.isFinite(temperature)) throw new Error("Weather response did not include a temperature");
+
+      setForm((current) => ({ ...current, ambientTemperature: temperature.toFixed(1) }));
+      setWeatherState("success");
+      setWeatherMessage(`Updated from your current location at ${new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date())}.`);
+    } catch (error) {
+      setWeatherState("error");
+      setWeatherMessage(locationErrorMessage(error));
+    }
+  }
+
   return (
     <div className="modal-backdrop">
       <form className="modal-sheet" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
@@ -839,6 +902,15 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
           <Field label="Weather" className="field-full"><TextInput placeholder="e.g. Clear, light wind" value={form.weather} onChange={(event) => setForm({ ...form, weather: event.target.value })} /></Field>
           <Field label="Ambient temperature"><NumberInput unit="°C" value={form.ambientTemperature} onChange={(event) => setForm({ ...form, ambientTemperature: event.target.value })} /></Field>
           <Field label="Track temperature"><NumberInput unit="°C" value={form.trackTemperature} onChange={(event) => setForm({ ...form, trackTemperature: event.target.value })} /></Field>
+          <div className="weather-fetch field-full">
+            <button className="button button-soft button-small" type="button" disabled={weatherState === "loading"} onClick={loadAmbientTemperature}>
+              {weatherState === "loading" ? <span className="spinner"><LoaderCircle /></span> : <LocateFixed />}
+              {weatherState === "loading" ? "Getting temperature…" : "Get current temperature"}
+            </button>
+            <p className={`weather-message ${weatherState === "error" ? "weather-error" : ""}`} aria-live="polite">
+              {weatherMessage} Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>.
+            </p>
+          </div>
           <Field label="Notes" className="field-full"><textarea className="textarea" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field>
         </div>
         <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? "Save changes" : "Create event"}</button>

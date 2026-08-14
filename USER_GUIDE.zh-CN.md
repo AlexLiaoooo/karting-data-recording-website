@@ -1,6 +1,6 @@
 # Kart Data 用户操作手册
 
-**适用版本：** v0.5
+**适用版本：** v0.6
 **更新日期：** 2026-08-14
 
 Kart Data 是一款用于竞赛卡丁车练习和比赛现场的数据记录工具。它可以记录胎压、胎温、车架 Setup、圈速和车手反馈，不需要注册账号。
@@ -81,6 +81,16 @@ Event
 - Notes：Event 备注。
 
 建立后，Event 页面会显示环境信息以及其下的所有 Sessions。
+
+### 自动获取环境温度
+
+在新建或编辑 Event 时，点击 **Get current temperature**：
+
+1. 首次使用时允许浏览器访问当前位置。
+2. 网站会读取当前位置附近的当前气温，并自动填入 **Ambient temperature**。
+3. 检查数值后保存 Event；必要时仍可手动修改。
+
+天气数据来自 Open-Meteo，是当前位置附近的天气模型数据，不等同于围场温度计或赛道表面温度。网络不可用、定位关闭或拒绝定位权限时，仍可继续手动填写。
 
 <img src="docs/images/user-guide/02-event-sessions.png" alt="Event 页面和 Session 列表" width="390">
 
