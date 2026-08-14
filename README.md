@@ -22,6 +22,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Explicit confirmation for cascading Event, Session and Run deletion.
 - Editable Event and Session details.
 - One-tap ambient temperature lookup using the device location and Open-Meteo, with manual entry retained as a fallback.
+- Light and dark display modes with system-theme detection and a locally remembered manual toggle.
 - Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
 - Static production output suitable for Vercel.
 

@@ -14,6 +14,7 @@ import {
   LocateFixed,
   LoaderCircle,
   MessageSquareText,
+  Moon,
   Pencil,
   Plus,
   Route,
@@ -23,11 +24,12 @@ import {
   Timer,
   Trash2,
   Trophy,
+  Sun,
   Upload,
   Wrench,
   X,
 } from "lucide-react";
-import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, normalizeAppData, saveData, validateImport } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
@@ -42,6 +44,7 @@ type WeatherState = "idle" | "loading" | "success" | "error";
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
 const eventTypes: EventRecord["type"][] = ["Practice", "Test", "Race", "Other"];
 const conditions: EventRecord["condition"][] = ["Dry", "Damp", "Wet", "Mixed"];
+const themeStorageKey = "kart-data-theme";
 const tyreCorners: Array<{ key: TyreCorner; label: string; code: string }> = [
   { key: "fl", label: "Front left", code: "FL" },
   { key: "fr", label: "Front right", code: "FR" },
@@ -96,6 +99,36 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
   );
 }
 
+function ThemeToggle() {
+  useLayoutEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      const savedTheme = localStorage.getItem(themeStorageKey);
+      const theme = savedTheme === "light" || savedTheme === "dark"
+        ? savedTheme
+        : mediaQuery.matches ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+    };
+
+    applyTheme();
+    mediaQuery.addEventListener("change", applyTheme);
+    return () => mediaQuery.removeEventListener("change", applyTheme);
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = nextTheme;
+    localStorage.setItem(themeStorageKey, nextTheme);
+  }
+
+  return (
+    <button className="icon-button theme-toggle" type="button" aria-label="Switch light or dark mode" onClick={toggleTheme}>
+      <span className="theme-icon theme-icon-dark" aria-hidden="true"><Moon /></span>
+      <span className="theme-icon theme-icon-light" aria-hidden="true"><Sun /></span>
+    </button>
+  );
+}
+
 function TopBar({
   title,
   subtitle,
@@ -122,7 +155,7 @@ function TopBar({
         <strong>{title}</strong>
         {subtitle && <span>{subtitle}</span>}
       </div>
-      {action && <div className="topbar-action">{action}</div>}
+      <div className="topbar-action">{action}<ThemeToggle /></div>
     </header>
   );
 }
