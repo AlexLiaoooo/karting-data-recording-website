@@ -37,7 +37,7 @@ import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplat
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
-import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
+import { emptyTrackMapData, MapAsset, TrackMapData } from "@/lib/track-map/types";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
@@ -202,16 +202,50 @@ export default function HomePage() {
   const hydrated = useRef(false);
 
   useEffect(() => {
-    Promise.all([loadData(), loadTrackMapData()])
-      .then(([stored, storedTrackMaps]) => {
+    let cancelled = false;
+    async function hydrate() {
+      try {
+        const [stored, storedTrackMaps] = await Promise.all([loadData(), loadTrackMapData()]);
+        let nextTrackMaps = storedTrackMaps;
+        const needsPfiMap = storedTrackMaps.layouts.some((layout) => {
+          const track = storedTrackMaps.tracks.find((candidate) => candidate.id === layout.trackId);
+          return !layout.mapAssetId && track?.name.trim().toLowerCase() === "pf international" && layout.name.trim().toLowerCase() === "full layout";
+        });
+        if (needsPfiMap) {
+          const response = await fetch("/maps/pfi-international-owner-driver.svg");
+          if (response.ok) {
+            const blob = await response.blob();
+            const timestamp = new Date().toISOString();
+            const mapAsset: MapAsset = { id: crypto.randomUUID(), blob, width: 1200, height: 900, mimeType: "image/svg+xml", size: blob.size, updatedAt: timestamp };
+            nextTrackMaps = {
+              ...storedTrackMaps,
+              assets: [...storedTrackMaps.assets, mapAsset],
+              layouts: storedTrackMaps.layouts.map((layout) => {
+                const track = storedTrackMaps.tracks.find((candidate) => candidate.id === layout.trackId);
+                const isLegacyPfiLayout = !layout.mapAssetId && track?.name.trim().toLowerCase() === "pf international" && layout.name.trim().toLowerCase() === "full layout";
+                return isLegacyPfiLayout
+                  ? { ...layout, mapAssetId: mapAsset.id, sourceAttribution: "Geometry derived from OpenStreetMap contributors · ODbL 1.0", sourceUrl: "https://www.openstreetmap.org/copyright", updatedAt: timestamp }
+                  : layout;
+              }),
+            };
+          }
+        }
+        if (cancelled) return;
         setData(stored);
-        setTrackMapData(storedTrackMaps);
-      })
-      .catch(() => setSaveState("Error"))
-      .finally(() => {
-        hydrated.current = true;
-        setReady(true);
-      });
+        setTrackMapData(nextTrackMaps);
+      } catch {
+        if (!cancelled) setSaveState("Error");
+      } finally {
+        if (!cancelled) {
+          hydrated.current = true;
+          setReady(true);
+        }
+      }
+    }
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

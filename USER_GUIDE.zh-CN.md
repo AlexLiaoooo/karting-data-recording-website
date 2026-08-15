@@ -323,6 +323,8 @@ Track Map Notebook 用于把刹车点、入弯点、Apex、出弯方式和赛道
 
 PF International 内置图是根据 OpenStreetMap 的赛道几何数据生成的示意图，不是官方宣传图；地图下方会显示 OpenStreetMap 的来源和 ODbL 许可链接。
 
+如果你之前已经建立过 PF International，但当时没有地图，网站会在启动时自动补上这张内置图；已经上传过的自定义地图不会被覆盖。
+
 ### 添加永久 Marker
 
 1. 打开一个已有地图图片的 Layout。
