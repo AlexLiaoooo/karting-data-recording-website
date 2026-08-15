@@ -30,7 +30,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
@@ -200,6 +200,25 @@ export default function HomePage() {
   const [isIOS, setIsIOS] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
+  const saveTracker = useRef({ pending: 0, failed: false });
+
+  // App data and Track Map data save on separate debounces. "Saved" must only appear
+  // once every in-flight write has settled, otherwise the faster save reports success
+  // while the other is still writing.
+  const beginSave = useCallback((write: () => Promise<void>) => {
+    const tracker = saveTracker.current;
+    tracker.pending += 1;
+    void write()
+      .catch(() => {
+        tracker.failed = true;
+      })
+      .finally(() => {
+        tracker.pending -= 1;
+        if (tracker.pending > 0) return;
+        setSaveState(tracker.failed ? "Error" : "Saved");
+        tracker.failed = false;
+      });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,24 +270,16 @@ export default function HomePage() {
   useEffect(() => {
     if (!hydrated.current) return;
     setSaveState("Saving…");
-    const timer = window.setTimeout(() => {
-      saveData(data)
-        .then(() => setSaveState("Saved"))
-        .catch(() => setSaveState("Error"));
-    }, 350);
+    const timer = window.setTimeout(() => beginSave(() => saveData(data)), 350);
     return () => window.clearTimeout(timer);
-  }, [data]);
+  }, [data, beginSave]);
 
   useEffect(() => {
     if (!hydrated.current) return;
     setSaveState("Saving…");
-    const timer = window.setTimeout(() => {
-      saveTrackMapData(trackMapData)
-        .then(() => setSaveState("Saved"))
-        .catch(() => setSaveState("Error"));
-    }, 500);
+    const timer = window.setTimeout(() => beginSave(() => saveTrackMapData(trackMapData)), 500);
     return () => window.clearTimeout(timer);
-  }, [trackMapData]);
+  }, [trackMapData, beginSave]);
 
   useEffect(() => {
     if (!toast) return;
@@ -554,7 +565,7 @@ export default function HomePage() {
   }
 
   function exportCsv() {
-    downloadFile(`kart-data-${todayDate()}.csv`, buildCsv(data), "text/csv;charset=utf-8");
+    downloadFile(`kart-data-${todayDate()}.csv`, buildCsv(data, trackMapData), "text/csv;charset=utf-8");
     flash("Excel-ready CSV exported");
   }
 

@@ -17,7 +17,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Create a blank Run, duplicate the previous Run, or copy any historical Run's tyre and setup values.
 - Compare every recorded performance, tyre, setup and feedback field, with differences highlighted.
 - Automatic IndexedDB saving without an account.
-- Versioned JSON backup/restore with confirmation and a complete Excel-ready CSV export.
+- Versioned JSON backup/restore with confirmation, and an Excel-ready CSV export containing three tables: Events/Sessions/Runs, Track reference markers, and Session track observations.
 - Reusable chassis setup templates.
 - Explicit confirmation for cascading Event, Session and Run deletion.
 - Editable Event and Session details.

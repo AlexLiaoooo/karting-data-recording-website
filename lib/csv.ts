@@ -1,4 +1,5 @@
 import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
+import type { TrackMapData } from "./track-map/types";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -117,7 +118,106 @@ function escapeCsv(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
-export function buildCsv(data: AppData) {
+const markerHeaders = [
+  "Track",
+  "Track location",
+  "Layout",
+  "Direction",
+  "Marker order",
+  "Marker label",
+  "Marker type",
+  "Short instruction",
+  "General note",
+  "Dry note",
+  "Wet note",
+];
+
+const observationHeaders = [
+  "Event name",
+  "Session name",
+  "Track",
+  "Layout",
+  "Visit date",
+  "Condition",
+  "Marker label",
+  "Marker type",
+  "Observation",
+  "Result",
+  "Session track summary",
+];
+
+function markerRows(trackMap: TrackMapData) {
+  const rows: unknown[][] = [];
+
+  for (const layout of trackMap.layouts) {
+    const track = trackMap.tracks.find((candidate) => candidate.id === layout.trackId);
+    const layoutValues = [track?.name ?? "", track?.location ?? "", layout.name, layout.direction];
+
+    if (!layout.markers.length) {
+      rows.push([...layoutValues, "", "", "", "", "", "", ""]);
+      continue;
+    }
+
+    for (const marker of [...layout.markers].sort((a, b) => a.order - b.order)) {
+      rows.push([
+        ...layoutValues,
+        marker.order,
+        marker.label,
+        marker.type,
+        marker.shortInstruction,
+        marker.generalNote,
+        marker.dryNote,
+        marker.wetNote,
+      ]);
+    }
+  }
+
+  return rows;
+}
+
+function observationRows(data: AppData, trackMap: TrackMapData) {
+  const rows: unknown[][] = [];
+
+  for (const visit of trackMap.visits) {
+    const layout = trackMap.layouts.find((candidate) => candidate.id === visit.layoutId);
+    const track = layout ? trackMap.tracks.find((candidate) => candidate.id === layout.trackId) : undefined;
+    const event = data.events.find((candidate) => candidate.id === visit.eventId);
+    const session = event?.sessions.find((candidate) => candidate.id === visit.sessionId);
+    const visitValues = [
+      event?.name ?? "",
+      session?.name ?? "",
+      track?.name ?? "",
+      layout?.name ?? "",
+      visit.date,
+      visit.condition,
+    ];
+
+    if (!visit.observations.length) {
+      rows.push([...visitValues, "", "", "", "", visit.summary]);
+      continue;
+    }
+
+    for (const observation of visit.observations) {
+      const marker = layout?.markers.find((candidate) => candidate.id === observation.markerId);
+      rows.push([
+        ...visitValues,
+        marker?.label ?? "",
+        marker?.type ?? "",
+        observation.note,
+        observation.result,
+        visit.summary,
+      ]);
+    }
+  }
+
+  return rows;
+}
+
+function section(title: string, header: string[], rows: unknown[][]) {
+  return [[title], header, ...rows];
+}
+
+export function buildCsv(data: AppData, trackMap: TrackMapData) {
   const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), ...feedbackHeaders];
   const rows: unknown[][] = [];
 
@@ -153,5 +253,15 @@ export function buildCsv(data: AppData) {
     }
   }
 
-  return `\uFEFF${[header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n")}`;
+  const tables = [
+    [header, ...rows],
+    section("TRACK REFERENCE MARKERS", markerHeaders, markerRows(trackMap)),
+    section("SESSION TRACK OBSERVATIONS", observationHeaders, observationRows(data, trackMap)),
+  ];
+
+  const body = tables
+    .map((table) => table.map((row) => row.map(escapeCsv).join(",")).join("\r\n"))
+    .join("\r\n\r\n");
+
+  return `\uFEFF${body}`;
 }
