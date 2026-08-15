@@ -154,17 +154,27 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
   const [search, setSearch] = useState("");
   useModalViewport(Boolean(editor));
 
-  const openTestTrack = () => {
+  const openTestTrack = async () => {
     const timestamp = now();
     const trackId = crypto.randomUUID();
     const layoutId = crypto.randomUUID();
+    let defaultAsset: MapAsset | undefined;
+    try {
+      const response = await fetch("/maps/pfi-international-owner-driver.svg");
+      if (!response.ok) throw new Error("Default map unavailable");
+      const blob = await response.blob();
+      defaultAsset = { id: crypto.randomUUID(), blob, width: 1200, height: 900, mimeType: "image/svg+xml", size: blob.size, updatedAt: timestamp };
+    } catch {
+      // The track can still be created if a static asset is unavailable; the user can upload a map later.
+    }
     onChange((current) => ({
       ...current,
       tracks: [...current.tracks, { id: trackId, name: "PF International", location: "Grantham, UK", notes: "", createdAt: timestamp, updatedAt: timestamp }],
-      layouts: [...current.layouts, { id: layoutId, trackId, name: "Full Layout", direction: "Unknown", mapAssetId: null, markers: [], createdAt: timestamp, updatedAt: timestamp }],
+      layouts: [...current.layouts, { id: layoutId, trackId, name: "Full Layout", direction: "Unknown", mapAssetId: defaultAsset?.id ?? null, sourceAttribution: defaultAsset ? "Geometry derived from OpenStreetMap contributors · ODbL 1.0" : undefined, sourceUrl: defaultAsset ? "https://www.openstreetmap.org/copyright" : undefined, markers: [], createdAt: timestamp, updatedAt: timestamp }],
+      assets: defaultAsset ? [...current.assets, defaultAsset] : current.assets,
     }));
     setView({ name: "workspace", layoutId });
-    notify("PF International created — upload your map image next");
+    notify(defaultAsset ? "PF International created with a built-in map" : "PF International created — upload your map image next");
   };
 
   function saveTrack(input: { name: string; location: string; notes: string }) {
@@ -407,7 +417,7 @@ function MapWorkspace({ data, layout, track, session, onChange, notify }: { data
       onChange((current) => ({
         ...current,
         assets: [...current.assets.filter((candidate) => candidate.id !== layout.mapAssetId), nextAsset],
-        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, updatedAt: now() } : candidate),
+        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, updatedAt: now() } : candidate),
       }));
       notify(`Map ready · ${nextAsset.width} × ${nextAsset.height}`);
     } catch (error) {
@@ -537,6 +547,7 @@ function MapWorkspace({ data, layout, track, session, onChange, notify }: { data
             </div>
           </div>
           {!session && <div className="map-image-actions"><button className="text-button" onClick={() => fileRef.current?.click()}><Upload /> Replace map image</button><span>{Math.round(asset.size / 1024)} KB</span></div>}
+          {layout.sourceAttribution && <p className="map-attribution">{layout.sourceAttribution}{layout.sourceUrl && <> · <a href={layout.sourceUrl} target="_blank" rel="noreferrer">View licence</a></>}</p>}
         </>
       ) : (
         <EmptyMapState title="Add the circuit map" text="Choose a clear overhead layout image. It will be resized and stored only on this device." action={!session && <button className="button button-primary" disabled={uploading} onClick={() => fileRef.current?.click()}><Upload /> {uploading ? "Preparing image…" : "Choose map image"}</button>} />

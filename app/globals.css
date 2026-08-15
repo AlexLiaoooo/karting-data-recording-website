@@ -1270,6 +1270,19 @@ h2 {
   margin: 13px 2px 0;
 }
 
+.map-attribution {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.map-attribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
 .marker-panel {
   background: var(--surface);
   border: 1px solid var(--line);

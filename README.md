@@ -26,6 +26,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Integrated Track Map Notebook with reusable Tracks and Layouts, uploaded map images, zoom/pan, permanent Corner/Braking/Turn-in/Apex/Exit notes, and Session-specific observations.
 - Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
 - Full JSON backup/restore includes Track Maps, markers, Session observations and embedded map images.
+- The PF International quick-start map is a generated schematic based on OpenStreetMap raceway geometry and includes ODbL attribution in the UI.
 - Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
 - Static production output suitable for Vercel.
 

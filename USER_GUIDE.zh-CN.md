@@ -317,9 +317,11 @@ Track Map Notebook 用于把刹车点、入弯点、Apex、出弯方式和赛道
 1. 在首页打开 **Track Library**，或在 **Data & settings** 中点击 **Manage Track Maps**。
 2. 第一次使用可以点击 **Create PF International**，也可以点击 **New** 建立其他赛道。
 3. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
-4. 打开 Layout 后点击 **Choose map image**，从相册或文件中选择一张清晰的赛道图。
+4. 第一次用快捷按钮建立 PF International 时，会自动载入一个内置的全赛道示意图；其他赛道或 Layout 可以点击 **Choose map image**，从相册或文件中选择一张清晰的赛道图。
 
 网站会在当前设备上优化并保存地图图片；不会自动上传到云端。
+
+PF International 内置图是根据 OpenStreetMap 的赛道几何数据生成的示意图，不是官方宣传图；地图下方会显示 OpenStreetMap 的来源和 ODbL 许可链接。
 
 ### 添加永久 Marker
 

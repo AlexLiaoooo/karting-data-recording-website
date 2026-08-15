@@ -38,6 +38,8 @@ export type TrackLayout = {
   name: string;
   direction: "Clockwise" | "Anti-clockwise" | "Unknown";
   mapAssetId: string | null;
+  sourceAttribution?: string;
+  sourceUrl?: string;
   markers: TrackMarker[];
   createdAt: string;
   updatedAt: string;
