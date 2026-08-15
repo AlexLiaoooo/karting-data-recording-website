@@ -406,8 +406,11 @@ The following decisions remain open and should be resolved before or during the 
 - Whether pressures and temperatures need timestamps.
 - Whether pre-run and post-run conditions should be separate form stages.
 - How Run comparison should select and display differences.
-- Whether CSV exports should use one combined table or separate Event/Session/Run tables.
 - The precise frontend framework and supporting libraries.
+
+Resolved:
+
+- CSV export uses a single file containing three labelled tables — Events/Sessions/Runs, Track reference markers, and Session track observations — separated by a blank row. The Run table keeps its original shape so existing spreadsheets continue to work.
 
 ## 14. Future expansion candidates
 
@@ -427,6 +430,13 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v1.0 — 2026-08-15
+
+- Extended CSV export with Track reference marker and Session track observation tables, so the export again covers the full dataset rather than only Events, Sessions and Runs.
+- Made the auto-save indicator wait for every in-flight write. App data and Track Map data save on separate debounces, so the faster save previously reported "Saved" while the other was still writing.
+- Tied map object-URL lifetime to the mounted image element, so replacing map images during a long trackside session no longer leaks one object URL per image.
+- Split the Track Map feature into the component modules named in section 7 — Track Library, Map Workspace, Map Canvas, Marker Sheet, editors and shared primitives — instead of a single feature file.
 
 ### Implemented prototype v0.8 — 2026-08-15
 
