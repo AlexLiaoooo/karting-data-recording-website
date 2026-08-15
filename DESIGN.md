@@ -286,7 +286,9 @@ The form may use collapsible sections, but frequently entered tyre values should
 ### Track Map Notebook
 
 - Reusable Tracks and multiple Layouts.
-- User-supplied, locally optimised map image per Layout.
+- PF International Full Layout includes a generated OpenStreetMap-based schematic; other Layouts can use a user-supplied, locally optimised map image.
+- Existing PF International Full Layout records without a map are backfilled with the built-in schematic on app startup; existing custom map assets are never overwritten.
+- Built-in map attribution and the ODbL licence link are shown beneath the map.
 - Zoom and pan on mobile and desktop.
 - Corner, Braking, Turn-in, Apex, Exit, Hazard, Overtaking and Focus markers.
 - Permanent general/dry/wet reference notes.
@@ -436,6 +438,11 @@ Possible later phases include:
 - Added Session-specific marker observations and overall Session map summaries without changing permanent reference notes.
 - Upgraded IndexedDB with separate Track, Layout, Visit and map-asset stores while preserving the existing app store.
 - Extended full JSON backup and restore to include Track Maps and embedded map images with record counts in the restore confirmation.
+
+### Implemented prototype v0.9 — 2026-08-15
+
+- Added a generated PF International owner-driver schematic based on OpenStreetMap raceway geometry, with visible ODbL attribution and source documentation.
+- Added automatic startup backfill for legacy PF International Full Layout records that do not yet have a map image.
 
 ### Implemented prototype v0.5 — 2026-08-13
 
