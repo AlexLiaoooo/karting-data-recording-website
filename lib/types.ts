@@ -69,6 +69,7 @@ export type EventRecord = {
   id: string;
   name: string;
   track: string;
+  trackLayoutId?: string;
   startDate: string;
   endDate: string;
   type: "Practice" | "Test" | "Race" | "Other";

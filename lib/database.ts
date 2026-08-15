@@ -1,7 +1,7 @@
 import type { AppData } from "./types";
 
 const DB_NAME = "kart-data-recorder";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "app";
 const DATA_KEY = "primary";
 
@@ -30,7 +30,7 @@ export function normalizeAppData(value: unknown): AppData | null {
   };
 }
 
-function openDatabase(): Promise<IDBDatabase> {
+export function openKartDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
@@ -38,6 +38,10 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME);
       }
+      if (!database.objectStoreNames.contains("tracks")) database.createObjectStore("tracks", { keyPath: "id" });
+      if (!database.objectStoreNames.contains("trackLayouts")) database.createObjectStore("trackLayouts", { keyPath: "id" });
+      if (!database.objectStoreNames.contains("trackVisits")) database.createObjectStore("trackVisits", { keyPath: "id" });
+      if (!database.objectStoreNames.contains("mapAssets")) database.createObjectStore("mapAssets", { keyPath: "id" });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -46,7 +50,7 @@ function openDatabase(): Promise<IDBDatabase> {
 
 export async function loadData(): Promise<AppData> {
   if (typeof indexedDB === "undefined") return emptyAppData();
-  const database = await openDatabase();
+  const database = await openKartDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, "readonly");
     const request = transaction.objectStore(STORE_NAME).get(DATA_KEY);
@@ -57,7 +61,7 @@ export async function loadData(): Promise<AppData> {
 }
 
 export async function saveData(data: AppData): Promise<void> {
-  const database = await openDatabase();
+  const database = await openKartDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, "readwrite");
     transaction.objectStore(STORE_NAME).put(data, DATA_KEY);

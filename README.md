@@ -23,6 +23,9 @@ A mobile-first, local-first web application for recording competition karting ty
 - Editable Event and Session details.
 - One-tap ambient temperature lookup using the device location and Open-Meteo, with manual entry retained as a fallback.
 - Light and dark display modes with system-theme detection and a locally remembered manual toggle.
+- Integrated Track Map Notebook with reusable Tracks and Layouts, uploaded map images, zoom/pan, permanent Corner/Braking/Turn-in/Apex/Exit notes, and Session-specific observations.
+- Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
+- Full JSON backup/restore includes Track Maps, markers, Session observations and embedded map images.
 - Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
 - Static production output suitable for Vercel.
 

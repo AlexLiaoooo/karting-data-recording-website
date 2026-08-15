@@ -1,7 +1,7 @@
 # Kart Data 用户操作手册
 
-**适用版本：** v0.7
-**更新日期：** 2026-08-14
+**适用版本：** v0.8
+**更新日期：** 2026-08-15
 
 Kart Data 是一款用于竞赛卡丁车练习和比赛现场的数据记录工具。它可以记录胎压、胎温、车架 Setup、圈速和车手反馈，不需要注册账号。
 
@@ -28,6 +28,7 @@ Kart Data 是一款用于竞赛卡丁车练习和比赛现场的数据记录工�
 10. [安装到 iPhone 主屏幕](#10-安装到-iphone-主屏幕)
 11. [编辑和删除记录](#11-编辑和删除记录)
 12. [常见问题](#12-常见问题)
+13. [使用 Track Map Notebook](#13-使用-track-map-notebook)
 
 ## 1. 认识数据结构
 
@@ -226,7 +227,7 @@ Setup 模板用于重复使用一套 Chassis setup。
 
 ### Export full backup
 
-导出完整 JSON 备份，包括所有 Events、Sessions、Runs 和 Setup 模板。
+导出完整 JSON 备份，包括所有 Events、Sessions、Runs、Setup 模板，以及 Track Library 中的 Tracks、Layouts、Markers、Session observations 和地图图片。
 
 JSON 是可以恢复回网站的备份格式。建议在每个赛道日结束后导出一次，并保存到 iCloud Drive、OneDrive 或其他安全位置。
 
@@ -245,7 +246,7 @@ CSV 用于分析和查看，不能用于恢复网站数据。需要恢复时必�
 
 1. 点击 **Restore JSON backup**。
 2. 选择之前导出的 `.json` 文件。
-3. 检查确认窗口中显示的 Events、Sessions 和 Runs 数量。
+3. 检查确认窗口中显示的 Events、Sessions、Runs、Tracks、Layouts、Markers 和地图图片数量。
 4. 点击 **Restore backup**。
 
 > [!WARNING]
@@ -306,6 +307,42 @@ CSV 用于分析和查看，不能用于恢复网站数据。需要恢复时必�
 ### 如何确认数据已经保存？
 
 在 Run 页面查看右上角状态。绿色 **Saved** 表示当前修改已经保存到设备；如果显示 **Saving…**，请等待它变成 **Saved** 后再关闭页面。
+
+## 13. 使用 Track Map Notebook
+
+Track Map Notebook 用于把刹车点、入弯点、Apex、出弯方式和赛道注意事项直接记录在赛道图上。它与现有 Kart Data 共用同一个网站、数据库和备份。
+
+### 建立 Track 和 Layout
+
+1. 在首页打开 **Track Library**，或在 **Data & settings** 中点击 **Manage Track Maps**。
+2. 第一次使用可以点击 **Create PF International**，也可以点击 **New** 建立其他赛道。
+3. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
+4. 打开 Layout 后点击 **Choose map image**，从相册或文件中选择一张清晰的赛道图。
+
+网站会在当前设备上优化并保存地图图片；不会自动上传到云端。
+
+### 添加永久 Marker
+
+1. 打开一个已有地图图片的 Layout。
+2. 点击 **Edit map**。
+3. 选择 Corner、Braking、Turn-in、Apex、Exit、Hazard、Overtaking 或 Focus。
+4. 点击地图上的实际位置放置 Marker。
+5. 填写 Label、Short instruction、General note、Dry note 和 Wet note。
+
+Marker 会自动保存。点击 **Move** 后再点地图，可以改变位置；点击 **Delete** 会先要求确认。正常 Reference 模式不会意外移动 Marker。
+
+地图上方的加号和减号用于缩放；放大后可以在地图区域内滑动查看不同位置。
+
+### 在 Event 和 Session 中使用
+
+1. 新建或编辑 Event。
+2. 在 **Saved Track Layout** 中选择对应的 Track 和 Layout。
+3. 打开该 Event 的一个 Session。
+4. 点击 **Track notes**。
+5. 点击地图 Marker，查看永久参考笔记，并填写本 Session 的实际观察和 Better / Same / Worse 结果。
+6. 可以在页面下方填写整个 Session 的赛道总结。
+
+Session observation 与永久 Track note 分开保存，因此当天抓地力或天气造成的临时变化不会覆盖长期赛道知识。
 
 ---
 

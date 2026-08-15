@@ -16,6 +16,10 @@
   --red: #b42318;
   --red-soft: #fff0ef;
   --green-soft: #e9f7f0;
+  --amber: #b85f00;
+  --purple: #7357c7;
+  --cyan: #087e8b;
+  --marker-shadow: rgba(20, 32, 51, 0.3);
   --compare-heading: #eef2f7;
   --hover-line: #aabbd3;
   --empty-line: #b8c5d6;
@@ -44,6 +48,10 @@
   --red: #ff7b72;
   --red-soft: #3a2025;
   --green-soft: #15382c;
+  --amber: #ffae57;
+  --purple: #b8a2ff;
+  --cyan: #59d3df;
+  --marker-shadow: rgba(0, 0, 0, 0.58);
   --compare-heading: #1b2735;
   --hover-line: #48617d;
   --empty-line: #3d5269;
@@ -1035,6 +1043,339 @@ h2 {
   width: 1px;
 }
 
+/* Track Map Notebook */
+.track-empty-actions {
+  display: grid;
+  gap: 9px;
+  width: min(100%, 280px);
+}
+
+.track-search {
+  margin-bottom: 12px;
+}
+
+.track-note-card {
+  margin-bottom: 20px;
+}
+
+.track-note-card p:last-child {
+  line-height: 1.5;
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+.track-layout-heading {
+  margin-top: 4px;
+}
+
+.track-workspace {
+  padding-top: 16px;
+}
+
+.track-workspace-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.track-workspace-heading h1,
+.track-workspace-heading .eyebrow {
+  margin-bottom: 0;
+}
+
+.map-controls {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  display: flex;
+  min-height: 48px;
+  padding: 4px 7px;
+}
+
+.map-controls > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  min-width: 47px;
+  text-align: center;
+}
+
+.map-control-button {
+  height: 38px;
+  width: 38px;
+}
+
+.map-control-button:disabled {
+  opacity: 0.35;
+}
+
+.map-reset {
+  margin-left: auto;
+  padding-right: 7px;
+}
+
+.marker-add-bar {
+  align-items: center;
+  background: var(--surface-blue);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  min-height: 49px;
+  padding: 6px 8px;
+}
+
+.marker-add-bar > span {
+  color: var(--blue);
+  flex: 1;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.marker-add-bar .select {
+  min-height: 37px;
+  padding-block: 5px;
+  width: 142px;
+}
+
+.marker-add-bar .icon-button {
+  height: 37px;
+  width: 37px;
+}
+
+.track-map-viewport {
+  background-color: var(--surface-soft);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 0 0 14px 14px;
+  max-height: min(58vh, 580px);
+  min-height: 220px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.track-map-viewport.placing-marker {
+  cursor: crosshair;
+}
+
+.track-map-stage {
+  line-height: 0;
+  min-width: 100%;
+  position: relative;
+  user-select: none;
+}
+
+.track-map-image {
+  display: block;
+  height: auto;
+  pointer-events: none;
+  width: 100%;
+}
+
+.map-marker {
+  align-items: center;
+  background: var(--blue);
+  border: 2px solid white;
+  border-radius: 999px;
+  box-shadow: 0 3px 9px var(--marker-shadow);
+  color: white;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  z-index: 2;
+}
+
+.map-marker > span {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.map-marker > small {
+  background: var(--text);
+  border-radius: 5px;
+  bottom: -20px;
+  color: var(--surface);
+  font-size: 0.61rem;
+  left: 50%;
+  line-height: 1.2;
+  max-width: 86px;
+  overflow: hidden;
+  padding: 3px 5px;
+  position: absolute;
+  text-overflow: ellipsis;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.map-marker.selected {
+  box-shadow: 0 0 0 4px var(--focus-ring), 0 3px 9px var(--marker-shadow);
+  transform: translate(-50%, -50%) scale(1.16);
+  z-index: 4;
+}
+
+.marker-corner { background: var(--blue); }
+.marker-braking { background: var(--red); }
+.marker-turnin { background: var(--amber); }
+.marker-apex { background: var(--green); }
+.marker-exit { background: var(--cyan); }
+.marker-hazard { background: #222a35; }
+.marker-overtaking { background: var(--purple); }
+.marker-focus { background: #d11f8a; }
+
+.map-image-actions {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.map-image-actions .text-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+  padding-left: 2px;
+}
+
+.map-image-actions svg,
+.map-help svg,
+.auto-save-note svg {
+  flex: 0 0 auto;
+  height: 16px;
+  width: 16px;
+}
+
+.map-image-actions > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.map-help {
+  align-items: flex-start;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.8rem;
+  gap: 7px;
+  line-height: 1.45;
+  margin: 13px 2px 0;
+}
+
+.marker-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.marker-panel-head,
+.marker-panel-head > div {
+  align-items: center;
+  display: flex;
+}
+
+.marker-panel-head {
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+
+.marker-panel-head > div {
+  gap: 10px;
+}
+
+.marker-panel-head h2,
+.marker-panel-head .eyebrow {
+  margin-bottom: 0;
+}
+
+.marker-key {
+  align-items: center;
+  border-radius: 9px;
+  color: white;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.marker-form,
+.marker-session-content,
+.marker-reference-content {
+  gap: 10px;
+}
+
+.marker-session-content,
+.marker-reference-content {
+  display: grid;
+}
+
+.marker-instruction {
+  background: var(--surface-blue);
+  border-radius: 10px;
+  color: var(--blue);
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 0;
+  padding: 11px;
+}
+
+.reference-note {
+  border-left: 3px solid var(--line);
+  padding: 3px 0 3px 10px;
+}
+
+.reference-note strong {
+  display: block;
+  font-size: 0.76rem;
+  margin-bottom: 3px;
+}
+
+.reference-note p {
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+.marker-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.danger-text {
+  color: var(--red);
+}
+
+.auto-save-note {
+  align-items: center;
+  color: var(--green);
+  display: flex;
+  font-size: 0.75rem;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.session-map-summary {
+  margin-top: 14px;
+}
+
+.session-map-summary .auto-save-note {
+  margin-top: 9px;
+}
+
 @media (max-width: 520px) {
   .app-shell {
     padding: 0;
@@ -1070,6 +1411,20 @@ h2 {
 
   .stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .track-workspace-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .marker-add-bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .marker-add-bar > span {
+    flex-basis: 100%;
   }
 }
 

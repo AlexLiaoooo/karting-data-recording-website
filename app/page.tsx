@@ -13,6 +13,7 @@ import {
   History,
   LocateFixed,
   LoaderCircle,
+  MapPinned,
   MessageSquareText,
   Moon,
   Pencil,
@@ -30,11 +31,15 @@ import {
   X,
 } from "lucide-react";
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { emptyAppData, loadData, normalizeAppData, saveData, validateImport } from "@/lib/database";
+import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
+import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
+import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
+import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
+import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes">;
@@ -173,6 +178,7 @@ function EmptyState({ icon, title, text, action }: { icon: ReactNode; title: str
 
 export default function HomePage() {
   const [data, setData] = useState<AppData>(emptyAppData());
+  const [trackMapData, setTrackMapData] = useState<TrackMapData>(emptyTrackMapData());
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<"Saved" | "Saving…" | "Error">("Saved");
   const [screen, setScreen] = useState<Screen>("home");
@@ -187,7 +193,7 @@ export default function HomePage() {
   const [showSaveTemplateForm, setShowSaveTemplateForm] = useState(false);
   const [showApplyTemplateForm, setShowApplyTemplateForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [pendingImport, setPendingImport] = useState<AppData | null>(null);
+  const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -196,8 +202,11 @@ export default function HomePage() {
   const hydrated = useRef(false);
 
   useEffect(() => {
-    loadData()
-      .then((stored) => setData(stored))
+    Promise.all([loadData(), loadTrackMapData()])
+      .then(([stored, storedTrackMaps]) => {
+        setData(stored);
+        setTrackMapData(storedTrackMaps);
+      })
       .catch(() => setSaveState("Error"))
       .finally(() => {
         hydrated.current = true;
@@ -215,6 +224,17 @@ export default function HomePage() {
     }, 350);
     return () => window.clearTimeout(timer);
   }, [data]);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    setSaveState("Saving…");
+    const timer = window.setTimeout(() => {
+      saveTrackMapData(trackMapData)
+        .then(() => setSaveState("Saved"))
+        .catch(() => setSaveState("Error"));
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [trackMapData]);
 
   useEffect(() => {
     if (!toast) return;
@@ -489,13 +509,14 @@ export default function HomePage() {
     setScreen("compare");
   }
 
-  function exportJson() {
-    downloadFile(
-      `kart-data-backup-${todayDate()}.json`,
-      JSON.stringify(data, null, 2),
-      "application/json",
-    );
-    flash("Backup exported");
+  async function exportJson() {
+    try {
+      const backup = await buildFullBackup(data, trackMapData);
+      downloadFile(`kart-data-backup-${todayDate()}.json`, backup, "application/json");
+      flash("Full backup exported, including Track Maps");
+    } catch {
+      flash("Backup could not be created");
+    }
   }
 
   function exportCsv() {
@@ -509,8 +530,7 @@ export default function HomePage() {
     if (!file) return;
     try {
       const parsed: unknown = JSON.parse(await file.text());
-      if (!validateImport(parsed)) throw new Error("Invalid backup");
-      const normalized = normalizeAppData(parsed);
+      const normalized = parseFullBackup(parsed);
       if (!normalized) throw new Error("Invalid backup");
       setPendingImport(normalized);
     } catch {
@@ -520,7 +540,8 @@ export default function HomePage() {
 
   function confirmImport() {
     if (!pendingImport) return;
-    setData(pendingImport);
+    setData(pendingImport.appData);
+    setTrackMapData(pendingImport.trackMapData);
     setPendingImport(null);
     setEventId(null);
     setSessionId(null);
@@ -581,6 +602,15 @@ export default function HomePage() {
           )}
 
           {activeEvent && <button className="button button-secondary button-block standalone-action" onClick={openNewEventForm}><Plus /> New event</button>}
+
+          <section className="list-section">
+            <div className="section-heading"><h2>Track tools</h2></div>
+            <button className="list-item" onClick={() => setScreen("track-maps")}>
+              <span className="list-icon"><MapPinned /></span>
+              <span className="list-copy"><strong>Track Library</strong><span>Map corners, braking points and reference notes</span></span>
+              <ChevronRight />
+            </button>
+          </section>
 
           {data.events.length > 0 && (
             <section className="list-section">
@@ -689,6 +719,8 @@ export default function HomePage() {
             </div>
           </article>
           <div className="action-stack">
+            <button className="button button-soft button-block" onClick={() => setScreen("session-track-notes")}><MapPinned /> Track notes</button>
+            {!selectedEvent.trackLayoutId && <p className="help-text session-track-help">Edit this Event and choose a saved Track Layout before adding Session Track notes.</p>}
             <button className="button button-primary button-block" onClick={() => addRun()}><Plus /> Add blank Run {String(selectedSession.runs.length + 1).padStart(2, "0")}</button>
             {selectedSession.runs.length > 0 && <button className="button button-soft button-block" onClick={() => addRun(selectedSession.runs.at(-1))}><Copy /> Duplicate last run</button>}
             {historicalRuns.length > 0 && <button className="button button-secondary button-block" onClick={() => setShowRunHistoryForm(true)}><History /> Copy a historical run</button>}
@@ -762,6 +794,10 @@ export default function HomePage() {
             ) : <p className="help-text">No templates yet. Open a Run, expand Chassis setup, then choose Save as template.</p>}
           </section>
           <section className="settings-section">
+            <div className="settings-heading"><span className="list-icon"><MapPinned /></span><div><h1>Track Library</h1><p>Manage circuit layouts, map images and permanent reference markers.</p></div></div>
+            <button className="button button-secondary button-block standalone-action" onClick={() => setScreen("track-maps")}><MapPinned /> Manage Track Maps</button>
+          </section>
+          <section className="settings-section">
             <div className="settings-heading"><span className="list-icon"><Share2 /></span><div><h1>Install on iPhone</h1><p>{isStandalone ? "Kart Data is running from your Home Screen." : "Install it for a full-screen, app-like trackside experience."}</p></div></div>
             {isStandalone ? (
               <div className="install-status"><Check /> Installed</div>
@@ -781,10 +817,39 @@ export default function HomePage() {
               <Stat label="Sessions" value={String(data.events.reduce((sum, event) => sum + event.sessions.length, 0))} />
               <Stat label="Runs" value={String(data.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0))} />
             </div>
+            <p className="help-text">{trackMapData.tracks.length} Tracks · {trackMapData.layouts.length} Layouts · {trackMapData.layouts.reduce((sum, layout) => sum + layout.markers.length, 0)} Markers</p>
             <p className="help-text">Clearing this browser&apos;s site data will remove these records. Export a backup regularly.</p>
           </section>
         </div>
       </>
+    );
+  } else if (screen === "track-maps") {
+    content = (
+      <TrackMapFeature
+        data={trackMapData}
+        mode="library"
+        onChange={(updater) => setTrackMapData(updater)}
+        onBack={() => setScreen("home")}
+        notify={flash}
+      />
+    );
+  } else if (screen === "session-track-notes" && selectedEvent && selectedSession) {
+    content = (
+      <TrackMapFeature
+        data={trackMapData}
+        mode="session"
+        session={{
+          eventId: selectedEvent.id,
+          sessionId: selectedSession.id,
+          eventName: selectedEvent.name,
+          sessionName: selectedSession.name,
+          layoutId: selectedEvent.trackLayoutId,
+          condition: selectedEvent.condition,
+        }}
+        onChange={(updater) => setTrackMapData(updater)}
+        onBack={() => setScreen("session")}
+        notify={flash}
+      />
     );
   } else {
     content = (
@@ -801,6 +866,7 @@ export default function HomePage() {
       {showEventForm && (
         <EventModal
           event={editingEventId ? data.events.find((event) => event.id === editingEventId) : undefined}
+          trackMapData={trackMapData}
           onClose={closeEventForm}
           onSave={saveEvent}
         />
@@ -848,13 +914,14 @@ function keepFocusedFieldVisible(event: ReactFocusEvent<HTMLFormElement>) {
   }, 350);
 }
 
-function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: () => void; onSave: (event: EventFormData) => void }) {
+function EventModal({ event, trackMapData, onClose, onSave }: { event?: EventRecord; trackMapData: TrackMapData; onClose: () => void; onSave: (event: EventFormData) => void }) {
   const isEditing = Boolean(event);
   const [weatherState, setWeatherState] = useState<WeatherState>("idle");
   const [weatherMessage, setWeatherMessage] = useState("Uses your device location. You can still enter a value manually.");
   const [form, setForm] = useState<EventFormData>(() => event ? {
     name: event.name,
     track: event.track,
+    trackLayoutId: event.trackLayoutId,
     startDate: event.startDate,
     endDate: event.endDate,
     type: event.type,
@@ -866,6 +933,7 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
   } : {
     name: "",
     track: "",
+    trackLayoutId: undefined,
     startDate: todayDate(),
     endDate: "",
     type: "Practice",
@@ -875,6 +943,10 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
     condition: "Dry",
     notes: "",
   });
+  const layoutOptions = trackMapData.layouts.map((layout) => ({
+    layout,
+    track: trackMapData.tracks.find((candidate) => candidate.id === layout.trackId),
+  })).filter((option) => option.track);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -927,7 +999,20 @@ function EventModal({ event, onClose, onSave }: { event?: EventRecord; onClose: 
         <div className="modal-head"><div><p className="eyebrow">{isEditing ? "EDIT EVENT" : "NEW EVENT"}</p><h2>{isEditing ? "Edit event" : "Create event"}</h2></div><IconButton label="Close" onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
           <Field label="Event name" className="field-full"><TextInput required autoFocus placeholder="e.g. Whilton Mill Practice" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
-          <Field label="Track" className="field-full"><TextInput placeholder="Circuit name" value={form.track} onChange={(event) => setForm({ ...form, track: event.target.value })} /></Field>
+          <Field label="Saved Track Layout" className="field-full">
+            <select
+              className="select"
+              value={form.trackLayoutId ?? ""}
+              onChange={(event) => {
+                const option = layoutOptions.find((candidate) => candidate.layout.id === event.target.value);
+                setForm({ ...form, trackLayoutId: option?.layout.id || undefined, track: option?.track?.name ?? form.track });
+              }}
+            >
+              <option value="">No saved layout</option>
+              {layoutOptions.map(({ layout, track }) => <option key={layout.id} value={layout.id}>{track?.name} · {layout.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Track name" className="field-full"><TextInput placeholder="Circuit name" value={form.track} onChange={(event) => setForm({ ...form, track: event.target.value, trackLayoutId: undefined })} /></Field>
           <Field label="Start date"><TextInput type="date" required value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} /></Field>
           <Field label="End date"><TextInput type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} /></Field>
           <Field label="Event type"><select className="select" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as EventRecord["type"] })}>{eventTypes.map((type) => <option key={type}>{type}</option>)}</select></Field>
@@ -1032,15 +1117,16 @@ function ApplyTemplateModal({ templates, onClose, onApply }: { templates: SetupT
   );
 }
 
-function ImportConfirmModal({ data, onCancel, onConfirm }: { data: AppData; onCancel: () => void; onConfirm: () => void }) {
-  const sessionCount = data.events.reduce((sum, event) => sum + event.sessions.length, 0);
-  const runCount = data.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0);
+function ImportConfirmModal({ data, onCancel, onConfirm }: { data: ParsedBackup; onCancel: () => void; onConfirm: () => void }) {
+  const sessionCount = data.appData.events.reduce((sum, event) => sum + event.sessions.length, 0);
+  const runCount = data.appData.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0);
+  const markerCount = data.trackMapData.layouts.reduce((sum, layout) => sum + layout.markers.length, 0);
   return (
     <div className="modal-backdrop modal-centered">
       <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="restore-title">
         <span className="danger-icon"><Upload /></span>
         <h2 id="restore-title">Replace current data?</h2>
-        <p>This backup contains {data.events.length} events, {sessionCount} sessions and {runCount} runs. Restoring it replaces all data currently stored on this device.</p>
+        <p>This backup contains {data.appData.events.length} events, {sessionCount} sessions, {runCount} runs, {data.trackMapData.tracks.length} tracks, {data.trackMapData.layouts.length} layouts, {markerCount} markers and {data.trackMapData.assets.length} map images. Restoring it replaces all data currently stored on this device.</p>
         <div className="action-stack">
           <button className="button button-primary button-block" onClick={onConfirm}>Restore backup</button>
           <button className="button button-secondary button-block" onClick={onCancel}>Cancel</button>

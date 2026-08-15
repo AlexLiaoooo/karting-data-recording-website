@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v0.5
-**Last updated:** 2026-08-13
+**Document status:** Implemented prototype v0.8
+**Last updated:** 2026-08-15
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -23,6 +23,7 @@ The first version will be deliberately small and reliable. It will work without 
 - Allow the user to export and restore their data without an account.
 - Keep the source code portable and under the owner's control.
 - Leave room for later cloud synchronization, team sharing, and analysis.
+- Build reusable visual circuit knowledge with permanent map markers and Session-specific observations.
 
 ## 3. First-version non-goals
 
@@ -280,6 +281,17 @@ The form may use collapsible sections, but frequently entered tyre values should
 - Unit preferences.
 - Theme preference.
 - Data deletion with explicit confirmation.
+- Track Library management.
+
+### Track Map Notebook
+
+- Reusable Tracks and multiple Layouts.
+- User-supplied, locally optimised map image per Layout.
+- Zoom and pan on mobile and desktop.
+- Corner, Braking, Turn-in, Apex, Exit, Hazard, Overtaking and Focus markers.
+- Permanent general/dry/wet reference notes.
+- Optional saved Layout on each Event.
+- Session-specific observations that never overwrite permanent notes.
 
 ## 8. Interaction and visual principles
 
@@ -413,6 +425,17 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v0.8 — 2026-08-15
+
+- Added the integrated Track Map Notebook and Track Library.
+- Added Track and Layout creation, editing and confirmed cascading deletion.
+- Added locally optimised map image upload, mobile/desktop zoom and pan, and protected Reference/Edit modes.
+- Added multiple marker types with add, move, edit and delete workflows plus general, dry and wet reference notes.
+- Added optional saved Track Layout selection to Event creation/editing and Session Track notes.
+- Added Session-specific marker observations and overall Session map summaries without changing permanent reference notes.
+- Upgraded IndexedDB with separate Track, Layout, Visit and map-asset stores while preserving the existing app store.
+- Extended full JSON backup and restore to include Track Maps and embedded map images with record counts in the restore confirmation.
 
 ### Implemented prototype v0.5 — 2026-08-13
 
