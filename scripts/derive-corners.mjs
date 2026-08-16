@@ -13,7 +13,36 @@
 import { readFileSync } from "node:fs";
 
 const SVG = "public/maps/pfi-international-owner-driver.svg";
-const MIN_CORNER_TURN = 55; // degrees; below this a bend reads as part of a straight
+
+/**
+ * Corners identified by hand, as normalised positions on the map. Curvature detection only
+ * finds bends sharp enough to stand out; a circuit also names long sweeping sections that
+ * never exceed the threshold. These are snapped onto the track centreline and merged into
+ * the lap order with the detected ones, so hand-placed and derived corners number as one
+ * continuous sequence.
+ */
+const MANUAL_CORNERS = [
+  { x: 0.413, y: 0.577 },
+  { x: 0.286, y: 0.594 },
+  { x: 0.210, y: 0.682 },
+];
+
+/**
+ * Proper names, keyed by the resulting corner number. A named complex can span more than one
+ * corner, as the Fullerton Esses does. Keyed by number rather than position because the
+ * numbering is the thing the owner works from; if corners are added or removed, re-check
+ * these against the printed list this script emits.
+ */
+const CORNER_NAMES = {
+  9: "Fullerton Esses",
+  10: "Fullerton Esses",
+  11: "Bobby Game Corner",
+  12: "Fletcher's Loop",
+};
+// Degrees; below this a bend reads as part of a straight. Set to include every bend the
+// owner counts as a corner, which is more than PF International's own circuit guide names —
+// that guide's numbering is deliberately not used here.
+const MIN_CORNER_TURN = Number(process.env.MIN_CORNER_TURN ?? 55);
 const VERTEX_TURN_FLOOR = 6; // degrees; ignore surveying noise between straight segments
 const MERGE_GAP = 34; // user units; bridge a brief straight inside one long corner
 
@@ -78,30 +107,51 @@ for (let index = 1; index < loop.length - 1; index += 1) {
 }
 if (current) groups.push(current);
 
-const corners = groups
+const viewBox = markup.match(/viewBox="\s*([\d.-]+)\s+([\d.-]+)\s+([\d.]+)\s+([\d.]+)/).slice(1).map(Number);
+const [vx, vy, vw, vh] = viewBox;
+const round = (value) => Number(value.toFixed(4));
+
+const detected = groups
   .filter((group) => Math.abs(group.total) >= MIN_CORNER_TURN)
   .map((group) => {
     // Vertex at half of the group's cumulative turn — the apex for labelling purposes.
     let running = 0;
     const half = Math.abs(group.total) / 2;
     const apex = group.turns.find(([, turn]) => (running += Math.abs(turn)) >= half) ?? group.turns[0];
-    return { index: apex[0], point: loop[apex[0]], total: Math.round(group.total) };
+    return { index: apex[0], point: loop[apex[0]], source: "derived" };
   });
 
-const viewBox = markup.match(/viewBox="\s*([\d.-]+)\s+([\d.-]+)\s+([\d.]+)\s+([\d.]+)/).slice(1).map(Number);
-const [vx, vy, vw, vh] = viewBox;
-const round = (value) => Number(value.toFixed(4));
+// Snap each hand-placed corner onto the nearest loop vertex, which also gives it a position
+// in the lap so it can be sorted alongside the detected ones.
+const manual = MANUAL_CORNERS.map((corner) => {
+  const target = [vx + corner.x * vw, vy + corner.y * vh];
+  let bestIndex = 0;
+  let bestDistance = Infinity;
+  loop.forEach((point, index) => {
+    const distance = Math.hypot(point[0] - target[0], point[1] - target[1]);
+    if (distance < bestDistance) { bestDistance = distance; bestIndex = index; }
+  });
+  return { index: bestIndex, point: loop[bestIndex], source: "manual", snap: Math.round(bestDistance) };
+});
+
+const corners = [...detected, ...manual].sort((a, b) => a.index - b.index);
 
 const literal = corners.map((corner, index) => {
-  const label = `T${index + 1}`;
+  const number = index + 1;
   const x = round((corner.point[0] - vx) / vw);
   const y = round((corner.point[1] - vy) / vh);
-  return `  { number: ${index + 1}, label: "${label}", x: ${x}, y: ${y} },`;
+  const name = CORNER_NAMES[number];
+  const named = name ? ` name: ${JSON.stringify(name)},` : "";
+  return `  { number: ${number}, label: "T${number}",${named} x: ${x}, y: ${y} },`;
 });
 
 console.log(`// Derived by scripts/derive-corners.mjs from ${SVG}. Do not hand-edit.`);
-console.log(`// ${corners.length} corners, lap order from the Sector 1 start.`);
+console.log(`// ${corners.length} corners in lap order: ${detected.length} from curvature, ${manual.length} placed by hand.`);
 console.log("export const BUILT_IN_PFI_CORNERS: TrackCorner[] = [");
 console.log(literal.join("\n"));
 console.log("];");
-console.error(`\nturn totals (deg): ${corners.map((corner) => corner.total).join(", ")}`);
+console.error("");
+corners.forEach((corner, index) => {
+  const detail = corner.source === "manual" ? `hand-placed, snapped ${corner.snap} units onto the track` : "from curvature";
+  console.error(`  T${String(index + 1).padEnd(3)} ${detail}`);
+});

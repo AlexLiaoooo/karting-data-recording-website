@@ -3,7 +3,7 @@
 import { Minus, ZoomIn } from "lucide-react";
 import { MouseEvent } from "react";
 import type { MapAsset, TrackCorner, TrackMarker } from "@/lib/track-map/types";
-import { MapImage, markerClass, markerShortNames } from "./shared";
+import { cornerTitle, MapImage, markerClass, markerShortNames } from "./shared";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
@@ -54,8 +54,8 @@ export function MapCanvas({
               key={corner.number}
               type="button"
               disabled={!onSelectCorner}
-              aria-label={onSelectCorner ? `Place marker at ${corner.label}` : corner.label}
-              title={corner.label}
+              aria-label={onSelectCorner ? `Place marker at ${cornerTitle(corner)}` : cornerTitle(corner)}
+              title={cornerTitle(corner)}
               onClick={(event) => { event.stopPropagation(); onSelectCorner?.(corner); }}
             >{corner.label}</button>
           ))}

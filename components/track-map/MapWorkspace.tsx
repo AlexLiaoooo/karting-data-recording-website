@@ -16,7 +16,7 @@ import {
 } from "@/lib/track-map/types";
 import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
-import { ConfirmDeleteDialog, EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
+import { ConfirmDeleteDialog, cornerTitle, EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
 
 type MapWorkspaceProps = {
   data: TrackMapData;
@@ -83,7 +83,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     addMarker(x, y, addType === "Corner" ? `T${layout.markers.filter((candidate) => candidate.type === "Corner").length + 1}` : addType);
   }
 
-  function addMarker(x: number, y: number, label: string) {
+  function addMarker(x: number, y: number, label: string, placedAt = label) {
     if (!addType) return;
     const marker: TrackMarker = {
       id: crypto.randomUUID(), x, y, order: layout.markers.length + 1, label,
@@ -92,7 +92,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     updateLayout((current) => ({ ...current, markers: [...current.markers, marker], updatedAt: now() }));
     setSelectedMarkerId(marker.id);
     setAddType(null);
-    notify(`${marker.type} marker added${label ? ` at ${label}` : ""}`);
+    notify(`${marker.type} marker added${placedAt ? ` at ${placedAt}` : ""}`);
   }
 
   /** Corner labels double as placement targets, so a marker can be put on T7 without aiming. */
@@ -101,10 +101,12 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     if (moveMarkerId) {
       updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x: corner.x, y: corner.y, updatedAt: now() } : marker) }));
       setMoveMarkerId(null);
-      notify(`Marker moved to ${corner.label}`);
+      notify(`Marker moved to ${cornerTitle(corner)}`);
       return;
     }
-    if (addType) addMarker(corner.x, corner.y, corner.label);
+    // The marker keeps the short label so it stays readable on the map; the full name shows
+    // in the corner picker and the toast.
+    if (addType) addMarker(corner.x, corner.y, corner.label, cornerTitle(corner));
   }
 
   function updateMarker(patch: Partial<TrackMarker>) {
@@ -200,7 +202,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
                   }}
                 >
                   <option value="">At corner…</option>
-                  {corners.map((corner) => <option key={corner.number}>{corner.label}</option>)}
+                  {corners.map((corner) => <option key={corner.number} value={corner.label}>{cornerTitle(corner)}</option>)}
                 </select>
               )}
               {(addType || moveMarkerId) && <button className="icon-button" aria-label="Cancel marker placement" onClick={() => { setAddType(null); setMoveMarkerId(null); }}><X /></button>}

@@ -431,6 +431,21 @@ Possible later phases include:
 
 ## 15. Change log
 
+### Implemented prototype v1.3 — 2026-08-16
+
+- Renumbered the built-in PF International corners to the owner's own scheme: fifteen corners
+  in lap order, starting from three corners he identified on the Sector 1 approach.
+- `scripts/derive-corners.mjs` now accepts hand-placed corners as an input, snaps them onto
+  the track centreline and merges them into the lap order with the detected ones. Curvature
+  detection only finds bends sharp enough to stand out, but a circuit also names long sweeping
+  sections that never reach that threshold, so detection alone was never sufficient.
+- PF International's own corner numbering is deliberately not used. Their circuit guide names
+  ten corners (Turn 1 "Litchfield Bridge", Turn 7 "Fullerton Esses", Turn 8 "Bobby Game
+  Corner", Turn 9 "Fletcher's Loop"), but their published map is a stylised diagram rather
+  than a survey: fitting its corner positions to this map's geometry over every rotation,
+  scale and mirror left a mean residual of 46 units on a 760-wide map and collapsed ten turns
+  onto six positions, so no reliable automatic mapping exists.
+
 ### Implemented prototype v1.2 — 2026-08-16
 
 - Added lap-ordered corner labels (T1–T12) to the built-in PF International layout, derived
