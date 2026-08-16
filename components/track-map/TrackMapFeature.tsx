@@ -3,6 +3,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { MapAsset, Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
+import { builtInPfiLayoutFields, loadBuiltInMapAsset } from "@/lib/track-map/built-in-map";
 import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
 import { TrackDetailView, TrackLibraryView } from "./TrackLibrary";
@@ -43,17 +44,24 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
     const layoutId = crypto.randomUUID();
     let defaultAsset: MapAsset | undefined;
     try {
-      const response = await fetch("/maps/pfi-international-owner-driver.svg");
-      if (!response.ok) throw new Error("Default map unavailable");
-      const blob = await response.blob();
-      defaultAsset = { id: crypto.randomUUID(), blob, width: 1200, height: 900, mimeType: "image/svg+xml", size: blob.size, updatedAt: timestamp };
+      defaultAsset = await loadBuiltInMapAsset();
     } catch {
       // The track can still be created if a static asset is unavailable; the user can upload a map later.
     }
     onChange((current) => ({
       ...current,
       tracks: [...current.tracks, { id: trackId, name: "PF International", location: "Grantham, UK", notes: "", createdAt: timestamp, updatedAt: timestamp }],
-      layouts: [...current.layouts, { id: layoutId, trackId, name: "Full Layout", direction: "Unknown", mapAssetId: defaultAsset?.id ?? null, sourceAttribution: defaultAsset ? "Geometry derived from OpenStreetMap contributors · ODbL 1.0" : undefined, sourceUrl: defaultAsset ? "https://www.openstreetmap.org/copyright" : undefined, markers: [], createdAt: timestamp, updatedAt: timestamp }],
+      layouts: [...current.layouts, {
+        id: layoutId,
+        trackId,
+        name: "Full Layout",
+        direction: "Unknown",
+        mapAssetId: null,
+        ...(defaultAsset ? builtInPfiLayoutFields(defaultAsset) : {}),
+        markers: [],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }],
       assets: defaultAsset ? [...current.assets, defaultAsset] : current.assets,
     }));
     setView({ name: "workspace", layoutId });

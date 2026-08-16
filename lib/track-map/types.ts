@@ -40,6 +40,8 @@ export type TrackLayout = {
   mapAssetId: string | null;
   sourceAttribution?: string;
   sourceUrl?: string;
+  /** Set only while the layout carries an app-supplied map; see lib/track-map/built-in-map.ts. */
+  builtInMapVersion?: string;
   markers: TrackMarker[];
   createdAt: string;
   updatedAt: string;

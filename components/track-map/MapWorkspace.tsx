@@ -53,7 +53,9 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
       onChange((current) => ({
         ...current,
         assets: [...current.assets.filter((candidate) => candidate.id !== layout.mapAssetId), nextAsset],
-        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, updatedAt: now() } : candidate),
+        // Clearing the attribution and version marks the map as user-owned, so the built-in
+        // map refresh on startup leaves it alone.
+        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, builtInMapVersion: undefined, updatedAt: now() } : candidate),
       }));
       notify(`Map ready · ${nextAsset.width} × ${nextAsset.height}`);
     } catch (error) {
