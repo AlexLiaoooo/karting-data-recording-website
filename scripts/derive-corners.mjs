@@ -27,18 +27,6 @@ const MANUAL_CORNERS = [
   { x: 0.210, y: 0.682 },
 ];
 
-/**
- * Proper names, keyed by the resulting corner number. A named complex can span more than one
- * corner, as the Fullerton Esses does. Keyed by number rather than position because the
- * numbering is the thing the owner works from; if corners are added or removed, re-check
- * these against the printed list this script emits.
- */
-const CORNER_NAMES = {
-  9: "Fullerton Esses",
-  10: "Fullerton Esses",
-  11: "Bobby Game Corner",
-  12: "Fletcher's Loop",
-};
 // Degrees; below this a bend reads as part of a straight. Set to include every bend the
 // owner counts as a corner, which is more than PF International's own circuit guide names —
 // that guide's numbering is deliberately not used here.
@@ -140,9 +128,7 @@ const literal = corners.map((corner, index) => {
   const number = index + 1;
   const x = round((corner.point[0] - vx) / vw);
   const y = round((corner.point[1] - vy) / vh);
-  const name = CORNER_NAMES[number];
-  const named = name ? ` name: ${JSON.stringify(name)},` : "";
-  return `  { number: ${number}, label: "T${number}",${named} x: ${x}, y: ${y} },`;
+  return `  { number: ${number}, label: "T${number}", x: ${x}, y: ${y} },`;
 });
 
 console.log(`// Derived by scripts/derive-corners.mjs from ${SVG}. Do not hand-edit.`);

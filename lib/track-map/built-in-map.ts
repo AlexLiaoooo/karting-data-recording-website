@@ -11,10 +11,10 @@ export const BUILT_IN_PFI_CORNERS: TrackCorner[] = [
   { number: 6, label: "T6", x: 0.1478, y: 0.6519 },
   { number: 7, label: "T7", x: 0.4859, y: 0.3213 },
   { number: 8, label: "T8", x: 0.3403, y: 0.5312 },
-  { number: 9, label: "T9", name: "Fullerton Esses", x: 0.5839, y: 0.3177 },
-  { number: 10, label: "T10", name: "Fullerton Esses", x: 0.4791, y: 0.2749 },
-  { number: 11, label: "T11", name: "Bobby Game Corner", x: 0.645, y: 0.0836 },
-  { number: 12, label: "T12", name: "Fletcher's Loop", x: 0.8326, y: 0.147 },
+  { number: 9, label: "T9", x: 0.5839, y: 0.3177 },
+  { number: 10, label: "T10", x: 0.4791, y: 0.2749 },
+  { number: 11, label: "T11", x: 0.645, y: 0.0836 },
+  { number: 12, label: "T12", x: 0.8326, y: 0.147 },
   { number: 13, label: "T13", x: 0.6883, y: 0.1238 },
   { number: 14, label: "T14", x: 0.6034, y: 0.2136 },
   { number: 15, label: "T15", x: 0.7161, y: 0.2653 },
@@ -29,7 +29,7 @@ export const BUILT_IN_PFI_SOURCE_URL = "https://www.openstreetmap.org/copyright"
  * time a track uses it, so without a version stamp a corrected map never reaches a device
  * that already stored the old one.
  */
-export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-named-corners";
+export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-numbered-corners";
 
 /**
  * Loads a map that ships with the app. Width and height come from the file's own viewBox

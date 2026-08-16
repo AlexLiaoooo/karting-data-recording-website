@@ -16,8 +16,6 @@ export type TrackCorner = {
   number: number;
   /** Short form shown on the map, e.g. "T7". Kept brief so it stays legible at map scale. */
   label: string;
-  /** Optional proper name, e.g. "Fletcher's Loop". A named complex may span two corners. */
-  name?: string;
   x: number;
   y: number;
 };

@@ -431,6 +431,13 @@ Possible later phases include:
 
 ## 15. Change log
 
+### Implemented prototype v1.4 — 2026-08-16
+
+- Removed the corner names added in v1.3. Corners are identified by number alone. At map
+  scale a name like "Bobby Game Corner" is wider than the gap between corners and painted
+  over its neighbours, and moving the names off the map into a list underneath was not worth
+  the space it cost. The fifteen-corner numbering is unaffected.
+
 ### Implemented prototype v1.3 — 2026-08-16
 
 - Renumbered the built-in PF International corners to the owner's own scheme: fifteen corners

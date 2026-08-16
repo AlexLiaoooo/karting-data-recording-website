@@ -2,7 +2,7 @@
 
 import { ArrowLeft, MapPinned, Moon, Sun, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useEffect } from "react";
-import type { MapAsset, TrackCorner, TrackMapData, TrackMarkerType } from "@/lib/track-map/types";
+import type { MapAsset, TrackMapData, TrackMarkerType } from "@/lib/track-map/types";
 
 export type SessionContext = {
   eventId: string;
@@ -34,10 +34,6 @@ export function markerClass(type: TrackMarkerType) {
   return `marker-${type.toLowerCase().replace("-", "")}`;
 }
 
-/** "T12 · Fletcher's Loop" where a corner is named, otherwise just "T12". */
-export function cornerTitle(corner: TrackCorner) {
-  return corner.name ? `${corner.label} · ${corner.name}` : corner.label;
-}
 
 export function ThemeButton() {
   function toggleTheme() {

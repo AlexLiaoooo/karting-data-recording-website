@@ -44,18 +44,6 @@ describe("BUILT_IN_PFI_CORNERS", () => {
     }
   });
 
-  it("carries the circuit's own corner names, with the Esses spanning two corners", () => {
-    const named = BUILT_IN_PFI_CORNERS.filter((corner) => corner.name)
-      .map((corner) => [corner.label, corner.name]);
-
-    expect(named).toEqual([
-      ["T9", "Fullerton Esses"],
-      ["T10", "Fullerton Esses"],
-      ["T11", "Bobby Game Corner"],
-      ["T12", "Fletcher's Loop"],
-    ]);
-  });
-
   it("has no two corners on top of each other", () => {
     for (const a of BUILT_IN_PFI_CORNERS) {
       for (const b of BUILT_IN_PFI_CORNERS) {
