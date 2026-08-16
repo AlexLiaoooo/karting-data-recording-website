@@ -431,6 +431,26 @@ Possible later phases include:
 
 ## 15. Change log
 
+### Implemented prototype v1.1 — 2026-08-16
+
+- Reframed the built-in PF International map from a 1200x900 landscape canvas to a cropped
+  portrait one, so the circuit fills 81.8% of the canvas width instead of 51.8% and renders
+  roughly 1.6 times larger on a phone. The legend, which overlapped the bottom-left loop,
+  moved clear of the track.
+- Added a version stamp and a startup refresh for app-supplied maps. The artwork is copied
+  into IndexedDB on first use, so without this a corrected map never reached a device that
+  had already stored the old one. A map the user uploaded is never overwritten.
+- Read built-in map dimensions from the file's own viewBox instead of hard-coding them.
+  Marker positions are fractions of the asset box, so a stored size that disagreed with the
+  artwork would have letterboxed the image and drifted every marker.
+- Gave the built-in map a dark colour scheme, so it no longer shows as a bright white panel
+  in the dark theme. It follows the device colour scheme; an SVG shown through an image
+  element is its own document and cannot see the app's manual theme toggle.
+- Removed the circuit name from inside the map artwork. The app already shows it in the top
+  bar and as the page heading, so it appeared three times on one screen.
+- Added a Vitest suite covering the data layer: backup round-trip, CSV export, the storage
+  schema upgrade, and built-in map replacement. `npm test` runs it.
+
 ### Implemented prototype v1.0 — 2026-08-15
 
 - Extended CSV export with Track reference marker and Session track observation tables, so the export again covers the full dataset rather than only Events, Sessions and Runs.

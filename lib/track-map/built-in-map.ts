@@ -9,7 +9,7 @@ export const BUILT_IN_PFI_SOURCE_URL = "https://www.openstreetmap.org/copyright"
  * time a track uses it, so without a version stamp a corrected map never reaches a device
  * that already stored the old one.
  */
-export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-portrait-crop";
+export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-dark-mode-and-title-removed";
 
 /**
  * Loads a map that ships with the app. Width and height come from the file's own viewBox

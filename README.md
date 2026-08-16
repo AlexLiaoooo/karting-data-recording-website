@@ -59,6 +59,9 @@ data rather than looking wrong:
 - **Storage** (`lib/database.test.ts`) — the version 1 to 2 schema upgrade preserves existing
   records while adding the Track Map stores, deletions do not reappear on reload, and app
   data stays separate from Track Map data.
+- **Built-in maps** (`lib/track-map/built-in-map.test.ts`) — corrected artwork replaces the
+  copy already stored on a device, a map the user uploaded is never overwritten, marker
+  positions survive the swap, and the asset size is read from the file's own viewBox.
 
 Image bytes are asserted through the backup path rather than the IndexedDB path: the
 `fake-indexeddb` test double cannot round-trip a Blob, so blob persistence in the database
