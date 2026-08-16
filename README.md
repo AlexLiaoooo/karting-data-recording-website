@@ -43,8 +43,26 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
+
+`npm test` runs Vitest against the data layer — the parts where a silent bug costs recorded
+data rather than looking wrong:
+
+- **Backup round-trip** (`lib/track-map/backup.test.ts`) — events, tracks, layouts, markers
+  and visits restore unchanged, map image bytes survive exactly, backups predating Track
+  Maps still restore, and malformed files are rejected instead of partially applied.
+- **CSV export** (`lib/csv.test.ts`) — the three tables, correct column counts, computed
+  pressure/temperature gains, the UTF-8 BOM, and escaping of quotes, commas and line breaks
+  in free-text notes.
+- **Storage** (`lib/database.test.ts`) — the version 1 to 2 schema upgrade preserves existing
+  records while adding the Track Map stores, deletions do not reappear on reload, and app
+  data stays separate from Track Map data.
+
+Image bytes are asserted through the backup path rather than the IndexedDB path: the
+`fake-indexeddb` test double cannot round-trip a Blob, so blob persistence in the database
+itself has to be checked in a real browser.
 
 ## Data ownership
 
