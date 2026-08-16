@@ -80,7 +80,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
       return;
     }
     if (!addType) return;
-    addMarker(x, y, addType === "Corner" ? `T${layout.markers.filter((candidate) => candidate.type === "Corner").length + 1}` : addType);
+    addMarker(x, y, addType);
   }
 
   function addMarker(x: number, y: number, label: string) {
@@ -250,6 +250,21 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
         <section className="settings-section session-map-summary">
           <label className="field"><span>Overall Session track summary</span><textarea className="textarea" placeholder="Overall grip, changing conditions, key lesson…" value={visit?.summary ?? ""} onChange={(event) => updateSummary(event.target.value)} /></label>
           <p className="auto-save-note"><Check /> Saved separately from permanent Track notes</p>
+        </section>
+      )}
+
+      {!session && (
+        <section className="settings-section layout-notes">
+          <label className="field">
+            <span>General notes</span>
+            <textarea
+              className="textarea"
+              placeholder="Anything about this layout as a whole: surface, kerbs, the wet line, gearing…"
+              value={layout.notes ?? ""}
+              onChange={(event) => updateLayout((current) => ({ ...current, notes: event.target.value, updatedAt: now() }))}
+            />
+          </label>
+          <p className="auto-save-note"><Check /> Kept with this Layout, not with a single marker</p>
         </section>
       )}
 

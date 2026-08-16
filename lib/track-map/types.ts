@@ -1,12 +1,5 @@
-export type TrackMarkerType =
-  | "Corner"
-  | "Braking"
-  | "Turn-in"
-  | "Apex"
-  | "Exit"
-  | "Hazard"
-  | "Overtaking"
-  | "Focus";
+/** The phases of a corner, plus the two pedal inputs. */
+export type TrackMarkerType = "In" | "Mid" | "Out" | "Brake" | "Gas";
 
 /**
  * A named corner on a layout, in lap order. Positions are normalised to the map asset box,
@@ -56,6 +49,8 @@ export type TrackLayout = {
   builtInMapVersion?: string;
   /** Lap-ordered corners used for labelling the map and placing markers by corner. */
   corners?: TrackCorner[];
+  /** Free-form notes about the layout as a whole, rather than about one marker. */
+  notes?: string;
   markers: TrackMarker[];
   createdAt: string;
   updatedAt: string;
@@ -102,16 +97,23 @@ export type TrackMapData = {
   assets: MapAsset[];
 };
 
-export const markerTypes: TrackMarkerType[] = [
-  "Corner",
-  "Braking",
-  "Turn-in",
-  "Apex",
-  "Exit",
-  "Hazard",
-  "Overtaking",
-  "Focus",
-];
+export const markerTypes: TrackMarkerType[] = ["In", "Mid", "Out", "Brake", "Gas"];
+
+/**
+ * Marker types used before the list was reduced to corner phases and pedal inputs. Entry,
+ * apex and exit map straight across; the rest were not phases of a corner at all, so they
+ * become "Mid" and their original type is preserved in the marker's general note.
+ */
+export const legacyMarkerTypes: Record<string, { type: TrackMarkerType; keepsMeaning: boolean }> = {
+  "Turn-in": { type: "In", keepsMeaning: true },
+  Apex: { type: "Mid", keepsMeaning: true },
+  Exit: { type: "Out", keepsMeaning: true },
+  Braking: { type: "Brake", keepsMeaning: true },
+  Corner: { type: "Mid", keepsMeaning: false },
+  Hazard: { type: "Mid", keepsMeaning: false },
+  Overtaking: { type: "Mid", keepsMeaning: false },
+  Focus: { type: "Mid", keepsMeaning: false },
+};
 
 export const emptyTrackMapData = (): TrackMapData => ({
   version: 1,

@@ -1,6 +1,8 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
 import { emptyAppData, loadData, normalizeAppData, openKartDatabase, saveData, validateImport } from "./database";
-import { loadTrackMapData, saveTrackMapData } from "./track-map/database";
+import { loadTrackMapData, migrateMarkerTypes, saveTrackMapData } from "./track-map/database";
+import { makeLayout, makeMarker } from "./test-fixtures";
+import type { TrackMarker } from "./track-map/types";
 import { makeAppData, makeTrackMapData } from "./test-fixtures";
 
 const DB_NAME = "kart-data-recorder";
@@ -72,6 +74,39 @@ describe("schema upgrade from version 1", () => {
   it("leaves a fresh install with empty data rather than failing", async () => {
     expect(await loadData()).toEqual(emptyAppData());
     expect(await loadTrackMapData()).toEqual({ version: 1, tracks: [], layouts: [], visits: [], assets: [] });
+  });
+});
+
+describe("migrateMarkerTypes", () => {
+  const withType = (type: string) => [makeLayout({ markers: [makeMarker({ type: type as TrackMarker["type"], generalNote: "Late apex works" })] })];
+  const migrated = (type: string) => migrateMarkerTypes(withType(type))[0].markers[0];
+
+  it.each([["Turn-in", "In"], ["Apex", "Mid"], ["Exit", "Out"], ["Braking", "Brake"]])(
+    "maps the corner phase %s to %s and leaves the note alone",
+    (legacy, expected) => {
+      const marker = migrated(legacy);
+      expect(marker.type).toBe(expected);
+      expect(marker.generalNote).toBe("Late apex works");
+    },
+  );
+
+  it.each(["Corner", "Hazard", "Overtaking", "Focus"])(
+    "records the original type in the note when %s has no equivalent",
+    (legacy) => {
+      const marker = migrated(legacy);
+      expect(marker.type).toBe("Mid");
+      expect(marker.generalNote).toBe(`Previously marked as ${legacy}.\nLate apex works`);
+    },
+  );
+
+  it("leaves a marker already on a current type untouched", () => {
+    const layouts = withType("Gas");
+    expect(migrateMarkerTypes(layouts)[0]).toBe(layouts[0]);
+  });
+
+  it("does not invent a note where the marker had none", () => {
+    const layouts = [makeLayout({ markers: [makeMarker({ type: "Hazard" as TrackMarker["type"], generalNote: "" })] })];
+    expect(migrateMarkerTypes(layouts)[0].markers[0].generalNote).toBe("Previously marked as Hazard.");
   });
 });
 

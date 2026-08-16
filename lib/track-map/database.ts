@@ -1,5 +1,5 @@
 import { openKartDatabase } from "@/lib/database";
-import { emptyTrackMapData, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
+import { emptyTrackMapData, legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
 
 const TRACKS_STORE = "tracks";
 const LAYOUTS_STORE = "trackLayouts";
@@ -19,6 +19,27 @@ function readAll<T>(transaction: IDBTransaction, storeName: string): Promise<T[]
   });
 }
 
+/**
+ * Rewrites markers stored under the old, longer type list. Types that were phases of a
+ * corner map straight across; the rest had no equivalent, so they become "Mid" and their
+ * original type is written into the general note rather than being lost.
+ */
+export function migrateMarkerTypes(layouts: TrackLayout[]): TrackLayout[] {
+  return layouts.map((layout) => {
+    let changed = false;
+    const markers = layout.markers.map((marker) => {
+      const legacy = legacyMarkerTypes[marker.type];
+      if (!legacy) return marker;
+      changed = true;
+      const generalNote = legacy.keepsMeaning
+        ? marker.generalNote
+        : [`Previously marked as ${marker.type}.`, marker.generalNote].filter(Boolean).join("\n");
+      return { ...marker, type: legacy.type, generalNote };
+    });
+    return changed ? { ...layout, markers } : layout;
+  });
+}
+
 export async function loadTrackMapData(): Promise<TrackMapData> {
   if (typeof indexedDB === "undefined") return emptyTrackMapData();
   const database = await openKartDatabase();
@@ -32,7 +53,7 @@ export async function loadTrackMapData(): Promise<TrackMapData> {
       readAll<MapAsset>(transaction, ASSETS_STORE),
     ]);
     lastAssetSignature = assetSignature(assets);
-    return { version: 1, tracks, layouts, visits, assets };
+    return { version: 1, tracks, layouts: migrateMarkerTypes(layouts), visits, assets };
   } finally {
     database.close();
   }

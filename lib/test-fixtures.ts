@@ -68,7 +68,7 @@ export function makeMarker(overrides: Partial<TrackMarker> = {}): TrackMarker {
     y: 0.63,
     order: 1,
     label: "T1",
-    type: "Braking",
+    type: "Brake",
     shortInstruction: "Brake at the 50 board",
     generalNote: "Late apex works",
     dryNote: "",

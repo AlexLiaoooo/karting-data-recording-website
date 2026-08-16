@@ -290,8 +290,8 @@ The form may use collapsible sections, but frequently entered tyre values should
 - Existing PF International Full Layout records without a map are backfilled with the built-in schematic on app startup; existing custom map assets are never overwritten.
 - Built-in map attribution and the ODbL licence link are shown beneath the map.
 - Zoom and pan on mobile and desktop.
-- Corner, Braking, Turn-in, Apex, Exit, Hazard, Overtaking and Focus markers.
-- Permanent general/dry/wet reference notes.
+- In, Mid, Out, Brake and Gas markers: the phases of a corner plus the two pedal inputs.
+- Permanent general/dry/wet reference notes, and general notes for the Layout as a whole.
 - Optional saved Layout on each Event.
 - Session-specific observations that never overwrite permanent notes.
 
@@ -430,6 +430,19 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v1.5 — 2026-08-16
+
+- Reduced the marker types to In, Mid, Out, Brake and Gas: the phases of a corner plus the
+  two pedal inputs. The previous eight mixed corner phases with things that were not phases
+  at all, such as Hazard and Overtaking.
+- Markers already stored under the old types migrate on load and on backup restore. Turn-in,
+  Apex, Exit and Braking map straight across; Corner, Hazard, Overtaking and Focus have no
+  equivalent, so they become Mid and their original type is written into the marker's general
+  note rather than being lost.
+- Added general notes to the Layout, at the foot of the map page, for anything about the
+  circuit as a whole rather than about one marker. Session track summaries are unchanged and
+  remain separate.
 
 ### Implemented prototype v1.4 — 2026-08-16
 

@@ -16,14 +16,11 @@ export type SessionContext = {
 export type TrackMapChange = (updater: (current: TrackMapData) => TrackMapData) => void;
 
 export const markerShortNames: Record<TrackMarkerType, string> = {
-  Corner: "C",
-  Braking: "B",
-  "Turn-in": "T",
-  Apex: "A",
-  Exit: "E",
-  Hazard: "!",
-  Overtaking: "O",
-  Focus: "F",
+  In: "I",
+  Mid: "M",
+  Out: "O",
+  Brake: "B",
+  Gas: "G",
 };
 
 export function now() {

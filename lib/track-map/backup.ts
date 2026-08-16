@@ -1,5 +1,6 @@
 import type { AppData } from "@/lib/types";
 import { normalizeAppData } from "@/lib/database";
+import { migrateMarkerTypes } from "./database";
 import { emptyTrackMapData, MapAsset, TrackMapData } from "./types";
 
 type PortableMapAsset = Omit<MapAsset, "blob"> & { dataUrl: string };
@@ -82,7 +83,9 @@ export function parseFullBackup(value: unknown): ParsedBackup | null {
       trackMapData: {
         version: 1,
         tracks: trackMap.tracks,
-        layouts: trackMap.layouts,
+        // A backup taken before the marker types were reduced restores through the same
+        // migration as stored data, so an old export stays usable.
+        layouts: migrateMarkerTypes(trackMap.layouts),
         visits: trackMap.visits,
         assets,
       },
