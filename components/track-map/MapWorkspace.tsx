@@ -264,7 +264,6 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
               onChange={(event) => updateLayout((current) => ({ ...current, notes: event.target.value, updatedAt: now() }))}
             />
           </label>
-          <p className="auto-save-note"><Check /> Kept with this Layout, not with a single marker</p>
         </section>
       )}
 
