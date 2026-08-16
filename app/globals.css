@@ -1178,6 +1178,40 @@ h2 {
   width: 100%;
 }
 
+/* Corner labels are reference furniture, not records: quieter than a marker, and stacked
+   below them so a marker placed on a corner is never hidden behind its label. */
+.map-corner {
+  align-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.6rem;
+  font-weight: 700;
+  height: 23px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 23px;
+  opacity: 0.92;
+  padding: 0 4px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.map-corner:disabled {
+  cursor: default;
+}
+
+.map-corner:not(:disabled):hover,
+.map-corner:not(:disabled):focus-visible {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+  opacity: 1;
+}
+
 .map-marker {
   align-items: center;
   background: var(--blue);

@@ -8,6 +8,17 @@ export type TrackMarkerType =
   | "Overtaking"
   | "Focus";
 
+/**
+ * A named corner on a layout, in lap order. Positions are normalised to the map asset box,
+ * the same convention as TrackMarker, so both survive the image being displayed at any size.
+ */
+export type TrackCorner = {
+  number: number;
+  label: string;
+  x: number;
+  y: number;
+};
+
 export type Track = {
   id: string;
   name: string;
@@ -42,6 +53,8 @@ export type TrackLayout = {
   sourceUrl?: string;
   /** Set only while the layout carries an app-supplied map; see lib/track-map/built-in-map.ts. */
   builtInMapVersion?: string;
+  /** Lap-ordered corners used for labelling the map and placing markers by corner. */
+  corners?: TrackCorner[];
   markers: TrackMarker[];
   createdAt: string;
   updatedAt: string;

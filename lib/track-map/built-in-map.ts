@@ -1,4 +1,21 @@
-import type { MapAsset, TrackLayout, TrackMapData } from "./types";
+import type { MapAsset, TrackCorner, TrackLayout, TrackMapData } from "./types";
+
+// Derived by scripts/derive-corners.mjs from the shipped SVG's own path geometry. Re-run that
+// script if the artwork changes; do not hand-edit. Lap order starts at the Sector 1 line.
+export const BUILT_IN_PFI_CORNERS: TrackCorner[] = [
+  { number: 1, label: "T1", x: 0.0808, y: 0.7548 },
+  { number: 2, label: "T2", x: 0.3283, y: 0.6857 },
+  { number: 3, label: "T3", x: 0.1478, y: 0.6519 },
+  { number: 4, label: "T4", x: 0.4859, y: 0.3213 },
+  { number: 5, label: "T5", x: 0.3403, y: 0.5312 },
+  { number: 6, label: "T6", x: 0.5839, y: 0.3177 },
+  { number: 7, label: "T7", x: 0.4791, y: 0.2749 },
+  { number: 8, label: "T8", x: 0.645, y: 0.0836 },
+  { number: 9, label: "T9", x: 0.8326, y: 0.147 },
+  { number: 10, label: "T10", x: 0.6883, y: 0.1238 },
+  { number: 11, label: "T11", x: 0.6034, y: 0.2136 },
+  { number: 12, label: "T12", x: 0.7161, y: 0.2653 },
+];
 
 export const BUILT_IN_PFI_MAP_URL = "/maps/pfi-international-owner-driver.svg";
 export const BUILT_IN_PFI_ATTRIBUTION = "Geometry derived from OpenStreetMap contributors · ODbL 1.0";
@@ -9,7 +26,7 @@ export const BUILT_IN_PFI_SOURCE_URL = "https://www.openstreetmap.org/copyright"
  * time a track uses it, so without a version stamp a corrected map never reaches a device
  * that already stored the old one.
  */
-export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-dark-mode-and-title-removed";
+export const BUILT_IN_PFI_MAP_VERSION = "2026-08-16-corner-labels";
 
 /**
  * Loads a map that ships with the app. Width and height come from the file's own viewBox
@@ -47,6 +64,7 @@ export function builtInPfiLayoutFields(asset: MapAsset) {
     sourceAttribution: BUILT_IN_PFI_ATTRIBUTION,
     sourceUrl: BUILT_IN_PFI_SOURCE_URL,
     builtInMapVersion: BUILT_IN_PFI_MAP_VERSION,
+    corners: BUILT_IN_PFI_CORNERS,
   };
 }
 

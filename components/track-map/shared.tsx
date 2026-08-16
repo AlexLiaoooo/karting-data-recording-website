@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, MapPinned, Moon, Sun } from "lucide-react";
+import { ArrowLeft, MapPinned, Moon, Sun, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useEffect } from "react";
 import type { MapAsset, TrackMapData, TrackMarkerType } from "@/lib/track-map/types";
 
@@ -75,6 +75,28 @@ export function MissingRecord({ onBack, text = "This track or layout may have be
       <FeatureHeader title="Track maps" onBack={onBack} />
       <div className="page-content"><EmptyMapState title="Map unavailable" text={text} /></div>
     </>
+  );
+}
+
+/**
+ * Matches the confirm dialog used for Events, Sessions and Runs. Track Map deletions used
+ * window.confirm, which neither states what else is removed nor styles like the rest of the
+ * app, and native dialogs are the least reliable part of an installed PWA.
+ */
+export function ConfirmDeleteDialog({ title, detail, onCancel, onConfirm }: { title: string; detail?: string; onCancel: () => void; onConfirm: () => void }) {
+  useModalViewport(true);
+  return (
+    <div className="modal-backdrop modal-centered">
+      <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="track-map-delete-title">
+        <span className="danger-icon"><Trash2 /></span>
+        <h2 id="track-map-delete-title">{title}</h2>
+        <p>{detail ? `${detail} ` : ""}This action cannot be undone.</p>
+        <div className="action-stack">
+          <button className="button button-danger button-block" onClick={onConfirm}>Delete permanently</button>
+          <button className="button button-secondary button-block" onClick={onCancel}>Cancel</button>
+        </div>
+      </section>
+    </div>
   );
 }
 

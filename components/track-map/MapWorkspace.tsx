@@ -7,6 +7,7 @@ import {
   markerTypes,
   MarkerObservation,
   Track,
+  TrackCorner,
   TrackLayout,
   TrackMapData,
   TrackMarker,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/track-map/types";
 import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
-import { EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
+import { ConfirmDeleteDialog, EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
 
 type MapWorkspaceProps = {
   data: TrackMapData;
@@ -32,8 +33,10 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
   const [addType, setAddType] = useState<TrackMarkerType | null>(null);
   const [moveMarkerId, setMoveMarkerId] = useState<string | null>(null);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TrackMarker | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const corners = layout.corners ?? [];
   const asset = data.assets.find((candidate) => candidate.id === layout.mapAssetId);
   const selectedMarker = layout.markers.find((marker) => marker.id === selectedMarkerId);
   const visit = session ? data.visits.find((candidate) => candidate.layoutId === layout.id && candidate.sessionId === session.sessionId) : undefined;
@@ -77,15 +80,31 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
       return;
     }
     if (!addType) return;
+    addMarker(x, y, addType === "Corner" ? `T${layout.markers.filter((candidate) => candidate.type === "Corner").length + 1}` : addType);
+  }
+
+  function addMarker(x: number, y: number, label: string) {
+    if (!addType) return;
     const marker: TrackMarker = {
-      id: crypto.randomUUID(), x, y, order: layout.markers.length + 1,
-      label: addType === "Corner" ? `T${layout.markers.filter((candidate) => candidate.type === "Corner").length + 1}` : addType,
+      id: crypto.randomUUID(), x, y, order: layout.markers.length + 1, label,
       type: addType, shortInstruction: "", generalNote: "", dryNote: "", wetNote: "", tags: [], updatedAt: now(),
     };
     updateLayout((current) => ({ ...current, markers: [...current.markers, marker], updatedAt: now() }));
     setSelectedMarkerId(marker.id);
     setAddType(null);
-    notify(`${marker.type} marker added`);
+    notify(`${marker.type} marker added${label ? ` at ${label}` : ""}`);
+  }
+
+  /** Corner labels double as placement targets, so a marker can be put on T7 without aiming. */
+  function selectCorner(corner: TrackCorner) {
+    if (session) return;
+    if (moveMarkerId) {
+      updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x: corner.x, y: corner.y, updatedAt: now() } : marker) }));
+      setMoveMarkerId(null);
+      notify(`Marker moved to ${corner.label}`);
+      return;
+    }
+    if (addType) addMarker(corner.x, corner.y, corner.label);
   }
 
   function updateMarker(patch: Partial<TrackMarker>) {
@@ -97,15 +116,19 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     }));
   }
 
-  function deleteMarker() {
-    if (!selectedMarker || !window.confirm(`Delete marker ${selectedMarker.label || selectedMarker.type}?`)) return;
+  function deleteMarker(marker: TrackMarker) {
     onChange((current) => ({
       ...current,
-      layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, markers: candidate.markers.filter((marker) => marker.id !== selectedMarker.id), updatedAt: now() } : candidate),
-      visits: current.visits.map((candidate) => candidate.layoutId === layout.id ? { ...candidate, observations: candidate.observations.filter((item) => item.markerId !== selectedMarker.id), updatedAt: now() } : candidate),
+      layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, markers: candidate.markers.filter((item) => item.id !== marker.id), updatedAt: now() } : candidate),
+      visits: current.visits.map((candidate) => candidate.layoutId === layout.id ? { ...candidate, observations: candidate.observations.filter((item) => item.markerId !== marker.id), updatedAt: now() } : candidate),
     }));
+    setPendingDelete(null);
     setSelectedMarkerId(null);
     notify("Marker deleted");
+  }
+
+  function observationCount(marker: TrackMarker) {
+    return data.visits.reduce((total, visit) => total + visit.observations.filter((item) => item.markerId === marker.id).length, 0);
   }
 
   function updateObservation(patch: Partial<Pick<MarkerObservation, "note" | "result">>) {
@@ -158,8 +181,28 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
         <>
           {editMode && (
             <div className="marker-add-bar">
-              <span>{moveMarkerId ? "Tap the new marker position" : addType ? `Tap map to place ${addType}` : "Add marker:"}</span>
+              <span>
+                {moveMarkerId
+                  ? corners.length ? "Choose a corner, or tap the new position" : "Tap the new marker position"
+                  : addType
+                    ? corners.length ? `Choose a corner, or tap the map` : `Tap map to place ${addType}`
+                    : "Add marker:"}
+              </span>
               {!moveMarkerId && <select className="select" value={addType ?? ""} onChange={(event) => setAddType((event.target.value || null) as TrackMarkerType | null)}><option value="">Choose type</option>{markerTypes.map((type) => <option key={type}>{type}</option>)}</select>}
+              {(addType || moveMarkerId) && corners.length > 0 && (
+                <select
+                  className="select"
+                  value=""
+                  aria-label="Place at corner"
+                  onChange={(event) => {
+                    const corner = corners.find((candidate) => candidate.label === event.target.value);
+                    if (corner) selectCorner(corner);
+                  }}
+                >
+                  <option value="">At corner…</option>
+                  {corners.map((corner) => <option key={corner.number}>{corner.label}</option>)}
+                </select>
+              )}
               {(addType || moveMarkerId) && <button className="icon-button" aria-label="Cancel marker placement" onClick={() => { setAddType(null); setMoveMarkerId(null); }}><X /></button>}
             </div>
           )}
@@ -167,12 +210,14 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
             asset={asset}
             alt={`${track.name} ${layout.name} map`}
             markers={layout.markers}
+            corners={corners}
             selectedMarkerId={selectedMarkerId}
             zoom={zoom}
             onZoomChange={setZoom}
             placing={Boolean(addType || moveMarkerId)}
             onMapClick={mapClicked}
             onSelectMarker={setSelectedMarkerId}
+            onSelectCorner={!session && (addType || moveMarkerId) ? selectCorner : undefined}
           />
           {!session && <div className="map-image-actions"><button className="text-button" onClick={() => fileRef.current?.click()}><Upload /> Replace map image</button><span>{Math.round(asset.size / 1024)} KB</span></div>}
           {layout.sourceAttribution && <p className="map-attribution">{layout.sourceAttribution}{layout.sourceUrl && <> · <a href={layout.sourceUrl} target="_blank" rel="noreferrer">View licence</a></>}</p>}
@@ -191,7 +236,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           conditionNote={conditionNote}
           onClose={() => setSelectedMarkerId(null)}
           onUpdateMarker={updateMarker}
-          onDeleteMarker={deleteMarker}
+          onDeleteMarker={() => setPendingDelete(selectedMarker)}
           onMove={() => { setMoveMarkerId(selectedMarker.id); setAddType(null); }}
           onUpdateObservation={updateObservation}
         />
@@ -206,6 +251,17 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           <label className="field"><span>Overall Session track summary</span><textarea className="textarea" placeholder="Overall grip, changing conditions, key lesson…" value={visit?.summary ?? ""} onChange={(event) => updateSummary(event.target.value)} /></label>
           <p className="auto-save-note"><Check /> Saved separately from permanent Track notes</p>
         </section>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDeleteDialog
+          title={`Delete marker ${pendingDelete.label || pendingDelete.type}?`}
+          detail={observationCount(pendingDelete) > 0
+            ? `This also deletes ${observationCount(pendingDelete)} Session observation${observationCount(pendingDelete) === 1 ? "" : "s"} recorded against it.`
+            : undefined}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => deleteMarker(pendingDelete)}
+        />
       )}
     </div>
   );

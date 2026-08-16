@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BUILT_IN_PFI_MAP_VERSION, loadBuiltInMapAsset, refreshBuiltInMaps } from "./built-in-map";
+import { BUILT_IN_PFI_CORNERS, BUILT_IN_PFI_MAP_VERSION, loadBuiltInMapAsset, refreshBuiltInMaps } from "./built-in-map";
 import { makeLayout, makeMapAsset, makeTrack, makeTrackMapData } from "../test-fixtures";
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 20 760 1000"><rect/></svg>';
@@ -26,6 +26,31 @@ describe("loadBuiltInMapAsset", () => {
   it("rejects a missing file", async () => {
     stubFetch(null);
     await expect(loadBuiltInMapAsset()).rejects.toThrow(/unavailable/);
+  });
+});
+
+describe("BUILT_IN_PFI_CORNERS", () => {
+  it("numbers corners consecutively in lap order", () => {
+    expect(BUILT_IN_PFI_CORNERS.map((corner) => corner.number)).toEqual(BUILT_IN_PFI_CORNERS.map((_, index) => index + 1));
+    expect(BUILT_IN_PFI_CORNERS.map((corner) => corner.label)).toEqual(BUILT_IN_PFI_CORNERS.map((_, index) => `T${index + 1}`));
+  });
+
+  it("keeps every corner normalised inside the map, like markers", () => {
+    for (const corner of BUILT_IN_PFI_CORNERS) {
+      expect(corner.x, corner.label).toBeGreaterThan(0);
+      expect(corner.x, corner.label).toBeLessThan(1);
+      expect(corner.y, corner.label).toBeGreaterThan(0);
+      expect(corner.y, corner.label).toBeLessThan(1);
+    }
+  });
+
+  it("has no two corners on top of each other", () => {
+    for (const a of BUILT_IN_PFI_CORNERS) {
+      for (const b of BUILT_IN_PFI_CORNERS) {
+        if (a.number >= b.number) continue;
+        expect(Math.hypot(a.x - b.x, a.y - b.y), `${a.label} vs ${b.label}`).toBeGreaterThan(0.02);
+      }
+    }
   });
 });
 
@@ -62,6 +87,13 @@ describe("refreshBuiltInMaps", () => {
     const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM" })] });
 
     expect((await refreshBuiltInMaps(data)).layouts[0].builtInMapVersion).toBe(BUILT_IN_PFI_MAP_VERSION);
+  });
+
+  it("backfills corner labels onto a layout that predates them", async () => {
+    stubFetch();
+    const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM", corners: undefined })] });
+
+    expect((await refreshBuiltInMaps(data)).layouts[0].corners).toEqual(BUILT_IN_PFI_CORNERS);
   });
 
   it("never touches a map the user uploaded", async () => {

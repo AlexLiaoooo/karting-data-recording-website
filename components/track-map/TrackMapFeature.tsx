@@ -7,7 +7,7 @@ import { builtInPfiLayoutFields, loadBuiltInMapAsset } from "@/lib/track-map/bui
 import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
 import { TrackDetailView, TrackLibraryView } from "./TrackLibrary";
-import { FeatureHeader, MissingRecord, now, SessionContext, TrackMapChange, useModalViewport } from "./shared";
+import { ConfirmDeleteDialog, FeatureHeader, MissingRecord, now, SessionContext, TrackMapChange, useModalViewport } from "./shared";
 
 export type { SessionContext } from "./shared";
 
@@ -30,13 +30,44 @@ type EditorState =
   | { kind: "layout"; trackId: string; layout?: TrackLayout }
   | null;
 
+type PendingDelete =
+  | { kind: "track"; track: Track }
+  | { kind: "layout"; layout: TrackLayout }
+  | null;
+
 export function TrackMapFeature({ data, mode, session, onChange, onBack, notify }: TrackMapFeatureProps) {
   const [view, setView] = useState<LibraryView>(() => mode === "session" && session?.layoutId
     ? { name: "workspace", layoutId: session.layoutId }
     : { name: "library" });
   const [editor, setEditor] = useState<EditorState>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [search, setSearch] = useState("");
   useModalViewport(Boolean(editor));
+
+  function deleteDialog() {
+    if (!pendingDelete) return null;
+    if (pendingDelete.kind === "track") {
+      const layouts = data.layouts.filter((layout) => layout.trackId === pendingDelete.track.id);
+      const markers = layouts.reduce((total, layout) => total + layout.markers.length, 0);
+      return (
+        <ConfirmDeleteDialog
+          title={`Delete ${pendingDelete.track.name}?`}
+          detail={`This also deletes ${layouts.length} layout${layouts.length === 1 ? "" : "s"}, ${markers} marker${markers === 1 ? "" : "s"}, their map images and every Session observation recorded on them.`}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => deleteTrack(pendingDelete.track)}
+        />
+      );
+    }
+    const visits = data.visits.filter((visit) => visit.layoutId === pendingDelete.layout.id).length;
+    return (
+      <ConfirmDeleteDialog
+        title={`Delete ${pendingDelete.layout.name}?`}
+        detail={`This also deletes its map image, ${pendingDelete.layout.markers.length} marker${pendingDelete.layout.markers.length === 1 ? "" : "s"} and ${visits} Session overlay${visits === 1 ? "" : "s"}.`}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => deleteLayout(pendingDelete.layout)}
+      />
+    );
+  }
 
   const openTestTrack = async () => {
     const timestamp = now();
@@ -117,7 +148,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
   }
 
   function deleteTrack(track: Track) {
-    if (!window.confirm(`Delete ${track.name}, all its layouts, map images and track notes? This cannot be undone.`)) return;
+    setPendingDelete(null);
     onChange((current) => {
       const layoutIds = current.layouts.filter((layout) => layout.trackId === track.id).map((layout) => layout.id);
       const assetIds = current.layouts.filter((layout) => layout.trackId === track.id).map((layout) => layout.mapAssetId).filter(Boolean);
@@ -134,7 +165,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
   }
 
   function deleteLayout(layout: TrackLayout) {
-    if (!window.confirm(`Delete ${layout.name}, its map image, markers and Session observations? This cannot be undone.`)) return;
+    setPendingDelete(null);
     onChange((current) => ({
       ...current,
       layouts: current.layouts.filter((candidate) => candidate.id !== layout.id),
@@ -172,12 +203,13 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
           layouts={data.layouts.filter((layout) => layout.trackId === track.id)}
           onBack={() => setView({ name: "library" })}
           onEditTrack={() => setEditor({ kind: "track", track })}
-          onDeleteTrack={() => deleteTrack(track)}
+          onDeleteTrack={() => setPendingDelete({ kind: "track", track })}
           onNewLayout={() => setEditor({ kind: "layout", trackId: track.id })}
           onOpenLayout={(layoutId) => setView({ name: "workspace", layoutId })}
         />
         {editor?.kind === "track" && <TrackEditor track={editor.track} onClose={() => setEditor(null)} onSave={saveTrack} />}
         {editor?.kind === "layout" && <LayoutEditor layout={editor.layout} onClose={() => setEditor(null)} onSave={saveLayout} />}
+        {deleteDialog()}
       </>
     );
   }
@@ -197,12 +229,13 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
         actions={mode === "library" ? (
           <>
             <button className="icon-button" aria-label="Edit layout" onClick={() => setEditor({ kind: "layout", trackId: track.id, layout })}><Pencil /></button>
-            <button className="icon-button" aria-label="Delete layout" onClick={() => deleteLayout(layout)}><Trash2 /></button>
+            <button className="icon-button" aria-label="Delete layout" onClick={() => setPendingDelete({ kind: "layout", layout })}><Trash2 /></button>
           </>
         ) : undefined}
       />
       <MapWorkspace data={data} layout={layout} track={track} session={mode === "session" ? session : undefined} onChange={onChange} notify={notify} />
       {editor?.kind === "layout" && <LayoutEditor layout={editor.layout} onClose={() => setEditor(null)} onSave={saveLayout} />}
+      {deleteDialog()}
     </>
   );
 }

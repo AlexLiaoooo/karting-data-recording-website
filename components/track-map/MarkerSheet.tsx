@@ -68,6 +68,12 @@ export function MarkerSheet({
           {marker.dryNote && <div className="reference-note"><strong>Dry</strong><p>{marker.dryNote}</p></div>}
           {marker.wetNote && <div className="reference-note"><strong>Wet</strong><p>{marker.wetNote}</p></div>}
           {!hasReferenceNotes && <p className="help-text">No notes on this marker yet. Switch to Edit map to add them.</p>}
+          {/* Delete is reachable here as well as in Edit map: a marker you want gone should
+              not require finding edit mode first. Moving still requires Edit map, so nothing
+              shifts by accident at the circuit. */}
+          <div className="marker-actions">
+            <button className="button button-secondary danger-text" onClick={onDeleteMarker}><Trash2 /> Delete marker</button>
+          </div>
         </div>
       )}
     </section>

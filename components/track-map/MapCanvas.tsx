@@ -2,7 +2,7 @@
 
 import { Minus, ZoomIn } from "lucide-react";
 import { MouseEvent } from "react";
-import type { MapAsset, TrackMarker } from "@/lib/track-map/types";
+import type { MapAsset, TrackCorner, TrackMarker } from "@/lib/track-map/types";
 import { MapImage, markerClass, markerShortNames } from "./shared";
 
 const MIN_ZOOM = 1;
@@ -13,24 +13,28 @@ type MapCanvasProps = {
   asset: MapAsset;
   alt: string;
   markers: TrackMarker[];
+  corners: TrackCorner[];
   selectedMarkerId: string | null;
   zoom: number;
   onZoomChange: (zoom: number) => void;
   placing: boolean;
   onMapClick: (event: MouseEvent<HTMLDivElement>) => void;
   onSelectMarker: (markerId: string) => void;
+  onSelectCorner?: (corner: TrackCorner) => void;
 };
 
 export function MapCanvas({
   asset,
   alt,
   markers,
+  corners,
   selectedMarkerId,
   zoom,
   onZoomChange,
   placing,
   onMapClick,
   onSelectMarker,
+  onSelectCorner,
 }: MapCanvasProps) {
   return (
     <>
@@ -38,11 +42,23 @@ export function MapCanvas({
         <button className="icon-button map-control-button" aria-label="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => onZoomChange(Math.max(MIN_ZOOM, zoom - ZOOM_STEP))}><Minus /></button>
         <span>{Math.round(zoom * 100)}%</span>
         <button className="icon-button map-control-button" aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP))}><ZoomIn /></button>
-        <button className="text-button map-reset" onClick={() => onZoomChange(MIN_ZOOM)}>Reset</button>
+        <button className="text-button map-reset" disabled={zoom === MIN_ZOOM} onClick={() => onZoomChange(MIN_ZOOM)}>Reset zoom</button>
       </div>
       <div className={`track-map-viewport ${placing ? "placing-marker" : ""}`}>
         <div className="track-map-stage" style={{ width: `${zoom * 100}%` }} onClick={onMapClick}>
           <MapImage className="track-map-image" asset={asset} alt={alt} />
+          {corners.map((corner) => (
+            <button
+              className="map-corner"
+              style={{ left: `${corner.x * 100}%`, top: `${corner.y * 100}%` }}
+              key={corner.number}
+              type="button"
+              disabled={!onSelectCorner}
+              aria-label={onSelectCorner ? `Place marker at ${corner.label}` : corner.label}
+              title={corner.label}
+              onClick={(event) => { event.stopPropagation(); onSelectCorner?.(corner); }}
+            >{corner.label}</button>
+          ))}
           {markers.map((marker) => (
             <button
               className={`map-marker ${markerClass(marker.type)} ${selectedMarkerId === marker.id ? "selected" : ""}`}

@@ -431,6 +431,23 @@ Possible later phases include:
 
 ## 15. Change log
 
+### Implemented prototype v1.2 — 2026-08-16
+
+- Added lap-ordered corner labels (T1–T12) to the built-in PF International layout, derived
+  from the map's own path geometry by `scripts/derive-corners.mjs` so the labels cannot drift
+  away from the artwork. Corners are stored on the Layout, so they are backed up and restored
+  with everything else.
+- A marker can now be placed on a named corner, from a picker or by tapping the corner label,
+  and takes that corner's name. Tapping anywhere on the map still works, for bumps,
+  overtaking spots and anything else between corners. Moving a marker accepts a corner too.
+- Marker deletion is now reachable from the normal Reference view, not only from Edit map.
+  Moving a marker still requires Edit map, so nothing shifts by accident at the circuit.
+- Replaced `window.confirm` for marker, Layout and Track deletion with the same confirm
+  dialog used for Events, Sessions and Runs. It states what else will be removed, which the
+  native dialog could not, and native dialogs are the least reliable part of an installed PWA.
+- Renamed the map's `Reset` control to `Reset zoom` and disabled it at 100%. It only ever
+  reset zoom, but read as "reset the map" and appeared inert when already at 100%.
+
 ### Implemented prototype v1.1 — 2026-08-16
 
 - Reframed the built-in PF International map from a 1200x900 landscape canvas to a cropped
