@@ -241,7 +241,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           onUpdateObservation={updateObservation}
         />
       ) : layout.markers.length > 0 ? (
-        <p className="map-help"><Crosshair /> Tap a marker to read or edit its notes. Zoom in, then drag the map area to pan.</p>
+        <p className="map-help"><Crosshair /> Tap a marker to read or edit its notes. Pinch to zoom, or hold Ctrl and scroll on a computer, then drag the map to pan.</p>
       ) : asset ? (
         <p className="map-help"><BookOpen /> Switch to Edit map, choose a marker type, then tap its position on the circuit.</p>
       ) : null}

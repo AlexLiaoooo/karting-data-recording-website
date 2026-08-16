@@ -289,7 +289,9 @@ The form may use collapsible sections, but frequently entered tyre values should
 - PF International Full Layout includes a generated OpenStreetMap-based schematic; other Layouts can use a user-supplied, locally optimised map image.
 - Existing PF International Full Layout records without a map are backfilled with the built-in schematic on app startup; existing custom map assets are never overwritten.
 - Built-in map attribution and the ODbL licence link are shown beneath the map.
-- Zoom and pan on mobile and desktop.
+- Zoom and pan on mobile and desktop: pinch to zoom on touch, ctrl or cmd with the wheel on a
+  pointer device, plus the on-screen zoom controls. The point under the fingers or cursor
+  stays put as the zoom changes.
 - In, Mid, Out, Brake and Gas markers: the phases of a corner plus the two pedal inputs.
 - Permanent general/dry/wet reference notes, and general notes for the Layout as a whole.
 - Optional saved Layout on each Event.
@@ -430,6 +432,18 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v1.6 — 2026-08-16
+
+- Added pinch to zoom on touch, and ctrl or cmd with the wheel on a pointer device. Plain
+  scrolling still scrolls the page, matching what browsers and map tools already do. The point
+  under the fingers or cursor is held in place as the zoom changes, so the map does not drift
+  away mid-gesture. Both gestures call preventDefault, so their listeners are attached
+  directly rather than through React props, which are passive.
+- A marker can now be placed anywhere on the map. Corner labels and existing markers stop
+  click propagation, so while placing they were dead zones scattered across the map; they are
+  now inert until placement finishes. Placing on a named corner is still available through the
+  "At corner" picker.
 
 ### Implemented prototype v1.5 — 2026-08-16
 

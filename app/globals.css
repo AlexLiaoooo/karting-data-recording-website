@@ -1164,6 +1164,14 @@ h2 {
   cursor: crosshair;
 }
 
+/* While placing, the whole map must be tappable. Corner labels and existing markers stop
+   click propagation, so left interactive they would be dead zones across the map. Placing on
+   a named corner is still available through the "At corner" picker. */
+.track-map-viewport.placing-marker .map-corner,
+.track-map-viewport.placing-marker .map-marker {
+  pointer-events: none;
+}
+
 .track-map-stage {
   line-height: 0;
   min-width: 100%;

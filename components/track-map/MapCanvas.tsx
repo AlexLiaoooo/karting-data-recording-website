@@ -1,9 +1,10 @@
 "use client";
 
 import { Minus, ZoomIn } from "lucide-react";
-import { MouseEvent } from "react";
+import { MouseEvent, useRef } from "react";
 import type { MapAsset, TrackCorner, TrackMarker } from "@/lib/track-map/types";
 import { MapImage, markerClass, markerShortNames } from "./shared";
+import { useMapZoom } from "./use-map-zoom";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
@@ -36,6 +37,9 @@ export function MapCanvas({
   onSelectMarker,
   onSelectCorner,
 }: MapCanvasProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  useMapZoom(viewportRef, { zoom, min: MIN_ZOOM, max: MAX_ZOOM, onZoomChange });
+
   return (
     <>
       <div className="map-controls">
@@ -44,7 +48,7 @@ export function MapCanvas({
         <button className="icon-button map-control-button" aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP))}><ZoomIn /></button>
         <button className="text-button map-reset" disabled={zoom === MIN_ZOOM} onClick={() => onZoomChange(MIN_ZOOM)}>Reset zoom</button>
       </div>
-      <div className={`track-map-viewport ${placing ? "placing-marker" : ""}`}>
+      <div ref={viewportRef} className={`track-map-viewport ${placing ? "placing-marker" : ""}`}>
         <div className="track-map-stage" style={{ width: `${zoom * 100}%` }} onClick={onMapClick}>
           <MapImage className="track-map-image" asset={asset} alt={alt} />
           {corners.map((corner) => (
