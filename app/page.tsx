@@ -696,12 +696,12 @@ export default function HomePage() {
         />
         <div className="page-content">
           <article className="summary-card">
-            <div className="card-head"><div><p className="eyebrow">{t("EVENT CONDITIONS")}</p><h1>{selectedEvent.weather || selectedEvent.condition}</h1></div><span className="badge">{selectedEvent.type}</span></div>
+            <div className="card-head"><div><p className="eyebrow">{t("EVENT CONDITIONS")}</p><h1>{selectedEvent.weather || t(selectedEvent.condition)}</h1></div><span className="badge">{t(selectedEvent.type)}</span></div>
             <p className="muted">{selectedEvent.track || t("Track not set")}</p>
             <div className="stat-grid">
               <Stat label={t("Ambient")} value={selectedEvent.ambientTemperature ? `${selectedEvent.ambientTemperature} °C` : "—"} />
               <Stat label={t("Track")} value={selectedEvent.trackTemperature ? `${selectedEvent.trackTemperature} °C` : "—"} />
-              <Stat label={t("Surface")} value={selectedEvent.condition} />
+              <Stat label={t("Surface")} value={t(selectedEvent.condition)} />
             </div>
           </article>
           <section className="list-section">
@@ -740,7 +740,7 @@ export default function HomePage() {
         />
         <div className="page-content">
           <article className="summary-card">
-            <div className="card-head"><div><p className="eyebrow">{t("SESSION SUMMARY")}</p><h1>{selectedSession.runs.length} recorded runs</h1></div><span className="badge">{selectedSession.type}</span></div>
+            <div className="card-head"><div><p className="eyebrow">{t("SESSION SUMMARY")}</p><h1>{t("{count} recorded runs", { count: selectedSession.runs.length })}</h1></div><span className="badge">{t(selectedSession.type)}</span></div>
             <div className="stat-grid">
               <Stat label={t("Best")} value={bestLap(selectedSession)} />
               <Stat label={t("Laps")} value={String(totalLaps(selectedSession))} />
@@ -1378,9 +1378,9 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
     {
       title: t("Driver feedback"),
       values: [
-        value(t("Balance"), runA.balance, runB.balance),
-        value(t("Grip"), runA.grip, runB.grip),
-        value(t("Braking"), runA.braking, runB.braking),
+        value(t("Balance"), t(runA.balance), t(runB.balance)),
+        value(t("Grip"), t(runA.grip), t(runB.grip)),
+        value(t("Braking"), t(runA.braking), t(runB.braking)),
         value(t("Corner entry"), runA.cornerEntry, runB.cornerEntry),
         value(t("Mid-corner"), runA.midCorner, runB.midCorner),
         value(t("Corner exit / traction"), runA.cornerExit, runB.cornerExit),

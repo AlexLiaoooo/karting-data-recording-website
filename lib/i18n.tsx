@@ -78,6 +78,7 @@ const zh: Record<string, string> = {
 
   // Session screen
   "SESSION SUMMARY": "SESSION 摘要",
+  "{count} recorded runs": "已记录 {count} 个 Runs",
   Best: "最快圈",
   Laps: "圈数",
   Start: "开始时间",
