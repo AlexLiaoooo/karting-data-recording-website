@@ -292,7 +292,8 @@ The form may use collapsible sections, but frequently entered tyre values should
 - Zoom and pan on mobile and desktop: pinch to zoom on touch, ctrl or cmd with the wheel on a
   pointer device, plus the on-screen zoom controls. The point under the fingers or cursor
   stays put as the zoom changes.
-- In, Mid, Out, Brake and Gas markers: the phases of a corner plus the two pedal inputs.
+- In, Mid, Out, Brake, Gas and Others markers: the phases of a corner, the two pedal inputs,
+  and a catch-all for anything that is neither.
 - Permanent general/dry/wet reference notes, and general notes for the Layout as a whole.
 - Optional saved Layout on each Event.
 - Session-specific observations that never overwrite permanent notes.
@@ -432,6 +433,44 @@ Possible later phases include:
 - AI-assisted observations and recommendations.
 
 ## 15. Change log
+
+### Implemented prototype v1.8 — 2026-08-17
+
+- Added Simplified Chinese for the whole interface, switched from a button in every top bar and
+  remembered in the browser. Roughly 300 strings.
+- Chinese follows the convention already set by `USER_GUIDE.zh-CN.md`: the structural nouns of
+  the data model — Event, Session, Run, Setup, Marker, Track, Layout — and product names such
+  as Track Library stay in English, with Chinese prose around them. That is how the owner
+  writes about the app; inventing Chinese equivalents would not match how he or the paddock
+  talk about it.
+- Dictionary keys are the English source strings, so anything untranslated falls back to
+  readable English rather than a missing-key placeholder.
+- Values written into records are never translated. `Full Layout` and `PF International` are
+  record values, and marker types and enumerations are stored in English with only their label
+  translated, so switching language cannot alter stored data or a CSV export.
+- Dates use the chosen language's locale.
+- The language is exposed through `useSyncExternalStore` with a server snapshot rather than read
+  in an effect. The prerendered markup has no access to localStorage, and reading it in an effect
+  would mean calling setState there, which cascades a render.
+- `lib/i18n.test.ts` reads the components and fails if any string passed to `t()` lacks a
+  translation, if a placeholder is lost in translation, or if a stored record value is ever
+  added to the dictionary.
+
+**Known gap:** `USER_GUIDE.zh-CN.md` quotes the English UI labels throughout, because it was
+written against an English-only interface. It is still accurate for English but no longer matches
+the Chinese interface it is written in.
+
+### Implemented prototype v1.7 — 2026-08-16
+
+- Added an "Others" marker type for anything that is neither a phase of a corner nor a pedal
+  input. It is marked `*` rather than a letter, since every letter would either collide with a
+  phase or read as one, and coloured outside the brake-to-throttle sequence.
+- Legacy Hazard, Overtaking and Focus markers now migrate to Others rather than Mid, which is
+  what they always meant. Their original type is still recorded in the marker's general note.
+  A marker migrated before this change stays as Mid; the note preserves the original either
+  way, so no second migration is warranted.
+- Removed the auto-save note under the Layout's general notes. It described where the notes
+  were kept rather than telling the user anything they needed at the circuit.
 
 ### Implemented prototype v1.6 — 2026-08-16
 

@@ -23,7 +23,8 @@ A mobile-first, local-first web application for recording competition karting ty
 - Editable Event and Session details.
 - One-tap ambient temperature lookup using the device location and Open-Meteo, with manual entry retained as a fallback.
 - Light and dark display modes with system-theme detection and a locally remembered manual toggle.
-- Integrated Track Map Notebook with reusable Tracks and Layouts, uploaded map images, pinch/ctrl-scroll zoom and pan, permanent In/Mid/Out/Brake/Gas marker notes, general notes per Layout, and Session-specific observations.
+- English and Simplified Chinese, switched from a button in every top bar and remembered in the browser. Dates follow the chosen language. Record values stay in English so data does not change with the interface.
+- Integrated Track Map Notebook with reusable Tracks and Layouts, uploaded map images, pinch/ctrl-scroll zoom and pan, permanent In/Mid/Out/Brake/Gas/Others marker notes, general notes per Layout, and Session-specific observations.
 - Fifteen numbered corner labels on the built-in circuit map, in lap order. A marker can be placed on a corner by name instead of aiming at the map, and can still be tapped anywhere for anything between corners.
 - Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
 - Full JSON backup/restore includes Track Maps, markers, Session observations and embedded map images.
@@ -63,6 +64,9 @@ data rather than looking wrong:
 - **Built-in maps** (`lib/track-map/built-in-map.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox.
+- **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string
+  passed to `t()` has a Chinese translation, that placeholders survive translation, and that
+  values written into records (`Full Layout`, `PF International`) are never translated.
 
 Image bytes are asserted through the backup path rather than the IndexedDB path: the
 `fake-indexeddb` test double cannot round-trip a Blob, so blob persistence in the database

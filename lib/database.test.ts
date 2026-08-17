@@ -90,11 +90,11 @@ describe("migrateMarkerTypes", () => {
     },
   );
 
-  it.each(["Corner", "Hazard", "Overtaking", "Focus"])(
-    "records the original type in the note when %s has no equivalent",
-    (legacy) => {
+  it.each([["Corner", "Mid"], ["Hazard", "Others"], ["Overtaking", "Others"], ["Focus", "Others"]])(
+    "moves %s to %s and records the original type in the note",
+    (legacy, expected) => {
       const marker = migrated(legacy);
-      expect(marker.type).toBe("Mid");
+      expect(marker.type).toBe(expected);
       expect(marker.generalNote).toBe(`Previously marked as ${legacy}.\nLate apex works`);
     },
   );
@@ -106,7 +106,9 @@ describe("migrateMarkerTypes", () => {
 
   it("does not invent a note where the marker had none", () => {
     const layouts = [makeLayout({ markers: [makeMarker({ type: "Hazard" as TrackMarker["type"], generalNote: "" })] })];
-    expect(migrateMarkerTypes(layouts)[0].markers[0].generalNote).toBe("Previously marked as Hazard.");
+    const marker = migrateMarkerTypes(layouts)[0].markers[0];
+    expect(marker.type).toBe("Others");
+    expect(marker.generalNote).toBe("Previously marked as Hazard.");
   });
 });
 

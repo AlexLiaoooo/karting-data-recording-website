@@ -5,6 +5,7 @@ import { MouseEvent, useRef } from "react";
 import type { MapAsset, TrackCorner, TrackMarker } from "@/lib/track-map/types";
 import { MapImage, markerClass, markerShortNames } from "./shared";
 import { useMapZoom } from "./use-map-zoom";
+import { useTranslation } from "@/lib/i18n";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
@@ -37,16 +38,17 @@ export function MapCanvas({
   onSelectMarker,
   onSelectCorner,
 }: MapCanvasProps) {
+  const { t } = useTranslation();
   const viewportRef = useRef<HTMLDivElement>(null);
   useMapZoom(viewportRef, { zoom, min: MIN_ZOOM, max: MAX_ZOOM, onZoomChange });
 
   return (
     <>
       <div className="map-controls">
-        <button className="icon-button map-control-button" aria-label="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => onZoomChange(Math.max(MIN_ZOOM, zoom - ZOOM_STEP))}><Minus /></button>
+        <button className="icon-button map-control-button" aria-label={t("Zoom out")} disabled={zoom <= MIN_ZOOM} onClick={() => onZoomChange(Math.max(MIN_ZOOM, zoom - ZOOM_STEP))}><Minus /></button>
         <span>{Math.round(zoom * 100)}%</span>
-        <button className="icon-button map-control-button" aria-label="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP))}><ZoomIn /></button>
-        <button className="text-button map-reset" disabled={zoom === MIN_ZOOM} onClick={() => onZoomChange(MIN_ZOOM)}>Reset zoom</button>
+        <button className="icon-button map-control-button" aria-label={t("Zoom in")} disabled={zoom >= MAX_ZOOM} onClick={() => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP))}><ZoomIn /></button>
+        <button className="text-button map-reset" disabled={zoom === MIN_ZOOM} onClick={() => onZoomChange(MIN_ZOOM)}>{t("Reset zoom")}</button>
       </div>
       <div ref={viewportRef} className={`track-map-viewport ${placing ? "placing-marker" : ""}`}>
         <div className="track-map-stage" style={{ width: `${zoom * 100}%` }} onClick={onMapClick}>
@@ -68,8 +70,8 @@ export function MapCanvas({
               className={`map-marker ${markerClass(marker.type)} ${selectedMarkerId === marker.id ? "selected" : ""}`}
               style={{ left: `${marker.x * 100}%`, top: `${marker.y * 100}%` }}
               key={marker.id}
-              aria-label={`${marker.type}: ${marker.label}`}
-              title={`${marker.type}: ${marker.label}`}
+              aria-label={`${t(marker.type)}: ${marker.label}`}
+              title={`${t(marker.type)}: ${marker.label}`}
               onClick={(event) => { event.stopPropagation(); onSelectMarker(marker.id); }}
             ><span>{markerShortNames[marker.type]}</span><small>{marker.label}</small></button>
           ))}

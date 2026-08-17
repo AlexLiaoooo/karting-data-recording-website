@@ -201,6 +201,13 @@ h2 {
   gap: 6px;
 }
 
+/* Shows the language it switches to, so it holds "中" or "EN" rather than an icon. */
+.language-toggle {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .theme-toggle .theme-icon {
   align-items: center;
   display: inline-flex;
@@ -1266,12 +1273,14 @@ h2 {
   z-index: 4;
 }
 
-/* Coloured in the order they occur through a corner: brake, turn in, apex, exit, throttle. */
+/* Coloured in the order they occur through a corner: brake, turn in, apex, exit, throttle.
+   Others sits outside that sequence, so it takes a colour outside it too. */
 .marker-brake { background: var(--red); }
 .marker-in { background: var(--amber); }
 .marker-mid { background: var(--blue); }
 .marker-out { background: var(--cyan); }
 .marker-gas { background: var(--green); }
+.marker-others { background: var(--purple); }
 
 .map-image-actions {
   align-items: center;

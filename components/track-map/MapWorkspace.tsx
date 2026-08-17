@@ -17,6 +17,7 @@ import {
 import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
 import { ConfirmDeleteDialog, EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
+import { useTranslation } from "@/lib/i18n";
 
 type MapWorkspaceProps = {
   data: TrackMapData;
@@ -28,6 +29,7 @@ type MapWorkspaceProps = {
 };
 
 export function MapWorkspace({ data, layout, track, session, onChange, notify }: MapWorkspaceProps) {
+  const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [addType, setAddType] = useState<TrackMarkerType | null>(null);
@@ -60,9 +62,9 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
         // map refresh on startup leaves it alone.
         layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, builtInMapVersion: undefined, updatedAt: now() } : candidate),
       }));
-      notify(`Map ready · ${nextAsset.width} × ${nextAsset.height}`);
+      notify(t("Map ready · {width} × {height}", { width: nextAsset.width, height: nextAsset.height }));
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Map upload failed");
+      notify(error instanceof Error ? error.message : t("Map upload failed"));
     } finally {
       setUploading(false);
     }
@@ -76,7 +78,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     if (moveMarkerId) {
       updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x, y, updatedAt: now() } : marker) }));
       setMoveMarkerId(null);
-      notify("Marker moved");
+      notify(t("Marker moved"));
       return;
     }
     if (!addType) return;
@@ -92,7 +94,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     updateLayout((current) => ({ ...current, markers: [...current.markers, marker], updatedAt: now() }));
     setSelectedMarkerId(marker.id);
     setAddType(null);
-    notify(`${marker.type} marker added${label ? ` at ${label}` : ""}`);
+    notify(label ? t("{type} marker added at {place}", { type: t(marker.type), place: label }) : t("{type} marker added", { type: t(marker.type) }));
   }
 
   /** Corner labels double as placement targets, so a marker can be put on T7 without aiming. */
@@ -101,7 +103,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     if (moveMarkerId) {
       updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x: corner.x, y: corner.y, updatedAt: now() } : marker) }));
       setMoveMarkerId(null);
-      notify(`Marker moved to ${corner.label}`);
+      notify(t("Marker moved to {corner}", { corner: corner.label }));
       return;
     }
     if (addType) addMarker(corner.x, corner.y, corner.label);
@@ -124,7 +126,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     }));
     setPendingDelete(null);
     setSelectedMarkerId(null);
-    notify("Marker deleted");
+    notify(t("Marker deleted"));
   }
 
   function observationCount(marker: TrackMarker) {
@@ -173,8 +175,8 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
   return (
     <div className="track-workspace page-content">
       <div className="track-workspace-heading">
-        <div><p className="eyebrow">{session ? "SESSION TRACK NOTES" : editMode ? "EDIT MAP" : "REFERENCE MAP"}</p><h1>{track.name}</h1></div>
-        {!session && <button className={`button button-small ${editMode ? "button-primary" : "button-secondary"}`} onClick={() => { setEditMode((value) => !value); setAddType(null); setMoveMarkerId(null); }}><Pencil /> {editMode ? "Editing" : "Edit map"}</button>}
+        <div><p className="eyebrow">{session ? t("SESSION TRACK NOTES") : editMode ? t("EDIT MAP") : t("REFERENCE MAP")}</p><h1>{track.name}</h1></div>
+        {!session && <button className={`button button-small ${editMode ? "button-primary" : "button-secondary"}`} onClick={() => { setEditMode((value) => !value); setAddType(null); setMoveMarkerId(null); }}><Pencil /> {editMode ? t("Editing") : t("Edit map")}</button>}
       </div>
 
       {asset ? (
@@ -183,27 +185,27 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
             <div className="marker-add-bar">
               <span>
                 {moveMarkerId
-                  ? corners.length ? "Choose a corner, or tap the new position" : "Tap the new marker position"
+                  ? corners.length ? t("Choose a corner, or tap the new position") : t("Tap the new marker position")
                   : addType
-                    ? corners.length ? `Choose a corner, or tap the map` : `Tap map to place ${addType}`
-                    : "Add marker:"}
+                    ? corners.length ? t("Choose a corner, or tap the map") : t("Tap map to place {type}", { type: t(addType) })
+                    : t("Add marker:")}
               </span>
-              {!moveMarkerId && <select className="select" value={addType ?? ""} onChange={(event) => setAddType((event.target.value || null) as TrackMarkerType | null)}><option value="">Choose type</option>{markerTypes.map((type) => <option key={type}>{type}</option>)}</select>}
+              {!moveMarkerId && <select className="select" value={addType ?? ""} onChange={(event) => setAddType((event.target.value || null) as TrackMarkerType | null)}><option value="">{t("Choose type")}</option>{markerTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}</select>}
               {(addType || moveMarkerId) && corners.length > 0 && (
                 <select
                   className="select"
                   value=""
-                  aria-label="Place at corner"
+                  aria-label={t("Place at corner")}
                   onChange={(event) => {
                     const corner = corners.find((candidate) => candidate.label === event.target.value);
                     if (corner) selectCorner(corner);
                   }}
                 >
-                  <option value="">At corner…</option>
+                  <option value="">{t("At corner…")}</option>
                   {corners.map((corner) => <option key={corner.number} value={corner.label}>{corner.label}</option>)}
                 </select>
               )}
-              {(addType || moveMarkerId) && <button className="icon-button" aria-label="Cancel marker placement" onClick={() => { setAddType(null); setMoveMarkerId(null); }}><X /></button>}
+              {(addType || moveMarkerId) && <button className="icon-button" aria-label={t("Cancel marker placement")} onClick={() => { setAddType(null); setMoveMarkerId(null); }}><X /></button>}
             </div>
           )}
           <MapCanvas
@@ -219,11 +221,11 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
             onSelectMarker={setSelectedMarkerId}
             onSelectCorner={!session && (addType || moveMarkerId) ? selectCorner : undefined}
           />
-          {!session && <div className="map-image-actions"><button className="text-button" onClick={() => fileRef.current?.click()}><Upload /> Replace map image</button><span>{Math.round(asset.size / 1024)} KB</span></div>}
-          {layout.sourceAttribution && <p className="map-attribution">{layout.sourceAttribution}{layout.sourceUrl && <> · <a href={layout.sourceUrl} target="_blank" rel="noreferrer">View licence</a></>}</p>}
+          {!session && <div className="map-image-actions"><button className="text-button" onClick={() => fileRef.current?.click()}><Upload /> {t("Replace map image")}</button><span>{Math.round(asset.size / 1024)} KB</span></div>}
+          {layout.sourceAttribution && <p className="map-attribution">{layout.sourceAttribution}{layout.sourceUrl && <> · <a href={layout.sourceUrl} target="_blank" rel="noreferrer">{t("View licence")}</a></>}</p>}
         </>
       ) : (
-        <EmptyMapState title="Add the circuit map" text="Choose a clear overhead layout image. It will be resized and stored only on this device." action={!session && <button className="button button-primary" disabled={uploading} onClick={() => fileRef.current?.click()}><Upload /> {uploading ? "Preparing image…" : "Choose map image"}</button>} />
+        <EmptyMapState title={t("Add the circuit map")} text={t("Choose a clear overhead layout image. It will be resized and stored only on this device.")} action={!session && <button className="button button-primary" disabled={uploading} onClick={() => fileRef.current?.click()}><Upload /> {uploading ? t("Preparing image…") : t("Choose map image")}</button>} />
       )}
       <input className="visually-hidden" ref={fileRef} type="file" accept="image/*" onChange={uploadImage} />
 
@@ -241,25 +243,25 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           onUpdateObservation={updateObservation}
         />
       ) : layout.markers.length > 0 ? (
-        <p className="map-help"><Crosshair /> Tap a marker to read or edit its notes. Pinch to zoom, or hold Ctrl and scroll on a computer, then drag the map to pan.</p>
+        <p className="map-help"><Crosshair /> {t("Tap a marker to read or edit its notes. Pinch to zoom, or hold Ctrl and scroll on a computer, then drag the map to pan.")}</p>
       ) : asset ? (
-        <p className="map-help"><BookOpen /> Switch to Edit map, choose a marker type, then tap its position on the circuit.</p>
+        <p className="map-help"><BookOpen /> {t("Switch to Edit map, choose a marker type, then tap its position on the circuit.")}</p>
       ) : null}
 
       {session && (
         <section className="settings-section session-map-summary">
-          <label className="field"><span>Overall Session track summary</span><textarea className="textarea" placeholder="Overall grip, changing conditions, key lesson…" value={visit?.summary ?? ""} onChange={(event) => updateSummary(event.target.value)} /></label>
-          <p className="auto-save-note"><Check /> Saved separately from permanent Track notes</p>
+          <label className="field"><span>{t("Overall Session track summary")}</span><textarea className="textarea" placeholder={t("Overall grip, changing conditions, key lesson…")} value={visit?.summary ?? ""} onChange={(event) => updateSummary(event.target.value)} /></label>
+          <p className="auto-save-note"><Check /> {t("Saved separately from permanent Track notes")}</p>
         </section>
       )}
 
       {!session && (
         <section className="settings-section layout-notes">
           <label className="field">
-            <span>General notes</span>
+            <span>{t("General notes")}</span>
             <textarea
               className="textarea"
-              placeholder="Anything about this layout as a whole: surface, kerbs, the wet line, gearing…"
+              placeholder={t("Anything about this layout as a whole: surface, kerbs, the wet line, gearing…")}
               value={layout.notes ?? ""}
               onChange={(event) => updateLayout((current) => ({ ...current, notes: event.target.value, updatedAt: now() }))}
             />

@@ -8,6 +8,7 @@ import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
 import { TrackDetailView, TrackLibraryView } from "./TrackLibrary";
 import { ConfirmDeleteDialog, FeatureHeader, MissingRecord, now, SessionContext, TrackMapChange, useModalViewport } from "./shared";
+import { useTranslation } from "@/lib/i18n";
 
 export type { SessionContext } from "./shared";
 
@@ -36,6 +37,7 @@ type PendingDelete =
   | null;
 
 export function TrackMapFeature({ data, mode, session, onChange, onBack, notify }: TrackMapFeatureProps) {
+  const { t } = useTranslation();
   const [view, setView] = useState<LibraryView>(() => mode === "session" && session?.layoutId
     ? { name: "workspace", layoutId: session.layoutId }
     : { name: "library" });
@@ -96,7 +98,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       assets: defaultAsset ? [...current.assets, defaultAsset] : current.assets,
     }));
     setView({ name: "workspace", layoutId });
-    notify(defaultAsset ? "PF International created with a built-in map" : "PF International created — upload your map image next");
+    notify(defaultAsset ? t("PF International created with a built-in map") : t("PF International created — upload your map image next"));
   };
 
   function saveTrack(input: { name: string; location: string; notes: string }) {
@@ -106,7 +108,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
         ...current,
         tracks: current.tracks.map((track) => track.id === editor.track?.id ? { ...track, ...input, updatedAt: timestamp } : track),
       }));
-      notify("Track updated");
+      notify(t("Track updated"));
     } else {
       const trackId = crypto.randomUUID();
       const layoutId = crypto.randomUUID();
@@ -116,7 +118,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
         layouts: [...current.layouts, { id: layoutId, trackId, name: "Full Layout", direction: "Unknown", mapAssetId: null, markers: [], createdAt: timestamp, updatedAt: timestamp }],
       }));
       setView({ name: "track", trackId });
-      notify("Track created");
+      notify(t("Track created"));
     }
     setEditor(null);
   }
@@ -129,7 +131,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
         ...current,
         layouts: current.layouts.map((layout) => layout.id === editor.layout?.id ? { ...layout, ...input, updatedAt: timestamp } : layout),
       }));
-      notify("Layout updated");
+      notify(t("Layout updated"));
     } else {
       const layout: TrackLayout = {
         ...input,
@@ -142,7 +144,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       };
       onChange((current) => ({ ...current, layouts: [...current.layouts, layout] }));
       setView({ name: "workspace", layoutId: layout.id });
-      notify("Layout created");
+      notify(t("Layout created"));
     }
     setEditor(null);
   }
@@ -161,7 +163,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       };
     });
     setView({ name: "library" });
-    notify(`${track.name} deleted`);
+    notify(t("{name} deleted", { name: track.name }));
   }
 
   function deleteLayout(layout: TrackLayout) {
@@ -173,7 +175,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       assets: layout.mapAssetId ? current.assets.filter((asset) => asset.id !== layout.mapAssetId) : current.assets,
     }));
     setView({ name: "track", trackId: layout.trackId });
-    notify(`${layout.name} deleted`);
+    notify(t("{name} deleted", { name: layout.name }));
   }
 
   if (view.name === "library") {
@@ -217,7 +219,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
   const layout = data.layouts.find((candidate) => candidate.id === view.layoutId);
   const track = layout ? data.tracks.find((candidate) => candidate.id === layout.trackId) : undefined;
   if (!layout || !track) {
-    return <MissingRecord onBack={mode === "session" ? onBack : () => setView({ name: "library" })} text={mode === "session" ? "This Event does not have an available saved Track Layout. Edit the Event and choose one first." : undefined} />;
+    return <MissingRecord onBack={mode === "session" ? onBack : () => setView({ name: "library" })} text={mode === "session" ? t("This Event does not have an available saved Track Layout. Edit the Event and choose one first.") : undefined} />;
   }
 
   return (
@@ -228,8 +230,8 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
         onBack={mode === "session" ? onBack : () => setView({ name: "track", trackId: track.id })}
         actions={mode === "library" ? (
           <>
-            <button className="icon-button" aria-label="Edit layout" onClick={() => setEditor({ kind: "layout", trackId: track.id, layout })}><Pencil /></button>
-            <button className="icon-button" aria-label="Delete layout" onClick={() => setPendingDelete({ kind: "layout", layout })}><Trash2 /></button>
+            <button className="icon-button" aria-label={t("Edit layout")} onClick={() => setEditor({ kind: "layout", trackId: track.id, layout })}><Pencil /></button>
+            <button className="icon-button" aria-label={t("Delete layout")} onClick={() => setPendingDelete({ kind: "layout", layout })}><Trash2 /></button>
           </>
         ) : undefined}
       />

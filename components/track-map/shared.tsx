@@ -3,6 +3,7 @@
 import { ArrowLeft, MapPinned, Moon, Sun, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useEffect } from "react";
 import type { MapAsset, TrackMapData, TrackMarkerType } from "@/lib/track-map/types";
+import { LanguageToggle, useTranslation } from "@/lib/i18n";
 
 export type SessionContext = {
   eventId: string;
@@ -21,6 +22,8 @@ export const markerShortNames: Record<TrackMarkerType, string> = {
   Out: "O",
   Brake: "B",
   Gas: "G",
+  // Not a letter, so it cannot be mistaken for one of the phases; "O" is already Out.
+  Others: "*",
 };
 
 export function now() {
@@ -33,13 +36,14 @@ export function markerClass(type: TrackMarkerType) {
 
 
 export function ThemeButton() {
+  const { t } = useTranslation();
   function toggleTheme() {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     localStorage.setItem("kart-data-theme", next);
   }
   return (
-    <button className="icon-button theme-toggle" type="button" aria-label="Switch light or dark mode" onClick={toggleTheme}>
+    <button className="icon-button theme-toggle" type="button" aria-label={t("Switch light or dark mode")} onClick={toggleTheme}>
       <span className="theme-icon theme-icon-dark"><Moon /></span>
       <span className="theme-icon theme-icon-light"><Sun /></span>
     </button>
@@ -47,11 +51,12 @@ export function ThemeButton() {
 }
 
 export function FeatureHeader({ title, subtitle, onBack, actions }: { title: string; subtitle?: string; onBack: () => void; actions?: ReactNode }) {
+  const { t } = useTranslation();
   return (
     <header className="topbar">
-      <button className="icon-button" type="button" aria-label="Back" onClick={onBack}><ArrowLeft /></button>
+      <button className="icon-button" type="button" aria-label={t("Back")} onClick={onBack}><ArrowLeft /></button>
       <div className="topbar-copy"><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
-      <div className="topbar-action">{actions}<ThemeButton /></div>
+      <div className="topbar-action">{actions}<LanguageToggle /><ThemeButton /></div>
     </header>
   );
 }
@@ -67,11 +72,15 @@ export function EmptyMapState({ title, text, action }: { title: string; text: st
   );
 }
 
-export function MissingRecord({ onBack, text = "This track or layout may have been deleted." }: { onBack: () => void; text?: string }) {
+export function MissingRecord({ onBack, text }: { onBack: () => void; text?: string }) {
+  const { t } = useTranslation();
+  // Defaulted here rather than in the parameter list, which is evaluated before the hook runs.
   return (
     <>
-      <FeatureHeader title="Track maps" onBack={onBack} />
-      <div className="page-content"><EmptyMapState title="Map unavailable" text={text} /></div>
+      <FeatureHeader title={t("Track maps")} onBack={onBack} />
+      <div className="page-content">
+        <EmptyMapState title={t("Map unavailable")} text={text ?? t("This track or layout may have been deleted.")} />
+      </div>
     </>
   );
 }
@@ -82,16 +91,17 @@ export function MissingRecord({ onBack, text = "This track or layout may have be
  * app, and native dialogs are the least reliable part of an installed PWA.
  */
 export function ConfirmDeleteDialog({ title, detail, onCancel, onConfirm }: { title: string; detail?: string; onCancel: () => void; onConfirm: () => void }) {
+  const { t } = useTranslation();
   useModalViewport(true);
   return (
     <div className="modal-backdrop modal-centered">
       <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="track-map-delete-title">
         <span className="danger-icon"><Trash2 /></span>
         <h2 id="track-map-delete-title">{title}</h2>
-        <p>{detail ? `${detail} ` : ""}This action cannot be undone.</p>
+        <p>{detail ? `${detail} ` : ""}{t("This action cannot be undone.")}</p>
         <div className="action-stack">
-          <button className="button button-danger button-block" onClick={onConfirm}>Delete permanently</button>
-          <button className="button button-secondary button-block" onClick={onCancel}>Cancel</button>
+          <button className="button button-danger button-block" onClick={onConfirm}>{t("Delete permanently")}</button>
+          <button className="button button-secondary button-block" onClick={onCancel}>{t("Cancel")}</button>
         </div>
       </section>
     </div>

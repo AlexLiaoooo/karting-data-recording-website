@@ -1,5 +1,5 @@
-/** The phases of a corner, plus the two pedal inputs. */
-export type TrackMarkerType = "In" | "Mid" | "Out" | "Brake" | "Gas";
+/** The phases of a corner, the two pedal inputs, and a catch-all for anything else. */
+export type TrackMarkerType = "In" | "Mid" | "Out" | "Brake" | "Gas" | "Others";
 
 /**
  * A named corner on a layout, in lap order. Positions are normalised to the map asset box,
@@ -97,12 +97,13 @@ export type TrackMapData = {
   assets: MapAsset[];
 };
 
-export const markerTypes: TrackMarkerType[] = ["In", "Mid", "Out", "Brake", "Gas"];
+export const markerTypes: TrackMarkerType[] = ["In", "Mid", "Out", "Brake", "Gas", "Others"];
 
 /**
- * Marker types used before the list was reduced to corner phases and pedal inputs. Entry,
- * apex and exit map straight across; the rest were not phases of a corner at all, so they
- * become "Mid" and their original type is preserved in the marker's general note.
+ * Marker types used before the list was reduced. Turn-in, apex, exit and braking map onto
+ * their phase; Corner becomes the mid-corner reference closest to it; the rest were never
+ * phases of a corner, so they land in "Others". Where the mapping loses meaning, the original
+ * type is written into the marker's general note rather than being dropped.
  */
 export const legacyMarkerTypes: Record<string, { type: TrackMarkerType; keepsMeaning: boolean }> = {
   "Turn-in": { type: "In", keepsMeaning: true },
@@ -110,9 +111,9 @@ export const legacyMarkerTypes: Record<string, { type: TrackMarkerType; keepsMea
   Exit: { type: "Out", keepsMeaning: true },
   Braking: { type: "Brake", keepsMeaning: true },
   Corner: { type: "Mid", keepsMeaning: false },
-  Hazard: { type: "Mid", keepsMeaning: false },
-  Overtaking: { type: "Mid", keepsMeaning: false },
-  Focus: { type: "Mid", keepsMeaning: false },
+  Hazard: { type: "Others", keepsMeaning: false },
+  Overtaking: { type: "Others", keepsMeaning: false },
+  Focus: { type: "Others", keepsMeaning: false },
 };
 
 export const emptyTrackMapData = (): TrackMapData => ({
