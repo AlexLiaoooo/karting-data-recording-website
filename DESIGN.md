@@ -456,9 +456,11 @@ Possible later phases include:
   translation, if a placeholder is lost in translation, or if a stored record value is ever
   added to the dictionary.
 
-**Known gap:** `USER_GUIDE.zh-CN.md` quotes the English UI labels throughout, because it was
-written against an English-only interface. It is still accurate for English but no longer matches
-the Chinese interface it is written in.
+- Rewrote `USER_GUIDE.zh-CN.md` against the Chinese interface. It previously quoted English UI
+  labels throughout, because it was written when the interface was English only. It now also
+  documents the language switch, the reduced marker types, corner numbering, placing a marker by
+  corner, Layout general notes, pinch zoom, and the three-table CSV. The screenshots still show
+  the English interface, which the guide states.
 
 ### Implemented prototype v1.7 — 2026-08-16
 
