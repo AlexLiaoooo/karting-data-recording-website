@@ -611,14 +611,14 @@ export default function HomePage() {
             <article className="summary-card">
               <div className="card-head"><span className="badge">{t("Active event")}</span><span className="muted">{formatDate(activeEvent.startDate, t, dateLocale)}</span></div>
               <h2>{activeEvent.name}</h2>
-              <p className="muted">{activeEvent.track || t("Track not set")} · {activeEvent.condition}</p>
+              <p className="muted">{activeEvent.track || t("Track not set")} · {t(activeEvent.condition)}</p>
               <div className="stat-grid">
                 <Stat label={t("Sessions")} value={String(activeEvent.sessions.length)} />
                 <Stat label={t("Runs")} value={String(activeEvent.sessions.reduce((count, session) => count + session.runs.length, 0))} />
                 <Stat label={t("Track")} value={activeEvent.trackTemperature ? `${activeEvent.trackTemperature} °C` : "—"} />
               </div>
               <button className="button button-primary button-block" type="button" onClick={() => openEvent(activeEvent.id)}>
-                Resume recording <ChevronRight />
+                {t("Resume recording")} <ChevronRight />
               </button>
             </article>
           ) : (
@@ -1208,7 +1208,7 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
         title={`Run ${String(run.number).padStart(2, "0")}`}
         subtitle={session.name}
         onBack={onBack}
-        action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{saveState}</span>}
+        action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{t(saveState)}</span>}
       />
       <div className="page-content run-page">
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1>{run.label || t("Trackside entry")}</h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>

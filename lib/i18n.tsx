@@ -50,6 +50,7 @@ const zh: Record<string, string> = {
   "CURRENT RUN": "当前 RUN",
   "Trackside entry": "赛道现场录入",
   "Active event": "当前 Event",
+  "Resume recording": "继续记录",
   Sessions: "Sessions",
   Runs: "Runs",
   Track: "赛道",
