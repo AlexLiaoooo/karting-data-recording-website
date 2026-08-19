@@ -28,7 +28,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Numbered corner labels on every built-in circuit map, in lap order. A marker can be placed on a corner by name instead of aiming at the map, and can still be tapped anywhere for anything between corners.
 - Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
 - Full JSON backup/restore includes Track Maps, markers, Session observations and embedded map images.
-- Built-in circuits added from a picker in the Track Library: PF International, and Whilton Mill with all four of its layouts (International, National, Indy, Mill). Each map is a generated schematic based on OpenStreetMap raceway geometry, showing the start/finish line and racing direction, and includes ODbL attribution in the UI.
+- Built-in circuits added from a picker in the Track Library: PF International and Whilton Mill International. Each map is a generated schematic based on OpenStreetMap raceway geometry, showing the start/finish line and racing direction, and includes ODbL attribution in the UI.
 - Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
 - Static production output suitable for Vercel.
 

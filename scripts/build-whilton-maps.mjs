@@ -1,10 +1,15 @@
 /**
- * Builds the four built-in Whilton Mill circuit maps, and the corner list for each, from one
+ * Builds the built-in Whilton Mill International circuit map, and its corner list, from one
  * committed OpenStreetMap extract.
  *
  * Run: node scripts/build-whilton-maps.mjs
- * Writes public/maps/whilton-mill-*.svg and prints the TrackCorner[] literals for
+ * Writes public/maps/whilton-mill-international.svg and prints the TrackCorner[] literal for
  * lib/track-map/built-in-maps.ts.
+ *
+ * The extract still holds the National (16338536) and Indy (16338537) relations, which chain the
+ * same way, so adding either back is one more entry in CIRCUITS. The Mill cadet circuit is a
+ * single closed way rather than a relation and would also need a lap start chosen for it, since
+ * a closed way begins wherever the surveyor started rather than at the line.
  *
  * This differs from scripts/derive-corners.mjs, which reads corners back out of artwork it did
  * not draw. Here one pass owns both, so the labels cannot drift from the map they sit on.
@@ -23,14 +28,10 @@ const MAIN_PIT_LANE = 1208334015;
 
 const CIRCUITS = [
   { key: "whilton-mill-international", file: "whilton-mill-international", name: "International", relation: 16338535, pitLane: MAIN_PIT_LANE },
-  { key: "whilton-mill-national", file: "whilton-mill-national", name: "National", relation: 16338536, pitLane: MAIN_PIT_LANE },
-  { key: "whilton-mill-indy", file: "whilton-mill-indy", name: "Indy", relation: 16338537, pitLane: MAIN_PIT_LANE },
-  // The cadet circuit is a single closed way rather than a relation, and has its own pit lane.
-  { key: "whilton-mill-mill", file: "whilton-mill-mill", name: "Mill", way: 149913876, pitLane: 149913880 },
 ];
 
-// Canvas. Portrait, because all four circuits are taller than they are wide once projected
-// north-up, and the map is width-constrained on a phone.
+// Canvas. Portrait, because the circuit is taller than it is wide once projected north-up, and
+// the map is width-constrained on a phone.
 const VIEW = { x: 0, y: 0, width: 760, height: 1000 };
 const MARGIN = { top: 120, right: 60, bottom: 150, left: 60 };
 const TRACK_WIDTH = 22;
@@ -40,37 +41,21 @@ const TRACK_WIDTH = 22;
 // tracks label corners at the same level of detail.
 const MIN_CORNER_TURN = Number(process.env.MIN_CORNER_TURN ?? 55);
 const VERTEX_TURN_FLOOR = 6; // degrees; below this is survey noise on a straight
-// Metres; bridges a brief straight inside one long corner. 8 sits mid-plateau: every value from
-// 6 to 10 yields the same corner count on all four circuits, while 12 and above starts splitting
-// the Mill circuit differently run to run.
+// Metres; bridges a brief straight inside one long corner. 8 sits mid-plateau: this circuit
+// yields the same eleven corners at every value from 6 to 14, so the threshold is not perched
+// on an edge.
 const MERGE_GAP = Number(process.env.MERGE_GAP ?? 8);
 
 /**
- * Degrees. A single corner tops out at a hairpin, so a continuous sweep past this is two
- * corners a driver would name separately and gets split into equal-turn parts. Whilton Mill's
- * tighter circuits each contain one curl of 190 to 235 degrees with no straight anywhere inside
- * it, so no MERGE_GAP setting separates them — the split has to be on turn, not on distance.
+ * Degrees. A single corner tops out at a hairpin, so a continuous sweep past this is two corners
+ * a driver would name separately and gets split into equal-turn parts. This circuit has no such
+ * sweep — its sharpest group turns 141 degrees — but the guard stays because a sweep that long
+ * has no straight inside it for MERGE_GAP to break at, so nothing else would catch one.
  */
 const MAX_CORNER_TURN = 180;
 
 const nodeKey = (point) => `${point.lat.toFixed(7)},${point.lon.toFixed(7)}`;
 
-/**
- * Rotates a closed way so the lap begins where the pit lane rejoins it.
- *
- * The three main circuits are relations whose lap order starts on the Home Straight, which is
- * the way the pit lane's exit node sits on — so the start line falls out of the data. A single
- * closed way has no such anchor and its first node is wherever the surveyor happened to begin,
- * so the same rule is applied explicitly here rather than starting the lap at an arbitrary point.
- */
-function rotateToPitExit(geometry, pitWay) {
-  const exit = nodeKey(pitWay.geometry.at(-1));
-  const open = geometry.slice(0, -1); // drop the repeated closing node before rotating
-  const index = open.findIndex((point) => nodeKey(point) === exit);
-  if (index === -1) throw new Error("The pit lane does not rejoin the circuit at a shared node.");
-  const rotated = [...open.slice(index), ...open.slice(0, index)];
-  return [...rotated, rotated[0]];
-}
 
 /**
  * Chains a relation's ways into one lap-ordered loop. Every Whilton Mill raceway way is tagged
@@ -164,27 +149,15 @@ const round4 = (value) => Number(value.toFixed(4));
 const toPath = (points) => `M ${points.map(([x, y]) => `${round1(x)},${round1(y)}`).join(" L ")}`;
 
 function build(circuit) {
-  let loop;
-  let chain = [];
-  if (circuit.relation) {
-    const relation = relations.get(circuit.relation);
-    if (!relation) throw new Error(`Relation ${circuit.relation} is missing from the extract.`);
-    const refs = relation.members
-      .filter((member) => member.type === "way" && member.ref !== circuit.pitLane)
-      .map((member) => member.ref);
-    ({ chain, loop } = chainWays(refs, "Home Straight"));
-  }
+  const relation = relations.get(circuit.relation);
+  if (!relation) throw new Error(`Relation ${circuit.relation} is missing from the extract.`);
+  const refs = relation.members
+    .filter((member) => member.type === "way" && member.ref !== circuit.pitLane)
+    .map((member) => member.ref);
+  const { chain, loop } = chainWays(refs, "Home Straight");
 
   const pitWay = ways.get(circuit.pitLane);
   if (!pitWay) throw new Error(`Pit lane way ${circuit.pitLane} is missing from the extract.`);
-
-  if (!circuit.relation) {
-    const way = ways.get(circuit.way);
-    if (!way) throw new Error(`Way ${circuit.way} is missing from the extract.`);
-    if (nodeKey(way.geometry[0]) !== nodeKey(way.geometry.at(-1))) throw new Error(`Way ${circuit.way} is not a closed loop.`);
-    chain = [circuit.way];
-    loop = rotateToPitExit(way.geometry, pitWay);
-  }
 
   const origin = loop[0];
   const metres = project(loop, origin);

@@ -287,9 +287,9 @@ The form may use collapsible sections, but frequently entered tyre values should
 
 - Reusable Tracks and multiple Layouts.
 - Built-in circuits, added from a picker in the Track Library: PF International (Full Layout)
-  and Whilton Mill (International, National, Indy and Mill). Each ships a generated
-  OpenStreetMap-based schematic with lap-ordered corner labels; any other Layout can use a
-  user-supplied, locally optimised map image.
+  and Whilton Mill (International). Each ships a generated OpenStreetMap-based schematic with
+  lap-ordered corner labels; any other Layout can use a user-supplied, locally optimised map
+  image.
 - A built-in circuit already in the library is listed as added and cannot be added twice.
 - Built-in Layouts are stamped with a key and an artwork version. Records without a map are
   backfilled on app startup and out-of-date artwork is replaced; a map the user uploaded is
@@ -504,6 +504,24 @@ Possible later phases include:
 - Added general notes to the Layout, at the foot of the map page, for anything about the
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
+
+### Implemented prototype v1.6 — 2026-08-19
+
+- Reduced Whilton Mill to the International layout. The National, Indy and Mill circuits and
+  their artwork are removed; only the circuit actually driven is shipped.
+- `scripts/build-whilton-maps.mjs` now builds the one map. The closed-way branch and its
+  pit-exit lap-start rule went with it, since only the Mill cadet circuit reached them. The
+  committed Overpass extract is unchanged: it still holds the National and Indy relations, which
+  chain the same way, so restoring either is one more entry in `CIRCUITS`.
+- Regenerating after the reduction produces a byte-identical `whilton-mill-international.svg`,
+  which is the check that removing the others changed nothing about the one that stayed.
+- The 180-degree corner split is kept even though this circuit never triggers it — its sharpest
+  group turns 141 degrees. A sweep long enough to need splitting has no straight inside it for
+  `MERGE_GAP` to break at, so nothing else would catch one.
+- `refreshBuiltInMaps` leaves a layout keyed to a dropped circuit alone rather than falling
+  through to the name match. Anyone who added Whilton Mill from v1.5 keeps all four layouts with
+  their maps and markers intact; the three extra ones simply stop receiving artwork updates and
+  can be deleted from the Layout page.
 
 ### Implemented prototype v1.5 — 2026-08-19
 

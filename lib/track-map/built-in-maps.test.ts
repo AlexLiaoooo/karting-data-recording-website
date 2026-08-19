@@ -86,8 +86,8 @@ describe("BUILT_IN_TRACKS", () => {
     expect(BUILT_IN_PFI_CORNERS).toHaveLength(15);
   });
 
-  it("offers all four Whilton Mill circuits", () => {
-    expect(WHILTON.layouts.map((layout) => layout.name)).toEqual(["International", "National", "Indy", "Mill"]);
+  it("offers the Whilton Mill International circuit", () => {
+    expect(WHILTON.layouts.map((layout) => layout.name)).toEqual(["International"]);
   });
 
   /**
@@ -209,31 +209,50 @@ describe("refreshBuiltInMaps", () => {
     stubFetch();
     const data = makeTrackMapData({
       tracks: [makeTrack({ name: "Whilton" })],
-      layouts: [makeLayout({ name: "My favourite loop", builtInLayoutKey: "whilton-indy", mapAssetId: null })],
+      layouts: [makeLayout({ name: "My favourite loop", builtInLayoutKey: "whilton-international", mapAssetId: null })],
       visits: [],
       assets: [],
     });
     const result = await refreshBuiltInMaps(data);
 
     expect(result.layouts[0].mapAssetId).toBeTruthy();
-    expect(result.layouts[0].corners).toEqual(WHILTON.layouts.find((layout) => layout.key === "whilton-indy")!.corners);
+    expect(result.layouts[0].corners).toEqual(WHILTON.layouts[0].corners);
   });
 
-  it("fetches once per distinct map when several layouts are stale", async () => {
+  it("fetches once per distinct map when layouts from several circuits are stale", async () => {
     stubFetch();
-    const layouts = WHILTON.layouts.map((layout, index) => makeLayout({
+    const all = BUILT_IN_TRACKS.flatMap((track) => track.layouts);
+    const layouts = all.map((layout, index) => makeLayout({
       id: `layout-${index}`,
       name: layout.name,
       builtInLayoutKey: layout.key,
       mapAssetId: null,
       markers: [],
     }));
-    const data = makeTrackMapData({ tracks: [makeTrack({ name: "Whilton Mill" })], layouts, visits: [], assets: [] });
+    const data = makeTrackMapData({ tracks: [makeTrack()], layouts, visits: [], assets: [] });
     const result = await refreshBuiltInMaps(data);
 
-    expect(fetch).toHaveBeenCalledTimes(WHILTON.layouts.length);
-    expect(new Set(result.layouts.map((layout) => layout.mapAssetId)).size).toBe(WHILTON.layouts.length);
-    expect(result.assets).toHaveLength(WHILTON.layouts.length);
+    expect(fetch).toHaveBeenCalledTimes(all.length);
+    expect(new Set(result.layouts.map((layout) => layout.mapAssetId)).size).toBe(all.length);
+    expect(result.assets).toHaveLength(all.length);
+  });
+
+  /**
+   * A layout keyed to a circuit that has since been dropped from the registry keeps whatever map
+   * it already holds. Falling through to the name match instead could hand it a different
+   * circuit's artwork, and clearing it would throw away a map the user may have markers on.
+   */
+  it("leaves a layout keyed to a circuit no longer in the registry alone", async () => {
+    stubFetch();
+    const data = makeTrackMapData({
+      tracks: [makeTrack({ name: "PF International" })],
+      layouts: [makeLayout({ name: "Full Layout", builtInLayoutKey: "whilton-national", sourceAttribution: "OSM" })],
+      visits: [],
+      assets: [makeMapAsset()],
+    });
+
+    expect(await refreshBuiltInMaps(data)).toEqual(data);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("keeps marker positions, which are relative to the asset box", async () => {
@@ -249,17 +268,17 @@ describe("refreshBuiltInMaps", () => {
 describe("createBuiltInTrack", () => {
   const STAMP = "2026-08-19T09:00:00.000Z";
 
-  it("creates one layout per circuit, each keyed and carrying its own map", async () => {
+  it.each(BUILT_IN_TRACKS.map((track) => [track.key, track] as const))("%s creates one layout per circuit, each keyed and carrying its own map", async (_key, track) => {
     stubFetch();
-    const created = await createBuiltInTrack(WHILTON, STAMP);
+    const created = await createBuiltInTrack(track, STAMP);
 
-    expect(created.track).toMatchObject({ name: "Whilton Mill", location: "Daventry, UK", createdAt: STAMP });
-    expect(created.layouts.map((layout) => layout.name)).toEqual(["International", "National", "Indy", "Mill"]);
-    expect(created.layouts.map((layout) => layout.builtInLayoutKey)).toEqual(WHILTON.layouts.map((layout) => layout.key));
+    expect(created.track).toMatchObject({ name: track.name, location: track.location, createdAt: STAMP });
+    expect(created.layouts.map((layout) => layout.name)).toEqual(track.layouts.map((layout) => layout.name));
+    expect(created.layouts.map((layout) => layout.builtInLayoutKey)).toEqual(track.layouts.map((layout) => layout.key));
     expect(created.layouts.every((layout) => layout.mapAssetId)).toBe(true);
-    expect(created.layouts.every((layout) => layout.trackId === created.track.id)).toBe(true);
-    expect(created.assets).toHaveLength(4);
-    expect(created.mapsLoaded).toBe(4);
+    expect(created.layouts.every((candidate) => candidate.trackId === created.track.id)).toBe(true);
+    expect(created.assets).toHaveLength(track.layouts.length);
+    expect(created.mapsLoaded).toBe(track.layouts.length);
   });
 
   it("records the direction taken from the circuit geometry rather than leaving it unknown", async () => {

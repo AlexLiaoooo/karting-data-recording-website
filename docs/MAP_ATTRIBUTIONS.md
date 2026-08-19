@@ -8,25 +8,26 @@ The underlying OpenStreetMap data is © [OpenStreetMap contributors](https://www
 
 The official circuit page describes the current full circuit as 1,382 m: [PF International — The Circuit](https://kartpfi.com/the-circuit). Its official artwork is not bundled here because PF International's company information page reserves rights to its content: [Company Information](https://kartpfi.com/legal/company-information).
 
-## Whilton Mill circuit schematics
+## Whilton Mill International circuit schematic
 
-`public/maps/whilton-mill-international.svg`, `-national.svg`, `-indy.svg` and `-mill.svg` are
-schematics generated for this project by `scripts/build-whilton-maps.mjs` from OpenStreetMap
-raceway geometry. They are derived works, not official Whilton Mill artwork.
+`public/maps/whilton-mill-international.svg` is a schematic generated for this project by
+`scripts/build-whilton-maps.mjs` from OpenStreetMap raceway geometry. It is a derived work, not
+official Whilton Mill artwork.
 
 The source geometry is committed at `scripts/data/whilton-mill-osm.json`, retrieved from the
-Overpass API on 2026-08-19. It covers the three circuit relations Whilton Mill has mapped —
-International (16338535), National (16338536) and Indy (16338537) — plus the closed way for the
-Mill circuit (149913876) and the two pit lanes. The underlying data is
+Overpass API on 2026-08-19. It is kept as retrieved, so it still covers all three circuit
+relations Whilton Mill has mapped — International (16338535), National (16338536) and Indy
+(16338537) — plus the closed way for the Mill circuit (149913876) and the two pit lanes, even
+though only the International circuit is shipped. The underlying data is
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) and available under the
 [Open Data Commons Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
 Every generated file carries the attribution in its own caption, and the website shows it beneath
 the map.
 
-The lap length printed on each map is the measured centreline of that geometry: 1,040 m
-(International), 845 m (National), 665 m (Indy) and 441 m (Mill). These are labelled "centreline"
-because they are not the operator's published distances. Whilton Mill's karting page quotes a
-"450m Mill Circuit" and a "960m National Circuit"; the Mill measurement lands within 2% of the
-first, but the National is well short of the second, which suggests the published figure is
-measured differently or refers to a different configuration. No official figure is reproduced
+The lap length printed on the map, 1,040 m, is the measured centreline of that geometry. It is
+labelled "centreline" because it is not the operator's published distance. Whilton Mill's karting
+page quotes a "450m Mill Circuit" and a "960m National Circuit", and it publishes no figure for
+the International circuit. Measuring the same way gave 441 m for the Mill circuit, within 2% of
+their figure, but 845 m for the National, well short of theirs — which suggests their distances
+are measured differently or refer to different configurations. No official figure is reproduced
 here as if it were derived from this data.
