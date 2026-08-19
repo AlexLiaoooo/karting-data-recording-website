@@ -3,7 +3,7 @@
  * so the corner list cannot drift away from the artwork it labels.
  *
  * Run: node scripts/derive-corners.mjs
- * Prints a TrackCorner[] literal to paste into lib/track-map/built-in-map.ts.
+ * Prints a TrackCorner[] literal to paste into lib/track-map/built-in-maps.ts.
  *
  * Method: chain the three sector paths into one lap-ordered loop, measure the turn angle at
  * each vertex, then group consecutive turning vertices into corners. A group counts as a

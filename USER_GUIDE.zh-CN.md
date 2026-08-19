@@ -334,17 +334,23 @@ Track Map Notebook 用于把刹车点、入弯点、弯心、出弯方式和赛�
 ### 建立 Track 和 Layout
 
 1. 在首页打开 **Track Library**，或在 **数据与设置** 中点击 **管理 Track Maps**。
-2. 第一次使用可以点击 **建立 PF International**，也可以点击 **新建** 建立其他赛道。
-3. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
-4. 第一次用快捷按钮建立 PF International 时，会自动载入一个内置的全赛道示意图；其他赛道或 Layout 可以点击 **选择地图图片**，从相册或文件中选择一张清晰的赛道图。
+2. 点击 **内置** 打开内置赛道列表，其中包含：
+   - **PF International** — Full Layout。
+   - **Whilton Mill** — International、National、Indy、Mill 四个 Layout，一次全部建立。
+   已经添加过的赛道会显示为 **已添加**，不会重复建立。
+3. 也可以点击 **新建** 自己建立赛道。
+4. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
+5. 内置赛道会自动载入示意图；自己建立的 Track 或 Layout 可以点击 **选择地图图片**，从相册或文件中选择一张清晰的赛道图。
 
 网站会在当前设备上优化并保存地图图片；不会自动上传到云端。
 
-PF International 内置图是根据 OpenStreetMap 的赛道几何数据生成的示意图，不是官方宣传图；地图下方会显示 OpenStreetMap 的来源和 ODbL 许可链接。内置图会跟随网站更新：如果之后修正了这张图，下次打开网站时会自动替换成新版本，而你自己上传的地图不会被覆盖。
+内置图是根据 OpenStreetMap 的赛道几何数据生成的示意图，不是官方宣传图；地图下方会显示 OpenStreetMap 的来源和 ODbL 许可链接。内置图会跟随网站更新：如果之后修正了某张图，下次打开网站时会自动替换成新版本，而你自己上传的地图不会被覆盖。
+
+Whilton Mill 的四张图上还画出了起点/终点线和行车方向箭头，方向来自 OpenStreetMap 的单行道标注。图上标注的长度是按 OpenStreetMap 中心线量出来的（International 1,040 m、National 845 m、Indy 665 m、Mill 441 m），与赛道官方公布的距离不完全一致，因此标为「centreline」。
 
 ### 弯角编号
 
-PF International 内置图上标有 T1 到 T15 的弯角编号，按照实际行车顺序排列。编号由赛道几何数据自动推导并经过人工确认，是这台车的自用编号，不使用赛道官方的弯角命名。
+每张内置图都标有按实际行车顺序排列的弯角编号：PF International 是 T1 到 T15，Whilton Mill 的 International 和 National 是 T1 到 T11，Indy 和 Mill 是 T1 到 T8。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
 
 ### 添加永久 Marker
 
@@ -352,7 +358,7 @@ PF International 内置图上标有 T1 到 T15 的弯角编号，按照实际行
 2. 点击 **编辑地图**。
 3. 选择 Marker 类型：入弯、弯中、出弯、刹车、油门或其他。
 4. 放置 Marker 有两种方式：
-   - 在 **选择弯角…** 中直接选择 T1 到 T15 中的一个，Marker 会精确落在该弯角上。
+   - 在 **选择弯角…** 中直接选择该 Layout 的某个弯角，Marker 会精确落在该弯角上。
    - 直接点击地图上的任意位置，适合记录弯角之间的路肩、颠簸或超车点。
 5. 填写名称、简短提示、一般笔记、干地笔记和湿地笔记。
 

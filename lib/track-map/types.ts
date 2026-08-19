@@ -45,7 +45,9 @@ export type TrackLayout = {
   mapAssetId: string | null;
   sourceAttribution?: string;
   sourceUrl?: string;
-  /** Set only while the layout carries an app-supplied map; see lib/track-map/built-in-map.ts. */
+  /** Which built-in circuit this layout came from; see lib/track-map/built-in-maps.ts. */
+  builtInLayoutKey?: string;
+  /** Set only while the layout carries an app-supplied map; see lib/track-map/built-in-maps.ts. */
   builtInMapVersion?: string;
   /** Lap-ordered corners used for labelling the map and placing markers by corner. */
   corners?: TrackCorner[];

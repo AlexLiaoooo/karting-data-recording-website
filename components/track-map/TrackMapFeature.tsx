@@ -2,11 +2,11 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { MapAsset, Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
-import { builtInPfiLayoutFields, loadBuiltInMapAsset } from "@/lib/track-map/built-in-map";
+import { Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
+import { BUILT_IN_TRACKS, BuiltInTrack, createBuiltInTrack } from "@/lib/track-map/built-in-maps";
 import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
-import { TrackDetailView, TrackLibraryView } from "./TrackLibrary";
+import { BuiltInTrackPicker, TrackDetailView, TrackLibraryView } from "./TrackLibrary";
 import { ConfirmDeleteDialog, FeatureHeader, MissingRecord, now, SessionContext, TrackMapChange, useModalViewport } from "./shared";
 import { useTranslation } from "@/lib/i18n";
 
@@ -44,7 +44,8 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
   const [editor, setEditor] = useState<EditorState>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [search, setSearch] = useState("");
-  useModalViewport(Boolean(editor));
+  const [picker, setPicker] = useState(false);
+  useModalViewport(Boolean(editor) || picker);
 
   function deleteDialog() {
     if (!pendingDelete) return null;
@@ -71,34 +72,26 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
     );
   }
 
-  const openTestTrack = async () => {
-    const timestamp = now();
-    const trackId = crypto.randomUUID();
-    const layoutId = crypto.randomUUID();
-    let defaultAsset: MapAsset | undefined;
-    try {
-      defaultAsset = await loadBuiltInMapAsset();
-    } catch {
-      // The track can still be created if a static asset is unavailable; the user can upload a map later.
-    }
+  /**
+   * Adds a circuit that ships with the app. Multi-layout tracks land on the track page rather
+   * than in a map, since there is no one layout to open; a single-layout track opens its map.
+   */
+  const addBuiltInTrack = async (builtIn: BuiltInTrack) => {
+    setPicker(false);
+    const created = await createBuiltInTrack(builtIn, now());
     onChange((current) => ({
       ...current,
-      tracks: [...current.tracks, { id: trackId, name: "PF International", location: "Grantham, UK", notes: "", createdAt: timestamp, updatedAt: timestamp }],
-      layouts: [...current.layouts, {
-        id: layoutId,
-        trackId,
-        name: "Full Layout",
-        direction: "Unknown",
-        mapAssetId: null,
-        ...(defaultAsset ? builtInPfiLayoutFields(defaultAsset) : {}),
-        markers: [],
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      }],
-      assets: defaultAsset ? [...current.assets, defaultAsset] : current.assets,
+      tracks: [...current.tracks, created.track],
+      layouts: [...current.layouts, ...created.layouts],
+      assets: [...current.assets, ...created.assets],
     }));
-    setView({ name: "workspace", layoutId });
-    notify(defaultAsset ? t("PF International created with a built-in map") : t("PF International created — upload your map image next"));
+    setView(created.layouts.length === 1
+      ? { name: "workspace", layoutId: created.layouts[0].id }
+      : { name: "track", trackId: created.track.id });
+
+    if (!created.mapsLoaded) notify(t("{name} created — upload your map image next", { name: builtIn.name }));
+    else if (created.layouts.length === 1) notify(t("{name} created with a built-in map", { name: builtIn.name }));
+    else notify(t("{name} created with {count} built-in layouts", { name: builtIn.name, count: created.layouts.length }));
   };
 
   function saveTrack(input: { name: string; location: string; notes: string }) {
@@ -188,8 +181,9 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
           onBack={onBack}
           onOpenTrack={(trackId) => setView({ name: "track", trackId })}
           onNewTrack={() => setEditor({ kind: "track" })}
-          onCreateTestTrack={openTestTrack}
+          onOpenBuiltIns={() => setPicker(true)}
         />
+        {picker && <BuiltInTrackPicker tracks={BUILT_IN_TRACKS} existing={data.tracks} onClose={() => setPicker(false)} onPick={addBuiltInTrack} />}
         {editor?.kind === "track" && <TrackEditor track={editor.track} onClose={() => setEditor(null)} onSave={saveTrack} />}
       </>
     );

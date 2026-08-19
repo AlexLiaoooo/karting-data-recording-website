@@ -286,8 +286,14 @@ The form may use collapsible sections, but frequently entered tyre values should
 ### Track Map Notebook
 
 - Reusable Tracks and multiple Layouts.
-- PF International Full Layout includes a generated OpenStreetMap-based schematic; other Layouts can use a user-supplied, locally optimised map image.
-- Existing PF International Full Layout records without a map are backfilled with the built-in schematic on app startup; existing custom map assets are never overwritten.
+- Built-in circuits, added from a picker in the Track Library: PF International (Full Layout)
+  and Whilton Mill (International, National, Indy and Mill). Each ships a generated
+  OpenStreetMap-based schematic with lap-ordered corner labels; any other Layout can use a
+  user-supplied, locally optimised map image.
+- A built-in circuit already in the library is listed as added and cannot be added twice.
+- Built-in Layouts are stamped with a key and an artwork version. Records without a map are
+  backfilled on app startup and out-of-date artwork is replaced; a map the user uploaded is
+  never overwritten.
 - Built-in map attribution and the ODbL licence link are shown beneath the map.
 - Zoom and pan on mobile and desktop: pinch to zoom on touch, ctrl or cmd with the wheel on a
   pointer device, plus the on-screen zoom controls. The point under the fingers or cursor
@@ -498,6 +504,37 @@ Possible later phases include:
 - Added general notes to the Layout, at the foot of the map page, for anything about the
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
+
+### Implemented prototype v1.5 — 2026-08-19
+
+- Added Whilton Mill as a second built-in circuit, with all four of its layouts: International
+  (1,040 m), National (845 m), Indy (665 m) and Mill (441 m). Each is a generated schematic
+  carrying its own lap-ordered corner labels, start/finish line and racing-direction arrow.
+- `lib/track-map/built-in-maps.ts` replaces `built-in-map.ts`. The single hard-coded PF
+  International map became a registry of tracks and layouts, and `refreshBuiltInMaps` now
+  identifies a stored layout by a `builtInLayoutKey` written onto the record rather than by
+  matching the track and layout names. Records created before keys existed have none, so PF
+  International keeps a name-match fallback; that fallback is deliberately not extended to
+  Whilton Mill, where a name match could only ever capture a track the user built themselves.
+- `scripts/build-whilton-maps.mjs` generates the four maps and their corner lists in one pass
+  from `scripts/data/whilton-mill-osm.json`, a committed Overpass extract. Artwork and labels
+  come out of the same run, so they cannot drift apart, and the build needs no network.
+- Lap order is taken from the ways' `oneway` tagging rather than inferred, so the direction
+  arrow shows the real racing direction. Each lap starts where the pit lane rejoins the
+  circuit, which is the Home Straight for the three main layouts.
+- Corner detection matches the PF International thresholds, with one addition: a continuous
+  sweep of more than 180 degrees is split into equal parts. Whilton Mill's tighter circuits
+  each contain a curl of 190 to 235 degrees with no straight inside it, which no distance-based
+  merge setting separates and which is not one corner to a driver.
+- Lap lengths on the maps are the measured OpenStreetMap centreline and are labelled as such.
+  They run shorter than the figures the circuit publishes — 441 m against a quoted 450 m for
+  the Mill circuit, and further off for the National — so presenting them as official distances
+  would have been wrong.
+- Layout direction is recorded as Clockwise, taken from the loop's signed area rather than
+  assumed.
+- Fixed a latent overflow in `.item-list`: with no explicit grid column the track was sized by
+  its content, so a long track name or layout list widened every row past its container and
+  pushed the chevron off screen.
 
 ### Implemented prototype v1.4 — 2026-08-16
 

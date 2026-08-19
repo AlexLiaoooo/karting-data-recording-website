@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronRight, ImageIcon, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Download, ImageIcon, MapPinned, Pencil, Plus, Trash2, X } from "lucide-react";
+import type { BuiltInTrack } from "@/lib/track-map/built-in-maps";
 import type { Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
-import { EmptyMapState, FeatureHeader } from "./shared";
+import { EmptyMapState, FeatureHeader, useModalViewport } from "./shared";
 import { useTranslation } from "@/lib/i18n";
 
 type TrackLibraryViewProps = {
@@ -12,10 +13,10 @@ type TrackLibraryViewProps = {
   onBack: () => void;
   onOpenTrack: (trackId: string) => void;
   onNewTrack: () => void;
-  onCreateTestTrack: () => void;
+  onOpenBuiltIns: () => void;
 };
 
-export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenTrack, onNewTrack, onCreateTestTrack }: TrackLibraryViewProps) {
+export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenTrack, onNewTrack, onOpenBuiltIns }: TrackLibraryViewProps) {
   const { t } = useTranslation();
   const filtered = data.tracks.filter((track) => `${track.name} ${track.location}`.toLowerCase().includes(search.toLowerCase()));
 
@@ -25,7 +26,10 @@ export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenT
       <div className="page-content">
         <div className="section-heading">
           <div><p className="eyebrow">{t("TRACK MAP NOTEBOOK")}</p><h1>{t("Your circuits")}</h1></div>
-          <button className="button button-primary button-small" onClick={onNewTrack}><Plus /> {t("New")}</button>
+          <div className="section-heading-actions">
+            <button className="button button-secondary button-small" onClick={onOpenBuiltIns}><Download /> {t("Built-in")}</button>
+            <button className="button button-primary button-small" onClick={onNewTrack}><Plus /> {t("New")}</button>
+          </div>
         </div>
         {data.tracks.length > 2 && <input className="input track-search" type="search" placeholder={t("Search tracks")} value={search} onChange={(event) => onSearchChange(event.target.value)} />}
         {filtered.length ? (
@@ -48,7 +52,7 @@ export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenT
             text={search ? t("Try another search.") : t("Upload a circuit map, then place braking, turn-in, apex and exit notes directly on it.")}
             action={!search && (
               <div className="track-empty-actions">
-                <button className="button button-primary" onClick={onCreateTestTrack}><Plus /> {t("Create PF International")}</button>
+                <button className="button button-primary" onClick={onOpenBuiltIns}><Download /> {t("Add a built-in circuit")}</button>
                 <button className="button button-secondary" onClick={onNewTrack}>{t("Create another track")}</button>
               </div>
             )}
@@ -56,6 +60,54 @@ export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenT
         )}
       </div>
     </>
+  );
+}
+
+type BuiltInTrackPickerProps = {
+  tracks: BuiltInTrack[];
+  existing: Track[];
+  onClose: () => void;
+  onPick: (track: BuiltInTrack) => void;
+};
+
+/**
+ * Offers the circuits that ship with the app.
+ *
+ * A circuit already in the library is shown as added rather than hidden, so the list does not
+ * change shape between visits, and is not offered again — adding it twice would leave two tracks
+ * of the same name with separate markers, which is never what someone means by tapping it again.
+ */
+export function BuiltInTrackPicker({ tracks, existing, onClose, onPick }: BuiltInTrackPickerProps) {
+  const { t } = useTranslation();
+  useModalViewport(true);
+  const names = new Set(existing.map((track) => track.name.trim().toLowerCase()));
+
+  return (
+    <div className="modal-backdrop">
+      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="built-in-track-title">
+        <div className="modal-head">
+          <div><p className="eyebrow">{t("TRACK LIBRARY")}</p><h2 id="built-in-track-title">{t("Built-in circuits")}</h2></div>
+          <button className="icon-button" type="button" aria-label={t("Close")} onClick={onClose}><X /></button>
+        </div>
+        <div className="item-list built-in-list">
+          {tracks.map((track) => {
+            const added = names.has(track.name.trim().toLowerCase());
+            const layouts = track.layouts.map((layout) => layout.name).join(" · ");
+            return (
+              <button className="list-item" key={track.key} disabled={added} onClick={() => onPick(track)}>
+                <span className="list-icon">{added ? <Check /> : <MapPinned />}</span>
+                <span className="list-copy">
+                  <strong>{track.name}</strong>
+                  <span>{track.location} · {layouts}</span>
+                </span>
+                {added ? <span className="list-note">{t("Added")}</span> : <ChevronRight />}
+              </button>
+            );
+          })}
+        </div>
+        <p className="modal-footnote">{t("Maps are drawn from OpenStreetMap geometry. You can replace any of them with your own image later.")}</p>
+      </section>
+    </div>
   );
 }
 

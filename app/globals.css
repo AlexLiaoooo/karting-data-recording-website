@@ -426,6 +426,9 @@ h2 {
 .item-list {
   display: grid;
   gap: 9px;
+  /* Without an explicit track the auto column is sized by its content, so one long track name or
+     layout list widens every row past the container and pushes the chevron off screen. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .list-item {
@@ -1055,6 +1058,44 @@ h2 {
   display: grid;
   gap: 9px;
   width: min(100%, 280px);
+}
+
+/* Two actions where the section heading previously held one; they stay on the heading row
+   rather than wrapping, so the list below does not shift down on a narrow phone. */
+.section-heading-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* A built-in circuit already in the library stays listed but is not offered again. */
+.list-item:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.list-item:disabled:hover {
+  border-color: var(--line);
+}
+
+.list-note {
+  color: var(--muted);
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal-footnote {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 14px 0 0;
+}
+
+/* A built-in track lists all of its layouts, which does not fit the single ellipsised line the
+   rest of the app uses, and the point of showing them is that they can all be read. */
+.built-in-list .list-copy span {
+  overflow: visible;
+  white-space: normal;
 }
 
 .track-search {

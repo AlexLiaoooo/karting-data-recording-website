@@ -38,7 +38,7 @@ import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
-import { refreshBuiltInMaps } from "@/lib/track-map/built-in-map";
+import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";

@@ -60,7 +60,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
         assets: [...current.assets.filter((candidate) => candidate.id !== layout.mapAssetId), nextAsset],
         // Clearing the attribution and version marks the map as user-owned, so the built-in
         // map refresh on startup leaves it alone.
-        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, builtInMapVersion: undefined, updatedAt: now() } : candidate),
+        layouts: current.layouts.map((candidate) => candidate.id === layout.id ? { ...candidate, mapAssetId: nextAsset.id, sourceAttribution: undefined, sourceUrl: undefined, builtInLayoutKey: undefined, builtInMapVersion: undefined, updatedAt: now() } : candidate),
       }));
       notify(t("Map ready · {width} × {height}", { width: nextAsset.width, height: nextAsset.height }));
     } catch (error) {
