@@ -350,7 +350,7 @@ Whilton Mill International 图上还画出了起点/终点线和行车方向箭�
 
 ### 弯角编号
 
-每张内置图都标有按实际行车顺序排列的弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T11。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
+每张内置图都标有按实际行车顺序排列的弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T12，从起点直道之后的第一个左弯开始编号。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
 
 ### 添加永久 Marker
 

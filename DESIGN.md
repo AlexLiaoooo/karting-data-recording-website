@@ -505,6 +505,25 @@ Possible later phases include:
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
 
+### Implemented prototype v1.7 — 2026-08-20
+
+- Renumbered the Whilton Mill International corners from eleven to twelve. The owner counts the
+  left-hand bend out of the start straight as Turn 1; it was not being labelled, so every corner
+  after it was numbered one low.
+- The bend is a real 44-degree corner, not a hand-placed dot, so it comes from lowering
+  `MIN_CORNER_TURN` to 38 rather than from a manual corner list of the kind PF International
+  needs. 38 sits mid-plateau: every value from 34 to 42 yields the same twelve corners, 43 and
+  above drops Turn 1 again, and 33 and below picks up a 31-degree kink he does not count.
+- The threshold is therefore set per circuit rather than shared with `scripts/derive-corners.mjs`,
+  which stays at 55 for PF International. The number encodes the owner's judgement of what counts
+  as a corner, and the two circuits do not answer that the same way.
+- The artwork is unchanged — regenerating produces a byte-identical SVG, because corner labels are
+  drawn by the app over the map rather than baked into it. Only the corner list moved.
+- `WHILTON_VERSION` is bumped so a device that already stored the map picks up the new numbering
+  on its next load. Markers already placed keep their positions, which are relative to the map
+  rather than to a corner, but a marker placed on a corner by name now sits one number further on
+  than its label implies and is worth re-checking.
+
 ### Implemented prototype v1.6 — 2026-08-19
 
 - Reduced Whilton Mill to the International layout. The National, Indy and Mill circuits and

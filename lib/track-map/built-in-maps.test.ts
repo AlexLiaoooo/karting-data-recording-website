@@ -91,6 +91,17 @@ describe("BUILT_IN_TRACKS", () => {
   });
 
   /**
+   * Twelve, not the eleven curvature detection found on its own: the owner counts the left-hand
+   * bend out of the start straight as Turn 1, and it turns 44 degrees where the inherited
+   * threshold wanted 55. Asserted so a threshold change cannot quietly renumber the circuit.
+   */
+  it("numbers Whilton Mill International from the bend out of the start straight", () => {
+    const corners = WHILTON.layouts[0].corners;
+    expect(corners).toHaveLength(12);
+    expect(corners[0]).toMatchObject({ number: 1, label: "T1", x: 0.274, y: 0.4217 });
+  });
+
+  /**
    * The registry names files under public/; nothing else checks that they are there. A typo or a
    * deleted map would otherwise only surface as a track created with no artwork on a real device.
    */

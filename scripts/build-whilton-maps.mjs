@@ -36,13 +36,22 @@ const VIEW = { x: 0, y: 0, width: 760, height: 1000 };
 const MARGIN = { top: 120, right: 60, bottom: 150, left: 60 };
 const TRACK_WIDTH = 22;
 
-// Degrees. A vertex group turning less than this reads as part of a straight. Matched to the
-// threshold scripts/derive-corners.mjs settled on for PF International, so the two built-in
-// tracks label corners at the same level of detail.
-const MIN_CORNER_TURN = Number(process.env.MIN_CORNER_TURN ?? 55);
+/**
+ * Degrees. A vertex group turning less than this reads as part of a straight.
+ *
+ * Set per circuit rather than shared with scripts/derive-corners.mjs, which uses 55 for PF
+ * International: the number encodes the owner's judgement of what counts as a corner here, and
+ * the two circuits do not answer that the same way. 55 missed the left-hand bend out of the
+ * start straight, which he counts as Turn 1 and which measures 44 degrees.
+ *
+ * 38 sits mid-plateau. Every value from 34 to 42 yields the same twelve corners, so the
+ * threshold is not perched on an edge: 43 and above drops Turn 1 again, and 33 and below picks
+ * up a 31-degree kink he does not count.
+ */
+const MIN_CORNER_TURN = Number(process.env.MIN_CORNER_TURN ?? 38);
 const VERTEX_TURN_FLOOR = 6; // degrees; below this is survey noise on a straight
 // Metres; bridges a brief straight inside one long corner. 8 sits mid-plateau: this circuit
-// yields the same eleven corners at every value from 6 to 14, so the threshold is not perched
+// yields the same corner count at every value from 6 to 14, so the threshold is not perched
 // on an edge.
 const MERGE_GAP = Number(process.env.MERGE_GAP ?? 8);
 
