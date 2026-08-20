@@ -1,6 +1,16 @@
 import { openKartDatabase } from "@/lib/database";
 import { emptyTrackMapData, legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
 
+/**
+ * Distance, in normalised map units, within which a marker counts as sitting on a corner.
+ * Placing on a corner copies its exact position, so this only has to absorb rounding. Corner
+ * lists are checked to keep corners at least 0.02 apart, so nothing here is ambiguous.
+ */
+const ON_CORNER = 0.002;
+
+/** A label the app wrote from a corner, rather than one the user typed. */
+const DERIVED_LABEL = /^T\d+$/;
+
 const TRACKS_STORE = "tracks";
 const LAYOUTS_STORE = "trackLayouts";
 const VISITS_STORE = "trackVisits";
@@ -38,6 +48,46 @@ export function migrateMarkerTypes(layouts: TrackLayout[]): TrackLayout[] {
     });
     return changed ? { ...layout, markers } : layout;
   });
+}
+
+/**
+ * Links markers that were placed on a corner back to that corner, for records written before
+ * markers stored a corner number and only carried a copy of its text.
+ *
+ * Matching is on position, never on the label: after a renumber the stored text names a corner
+ * the marker is no longer on, so trusting it would re-attach the marker to the wrong one. A
+ * label the app generated is cleared once the link exists, which is what lets it follow a
+ * renumber; a label the user typed is left alone and keeps precedence.
+ *
+ * Must run after refreshBuiltInMaps, so the corner list it matches against is the current one.
+ */
+export function attachMarkersToCorners(data: TrackMapData): TrackMapData {
+  let changed = false;
+
+  const layouts = data.layouts.map((layout) => {
+    const corners = layout.corners;
+    if (!corners?.length) return layout;
+
+    let layoutChanged = false;
+    const markers = layout.markers.map((marker) => {
+      if (marker.cornerNumber !== undefined) return marker;
+      const corner = corners.find((candidate) => Math.hypot(candidate.x - marker.x, candidate.y - marker.y) <= ON_CORNER);
+      if (!corner) return marker;
+
+      layoutChanged = true;
+      return {
+        ...marker,
+        cornerNumber: corner.number,
+        label: DERIVED_LABEL.test(marker.label) ? "" : marker.label,
+      };
+    });
+
+    if (!layoutChanged) return layout;
+    changed = true;
+    return { ...layout, markers };
+  });
+
+  return changed ? { ...data, layouts } : data;
 }
 
 export async function loadTrackMapData(): Promise<TrackMapData> {

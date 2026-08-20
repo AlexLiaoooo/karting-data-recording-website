@@ -4,6 +4,7 @@ import { BookOpen, Check, Crosshair, Pencil, Upload, X } from "lucide-react";
 import { ChangeEvent, MouseEvent, useRef, useState } from "react";
 import { optimiseMapImage } from "@/lib/track-map/image-processing";
 import {
+  markerLabel,
   markerTypes,
   MarkerObservation,
   Track,
@@ -76,37 +77,45 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
     const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
     const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
     if (moveMarkerId) {
-      updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x, y, updatedAt: now() } : marker) }));
+      // Moved off its corner, so the link goes; anything the marker was showing is kept as text.
+      updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId
+        ? { ...marker, x, y, label: markerLabel(marker, corners), cornerNumber: undefined, updatedAt: now() }
+        : marker) }));
       setMoveMarkerId(null);
       notify(t("Marker moved"));
       return;
     }
     if (!addType) return;
-    addMarker(x, y, addType);
+    addMarker(x, y);
   }
 
-  function addMarker(x: number, y: number, label: string) {
+  /**
+   * A marker placed on a corner is stored as that corner's number with no label of its own, so it
+   * follows the corner if the circuit is ever renumbered. One placed anywhere else starts unnamed.
+   */
+  function addMarker(x: number, y: number, cornerNumber?: number) {
     if (!addType) return;
     const marker: TrackMarker = {
-      id: crypto.randomUUID(), x, y, order: layout.markers.length + 1, label,
+      id: crypto.randomUUID(), x, y, order: layout.markers.length + 1, label: "", cornerNumber,
       type: addType, shortInstruction: "", generalNote: "", dryNote: "", wetNote: "", tags: [], updatedAt: now(),
     };
     updateLayout((current) => ({ ...current, markers: [...current.markers, marker], updatedAt: now() }));
     setSelectedMarkerId(marker.id);
     setAddType(null);
-    notify(label ? t("{type} marker added at {place}", { type: t(marker.type), place: label }) : t("{type} marker added", { type: t(marker.type) }));
+    const place = markerLabel(marker, corners);
+    notify(place ? t("{type} marker added at {place}", { type: t(marker.type), place }) : t("{type} marker added", { type: t(marker.type) }));
   }
 
   /** Corner labels double as placement targets, so a marker can be put on T7 without aiming. */
   function selectCorner(corner: TrackCorner) {
     if (session) return;
     if (moveMarkerId) {
-      updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x: corner.x, y: corner.y, updatedAt: now() } : marker) }));
+      updateLayout((current) => ({ ...current, updatedAt: now(), markers: current.markers.map((marker) => marker.id === moveMarkerId ? { ...marker, x: corner.x, y: corner.y, cornerNumber: corner.number, updatedAt: now() } : marker) }));
       setMoveMarkerId(null);
       notify(t("Marker moved to {corner}", { corner: corner.label }));
       return;
     }
-    if (addType) addMarker(corner.x, corner.y, corner.label);
+    if (addType) addMarker(corner.x, corner.y, corner.number);
   }
 
   function updateMarker(patch: Partial<TrackMarker>) {
@@ -232,6 +241,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
       {selectedMarker ? (
         <MarkerSheet
           marker={selectedMarker}
+          cornerLabel={corners.find((corner) => corner.number === selectedMarker.cornerNumber)?.label}
           mode={session ? "session" : editMode ? "edit" : "reference"}
           session={session}
           observation={observation}
@@ -271,7 +281,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
 
       {pendingDelete && (
         <ConfirmDeleteDialog
-          title={`Delete marker ${pendingDelete.label || pendingDelete.type}?`}
+          title={`Delete marker ${markerLabel(pendingDelete, corners) || pendingDelete.type}?`}
           detail={observationCount(pendingDelete) > 0
             ? `This also deletes ${observationCount(pendingDelete)} Session observation${observationCount(pendingDelete) === 1 ? "" : "s"} recorded against it.`
             : undefined}

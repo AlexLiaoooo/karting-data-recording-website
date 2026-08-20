@@ -1,5 +1,5 @@
 import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
-import type { TrackMapData } from "./track-map/types";
+import { markerLabel, type TrackMapData } from "./track-map/types";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -162,7 +162,7 @@ function markerRows(trackMap: TrackMapData) {
       rows.push([
         ...layoutValues,
         marker.order,
-        marker.label,
+        markerLabel(marker, layout.corners),
         marker.type,
         marker.shortInstruction,
         marker.generalNote,
@@ -201,7 +201,7 @@ function observationRows(data: AppData, trackMap: TrackMapData) {
       const marker = layout?.markers.find((candidate) => candidate.id === observation.markerId);
       rows.push([
         ...visitValues,
-        marker?.label ?? "",
+        marker ? markerLabel(marker, layout?.corners) : "",
         marker?.type ?? "",
         observation.note,
         observation.result,

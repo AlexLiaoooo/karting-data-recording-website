@@ -39,6 +39,7 @@ import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
+import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";
@@ -232,7 +233,10 @@ export default function HomePage() {
       try {
         const [stored, storedTrackMaps] = await Promise.all([loadData(), loadTrackMapData()]);
         // Offline or a missing asset must not block startup — keep what is already stored.
-        const nextTrackMaps = await refreshBuiltInMaps(storedTrackMaps).catch(() => storedTrackMaps);
+        const refreshed = await refreshBuiltInMaps(storedTrackMaps).catch(() => storedTrackMaps);
+        // After the refresh, never before: it matches markers against the corner list by position,
+        // and before the refresh that list can still be the pre-renumber one.
+        const nextTrackMaps = attachMarkersToCorners(refreshed);
         if (cancelled) return;
         setData(stored);
         setTrackMapData(nextTrackMaps);

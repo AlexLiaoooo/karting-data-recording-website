@@ -7,6 +7,8 @@ import { useTranslation } from "@/lib/i18n";
 
 type MarkerSheetProps = {
   marker: TrackMarker;
+  /** The marker's corner, when it sits on one. Shown in place of a label it does not have. */
+  cornerLabel?: string;
   mode: "session" | "edit" | "reference";
   session?: SessionContext;
   observation?: MarkerObservation;
@@ -20,6 +22,7 @@ type MarkerSheetProps = {
 
 export function MarkerSheet({
   marker,
+  cornerLabel,
   mode,
   session,
   observation,
@@ -38,7 +41,7 @@ export function MarkerSheet({
       <div className="marker-panel-head">
         <div>
           <span className={`marker-key ${markerClass(marker.type)}`}>{markerShortNames[marker.type]}</span>
-          <div><p className="eyebrow">{t(marker.type)}</p><h2>{marker.label || t("Untitled marker")}</h2></div>
+          <div><p className="eyebrow">{t(marker.type)}</p><h2>{marker.label || cornerLabel || t("Untitled marker")}</h2></div>
         </div>
         <button className="icon-button" aria-label={t("Close marker")} onClick={onClose}><X /></button>
       </div>
@@ -54,7 +57,9 @@ export function MarkerSheet({
         </div>
       ) : mode === "edit" ? (
         <div className="form-grid marker-form">
-          <label className="field"><span>{t("Label")}</span><input className="input" value={marker.label} onChange={(event) => onUpdateMarker({ label: event.target.value })} /></label>
+          {/* Left empty for a marker on a corner, which shows the corner's own label until the
+              user types over it. Storing that label as text is what used to go stale on a renumber. */}
+          <label className="field"><span>{t("Label")}</span><input className="input" placeholder={cornerLabel ?? ""} value={marker.label} onChange={(event) => onUpdateMarker({ label: event.target.value })} /></label>
           <label className="field"><span>{t("Type")}</span><select className="select" value={marker.type} onChange={(event) => onUpdateMarker({ type: event.target.value as TrackMarkerType })}>{markerTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}</select></label>
           <label className="field field-full"><span>{t("Short instruction")}</span><input className="input" placeholder={t("e.g. Brake at marshal post")} value={marker.shortInstruction} onChange={(event) => onUpdateMarker({ shortInstruction: event.target.value })} /></label>
           <label className="field field-full"><span>{t("General note")}</span><textarea className="textarea" value={marker.generalNote} onChange={(event) => onUpdateMarker({ generalNote: event.target.value })} /></label>

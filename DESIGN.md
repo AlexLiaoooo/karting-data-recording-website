@@ -505,7 +505,30 @@ Possible later phases include:
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
 
-### Implemented prototype v1.7 — 2026-08-20
+### Implemented prototype v1.8 — 2026-08-20
+
+- A marker placed on a corner now stores that corner's number instead of a copy of its label, and
+  the label is resolved for display through `markerLabel`. Renumbering a circuit renames every
+  marker on it, which is what the v1.7 renumber exposed: eleven corners moved up by one and each
+  marker went on asserting the number it was placed under.
+- Free text still wins when there is any, so a name typed into the Label field is never
+  overwritten by a renumber, and the corner link survives underneath it for later use. The Label
+  field shows the corner as its placeholder rather than as a value, which is what keeps the stored
+  label empty and therefore live.
+- Moving a marker off its corner drops the link and keeps whatever it was showing as text; moving
+  it onto a corner takes the link up again.
+- `attachMarkersToCorners` repairs records written before the corner number existed. It matches on
+  position, never on the stored label — after a renumber that label names a corner the marker is
+  no longer on, so trusting it would re-attach the marker to the wrong one. A label the app
+  generated (`T` followed by digits) is cleared once the link exists; one the user typed is kept.
+  It runs after `refreshBuiltInMaps`, so the corner list it matches against is the current one.
+- Placing a marker away from any corner no longer writes the marker's own type into its label.
+  That was never intentional and read back as "Brake marker added at Brake"; such markers now
+  start unnamed and can be named in the Label field.
+- The CSV marker and observation tables export the resolved label, so an export taken after a
+  renumber agrees with the app.
+
+
 
 - Renumbered the Whilton Mill International corners from eleven to twelve. The owner counts the
   left-hand bend out of the start straight as Turn 1; it was not being labelled, so every corner

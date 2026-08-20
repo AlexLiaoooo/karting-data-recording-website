@@ -2,7 +2,7 @@
 
 import { Minus, ZoomIn } from "lucide-react";
 import { MouseEvent, useRef } from "react";
-import type { MapAsset, TrackCorner, TrackMarker } from "@/lib/track-map/types";
+import { markerLabel, type MapAsset, type TrackCorner, type TrackMarker } from "@/lib/track-map/types";
 import { MapImage, markerClass, markerShortNames } from "./shared";
 import { useMapZoom } from "./use-map-zoom";
 import { useTranslation } from "@/lib/i18n";
@@ -70,10 +70,10 @@ export function MapCanvas({
               className={`map-marker ${markerClass(marker.type)} ${selectedMarkerId === marker.id ? "selected" : ""}`}
               style={{ left: `${marker.x * 100}%`, top: `${marker.y * 100}%` }}
               key={marker.id}
-              aria-label={`${t(marker.type)}: ${marker.label}`}
-              title={`${t(marker.type)}: ${marker.label}`}
+              aria-label={`${t(marker.type)}: ${markerLabel(marker, corners)}`}
+              title={`${t(marker.type)}: ${markerLabel(marker, corners)}`}
               onClick={(event) => { event.stopPropagation(); onSelectMarker(marker.id); }}
-            ><span>{markerShortNames[marker.type]}</span><small>{marker.label}</small></button>
+            ><span>{markerShortNames[marker.type]}</span><small>{markerLabel(marker, corners)}</small></button>
           ))}
         </div>
       </div>

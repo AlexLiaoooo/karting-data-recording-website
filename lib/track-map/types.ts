@@ -27,7 +27,10 @@ export type TrackMarker = {
   x: number;
   y: number;
   order: number;
+  /** Free text, and empty for a marker identified only by its corner. See markerLabel. */
   label: string;
+  /** Set when the marker was placed on a corner; see markerLabel for why it is not the label. */
+  cornerNumber?: number;
   type: TrackMarkerType;
   shortInstruction: string;
   generalNote: string;
@@ -100,6 +103,23 @@ export type TrackMapData = {
 };
 
 export const markerTypes: TrackMarkerType[] = ["In", "Mid", "Out", "Brake", "Gas", "Others"];
+
+/**
+ * What to call a marker on screen and in an export.
+ *
+ * A marker placed on a corner stores that corner's number, not a copy of its label, so
+ * renumbering a circuit renames every marker on it. Copying the text instead left markers
+ * asserting a corner they were no longer on: renumbering Whilton Mill moved eleven corners up by
+ * one, and each marker went on claiming the number it was placed under.
+ *
+ * Free text wins when there is any, so naming a marker yourself is never overwritten by a
+ * renumber, and the corner link survives underneath it.
+ */
+export function markerLabel(marker: TrackMarker, corners: TrackCorner[] = []): string {
+  if (marker.label) return marker.label;
+  if (marker.cornerNumber === undefined) return "";
+  return corners.find((corner) => corner.number === marker.cornerNumber)?.label ?? "";
+}
 
 /**
  * Marker types used before the list was reduced. Turn-in, apex, exit and braking map onto
