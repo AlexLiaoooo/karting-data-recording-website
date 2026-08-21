@@ -8,29 +8,23 @@
   <title id="title">PF International owner-driver circuit schematic</title>
   <desc id="desc">A simplified owner-driver layout schematic for PF International, with three coloured track sectors and a dashed pit lane.</desc>
   <style>
-    /* The sector colours read on either background, so only the surfaces and text swap.
-       This follows the device colour scheme: an SVG shown through &lt;img&gt; is its own
-       document and cannot see the app's manual light/dark toggle. */
-    .map-bg { fill: #f7f8fb; }
-    .map-caption { fill: #64748b; }
-    .map-legend-surface { fill: #ffffff; stroke: #e2e8f0; }
-    .map-legend-label { fill: #334155; }
-    .map-shadow { stroke: #172033; }
-    @media (prefers-color-scheme: dark) {
-      .map-bg { fill: #131c29; }
-      .map-caption { fill: #93a4bb; }
-      .map-legend-surface { fill: #1c2735; stroke: #30405a; }
-      .map-legend-label { fill: #ccd8e6; }
-      .map-shadow { stroke: #05080d; }
-    }
+    /* An SVG shown through &lt;img&gt; is its own document: it cannot see the app's light/dark
+       toggle, and following prefers-color-scheme instead put a dark map inside a light app
+       whenever the two disagreed. So the artwork carries no background and no theme of its own.
+       The app's map viewport supplies the surface, already themed, and every colour below is a
+       mid-tone chosen to read on both of its backgrounds (#f5f7fb light, #1d2a3a dark). The
+       sector colours already read on either. */
+    .map-caption { fill: #7f8c9e; }
+    .map-legend-surface { fill: #8896aa; fill-opacity: 0.14; stroke: #8896aa; stroke-opacity: 0.3; }
+    .map-legend-label { fill: #7f8c9e; }
+    .map-outline { stroke: #7f8c9e; }
   </style>
-  <rect class="map-bg" x="40" y="20" width="760" height="1000" rx="36"/>
   <!-- The circuit name is deliberately absent: the app already shows it in the top bar and
        as the page heading, so repeating it here made three copies on one screen. -->
   <text class="map-caption" x="72" y="76" font-family="Arial, Helvetica, sans-serif" font-size="20">Owner-driver / full layout · 1,382 m</text>
 
   <!-- Main circuit geometry, derived from OpenStreetMap raceway ways. -->
-  <g class="map-shadow" fill="none" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" opacity="0.14">
+  <g class="map-outline" fill="none" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" opacity="0.22">
     <path d="M 461.3,195.5 L 519.5,110.3 L 524.6,106.6 L 530.2,103.6 L 538.7,101.2 L 547.2,100.0 L 558.3,100.7 L 641.6,121.0 L 657.8,127.3 L 668.0,132.7 L 676.3,142.9 L 678.8,150.9 L 678.6,158.4 L 672.8,167.0 L 664.7,173.8 L 655.4,179.1 L 643.4,182.6 L 629.6,182.9 L 615.4,179.6 L 607.7,175.4 L 602.5,169.3 L 598.7,162.3 L 592.2,155.4 L 581.1,148.6 L 570.8,145.1 L 563.1,143.8 L 555.4,143.5 L 547.5,145.8 L 541.7,149.6 L 538.1,154.4 L 518.1,184.5 L 508.4,199.3 L 504.9,204.6 L 499.5,213.3 L 497.7,223.3 L 498.6,233.6 L 504.5,244.1 L 510.9,251.4 L 519.9,258.4 L 539.7,266.4 L 566.2,273.7 L 575.3,277.3 L 580.8,281.0 L 584.2,285.3 L 585.5,290.0 L 584.2,293.8 L 558.6,332.7 L 507.1,406.0 L 457.4,481.1"/>
     <path d="M 457.4,481.1 L 393.0,573.0 L 389.1,577.9 L 382.0,582.7 L 372.8,589.7 L 360.3,595.3 L 344.6,600.2 L 327.5,603.1 L 297.5,604.8 L 277.3,609.7 L 268.1,612.8 L 260.6,615.7 L 251.9,619.7 L 244.5,624.2 L 237.5,630.9 L 232.6,637.3 L 212.9,668.3 L 192.8,697.8 L 188.7,701.6 L 185.0,704.7 L 178.2,709.1 L 142.2,725.5 L 129.9,731.5 L 120.5,737.7 L 109.8,749.5 L 102.0,759.6 L 100.0,766.7 L 101.4,774.8 L 105.3,782.7 L 114.3,790.0 L 123.9,795.0 L 136.4,798.5 L 150.8,800.0 L 176.9,799.2 L 192.2,797.4 L 206.6,794.9 L 221.6,791.0 L 235.0,786.2 L 249.0,777.8 L 255.9,770.6 L 264.7,759.1 L 290.2,721.0 L 291.0,713.7 L 289.5,705.7 L 283.0,697.1 L 274.6,691.2 L 266.2,687.9 L 256.8,685.5 L 240.4,684.3"/>
     <path d="M 240.4,684.3 L 173.7,681.3"/>

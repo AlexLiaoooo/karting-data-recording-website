@@ -266,35 +266,35 @@ function toSvg(built) {
   start/finish tick and arrow show the real racing direction rather than a drawing convention.
   Length is the measured centreline, which is shorter than the figure an operator publishes for
   the same circuit; it is labelled "centreline" rather than presented as the official distance.
+
+  The artwork is deliberately transparent and carries no light or dark theme; see the style block.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEW.x} ${VIEW.y} ${VIEW.width} ${VIEW.height}" role="img" aria-labelledby="title desc">
   <title id="title">${title} schematic</title>
   <desc id="desc">A schematic of the ${circuit.name} circuit at Whilton Mill, with the start/finish line, the racing direction and a dashed pit lane.</desc>
   <style>
-    /* An SVG shown through &lt;img&gt; is its own document and cannot see the app's light/dark
-       toggle, so it follows the device colour scheme instead. Only surfaces and text swap;
-       the track colour reads on either background. */
-    .map-bg { fill: #f7f8fb; }
-    .map-caption { fill: #64748b; }
-    .map-legend-surface { fill: #ffffff; stroke: #e2e8f0; }
-    .map-legend-label { fill: #334155; }
-    .map-shadow { stroke: #172033; }
-    .map-mark { fill: #334155; stroke: #334155; }
-    @media (prefers-color-scheme: dark) {
-      .map-bg { fill: #131c29; }
-      .map-caption { fill: #93a4bb; }
-      .map-legend-surface { fill: #1c2735; stroke: #30405a; }
-      .map-legend-label { fill: #ccd8e6; }
-      .map-shadow { stroke: #05080d; }
-      .map-mark { fill: #ccd8e6; stroke: #ccd8e6; }
-    }
+    /* An SVG shown through &lt;img&gt; is its own document: it cannot see the app's light/dark
+       toggle, and following prefers-color-scheme instead put a dark map inside a light app
+       whenever the two disagreed. So the artwork carries no background and no theme of its own.
+       The app's map viewport supplies the surface, already themed, and every colour below is a
+       mid-tone chosen to read on both of its backgrounds (#f5f7fb light, #1d2a3a dark). */
+    .map-caption { fill: #7f8c9e; }
+    .map-legend-surface { fill: #8896aa; fill-opacity: 0.14; stroke: #8896aa; stroke-opacity: 0.3; }
+    .map-legend-label { fill: #7f8c9e; }
+    .map-outline { stroke: #7f8c9e; }
+    /* The start line and the direction arrow sit on the track itself, so they take their contrast
+       from it rather than from the page, and white works the same in either theme. Their legend
+       swatches sit on the panel instead and stay in the label colour. */
+    .map-mark { fill: #ffffff; stroke: #ffffff; }
+    .map-legend-mark { fill: #7f8c9e; stroke: #7f8c9e; }
   </style>
-  <rect class="map-bg" x="${VIEW.x}" y="${VIEW.y}" width="${VIEW.width}" height="${VIEW.height}" rx="36"/>
   <!-- The circuit name is deliberately absent: the app shows it in the top bar and as the page
        heading, so repeating it here put three copies on one screen. -->
   <text class="map-caption" x="60" y="76" font-family="Arial, Helvetica, sans-serif" font-size="20">${caption}</text>
 
-  <g class="map-shadow" fill="none" stroke-width="${TRACK_WIDTH + 12}" stroke-linecap="round" stroke-linejoin="round" opacity="0.14">
+  <!-- A neutral outline rather than a drop shadow: it separates the track from the viewport grid
+       and from itself where the lap runs back alongside, and it does that on either background. -->
+  <g class="map-outline" fill="none" stroke-width="${TRACK_WIDTH + 10}" stroke-linecap="round" stroke-linejoin="round" opacity="0.22">
     <path d="${toPath(canvas)}"/>
   </g>
 
@@ -308,7 +308,7 @@ function toSvg(built) {
   <polygon class="map-mark" points="${startTick.arrow}" stroke-width="1"/>
 
   <g font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">
-    <g transform="translate(60 ${VIEW.height - 130})"><rect class="map-legend-surface" width="290" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text><line x1="176" y1="28" x2="192" y2="28" stroke="#94a3b8" stroke-width="6" stroke-dasharray="5 4"/><text class="map-legend-label" x="206" y="35">Pit lane</text><line class="map-mark" x1="30" y1="50" x2="30" y2="66" stroke-width="5" stroke-linecap="round"/><text class="map-legend-label" x="52" y="65">Start</text><polygon class="map-mark" points="176,58 192,64 176,70"/><text class="map-legend-label" x="206" y="65">Direction</text></g>
+    <g transform="translate(60 ${VIEW.height - 130})"><rect class="map-legend-surface" width="290" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text><line x1="176" y1="28" x2="192" y2="28" stroke="#94a3b8" stroke-width="6" stroke-dasharray="5 4"/><text class="map-legend-label" x="206" y="35">Pit lane</text><line class="map-legend-mark" x1="30" y1="50" x2="30" y2="66" stroke-width="5" stroke-linecap="round"/><text class="map-legend-label" x="52" y="65">Start</text><polygon class="map-legend-mark" points="176,58 192,64 176,70"/><text class="map-legend-label" x="206" y="65">Direction</text></g>
   </g>
 
   <text class="map-caption" x="60" y="${VIEW.height - 22}" font-family="Arial, Helvetica, sans-serif" font-size="13">Schematic generated from OpenStreetMap raceway geometry · © OpenStreetMap contributors · ODbL 1.0</text>

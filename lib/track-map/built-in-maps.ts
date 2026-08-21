@@ -71,10 +71,10 @@ export const BUILT_IN_WHILTON_INTERNATIONAL_CORNERS: TrackCorner[] = [
 
 /**
  * Bumped when the artwork or the corner list changes, so a device that already stored the map
- * picks up the new one. This revision renumbers the corners: the left-hand bend out of the start
- * straight is Turn 1, which moves every other corner up by one.
+ * picks up the new one. This revision drops the map's own background and theme so it follows the
+ * app's light/dark toggle; the one before it renumbered the corners from the start straight.
  */
-const WHILTON_VERSION = "2026-08-20-turn-one-at-start-straight";
+const WHILTON_VERSION = "2026-08-20-theme-neutral";
 
 export const BUILT_IN_TRACKS: BuiltInTrack[] = [
   {
@@ -89,7 +89,7 @@ export const BUILT_IN_TRACKS: BuiltInTrack[] = [
       key: "pfi-full",
       name: "Full Layout",
       mapUrl: "/maps/pfi-international-owner-driver.svg",
-      version: "2026-08-16-numbered-corners",
+      version: "2026-08-20-theme-neutral",
       corners: BUILT_IN_PFI_CORNERS,
     }],
   },

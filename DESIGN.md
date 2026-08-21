@@ -505,7 +505,28 @@ Possible later phases include:
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
 
-### Implemented prototype v1.8 — 2026-08-20
+### Implemented prototype v1.9 — 2026-08-20
+
+- Built-in maps now follow the app's light/dark toggle. They previously followed the device
+  colour scheme, because an SVG shown through `<img>` is its own document and cannot see the
+  page: setting the app to light on a dark phone left a dark map inside a light app.
+- Fixed by removing the theme from the artwork rather than by theming it from the app. Each map
+  drops its opaque background rect and its `prefers-color-scheme` block, and every remaining
+  colour is a mid-tone that reads on both viewport backgrounds (`#f5f7fb` and `#1d2a3a`). The
+  `.track-map-viewport` surface and its grid, both already themed, now show through — the grid
+  was being covered up by the map's own background and had never been visible.
+- Inlining the SVG into the DOM would also have worked and was rejected: a restored JSON backup
+  can carry an arbitrary blob under an `image/svg+xml` type, so inlining stored markup would be a
+  script-injection route into the app's own origin for the sake of a colour.
+- The drop shadow became a neutral outline. A dark shadow is invisible on a dark background,
+  whereas an outline separates the track from the grid and from itself where the lap runs back
+  alongside, and does so on either background.
+- The start line and direction arrow are white. They sit on the track, so they take their
+  contrast from it rather than from the page, and the track colour is the same in both themes.
+  Their legend swatches sit on the panel instead and stay in the label colour.
+- Both artwork versions are bumped so devices holding the old maps replace them.
+
+
 
 - A marker placed on a corner now stores that corner's number instead of a copy of its label, and
   the label is resolved for display through `markerLabel`. Renumbering a circuit renames every
