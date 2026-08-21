@@ -2,6 +2,7 @@
 
 import { BookOpen, Check, Crosshair, Pencil, Upload, X } from "lucide-react";
 import { ChangeEvent, MouseEvent, useRef, useState } from "react";
+import { counted } from "@/lib/format";
 import { optimiseMapImage } from "@/lib/track-map/image-processing";
 import {
   markerLabel,
@@ -283,7 +284,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
         <ConfirmDeleteDialog
           title={`Delete marker ${markerLabel(pendingDelete, corners) || pendingDelete.type}?`}
           detail={observationCount(pendingDelete) > 0
-            ? `This also deletes ${observationCount(pendingDelete)} Session observation${observationCount(pendingDelete) === 1 ? "" : "s"} recorded against it.`
+            ? t("This also deletes {observations} recorded against it.", { observations: counted(observationCount(pendingDelete), "Session observation") })
             : undefined}
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => deleteMarker(pendingDelete)}

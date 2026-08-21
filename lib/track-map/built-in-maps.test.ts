@@ -266,6 +266,24 @@ describe("refreshBuiltInMaps", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  /**
+   * Layouts created before the registry recorded a direction were all stamped Unknown, including
+   * the PF International record the app used to create by hand.
+   */
+  it("fills a direction that was never chosen", async () => {
+    stubFetch();
+    const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM", direction: "Unknown" })] });
+
+    expect((await refreshBuiltInMaps(data)).layouts[0].direction).toBe("Clockwise");
+  });
+
+  it("never overwrites a direction the user picked", async () => {
+    stubFetch();
+    const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM", direction: "Anti-clockwise" })] });
+
+    expect((await refreshBuiltInMaps(data)).layouts[0].direction).toBe("Anti-clockwise");
+  });
+
   it("keeps marker positions, which are relative to the asset box", async () => {
     stubFetch();
     const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM" })] });

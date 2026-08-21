@@ -3,6 +3,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
+import { counted } from "@/lib/format";
 import { BUILT_IN_TRACKS, BuiltInTrack, createBuiltInTrack } from "@/lib/track-map/built-in-maps";
 import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
@@ -55,7 +56,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       return (
         <ConfirmDeleteDialog
           title={`Delete ${pendingDelete.track.name}?`}
-          detail={`This also deletes ${layouts.length} layout${layouts.length === 1 ? "" : "s"}, ${markers} marker${markers === 1 ? "" : "s"}, their map images and every Session observation recorded on them.`}
+          detail={t("This also deletes {layouts}, {markers}, their map images and every Session observation recorded on them.", { layouts: counted(layouts.length, "layout"), markers: counted(markers, "marker") })}
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => deleteTrack(pendingDelete.track)}
         />
@@ -65,7 +66,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
     return (
       <ConfirmDeleteDialog
         title={`Delete ${pendingDelete.layout.name}?`}
-        detail={`This also deletes its map image, ${pendingDelete.layout.markers.length} marker${pendingDelete.layout.markers.length === 1 ? "" : "s"} and ${visits} Session overlay${visits === 1 ? "" : "s"}.`}
+        detail={t("This also deletes its map image, {markers} and {overlays}.", { markers: counted(pendingDelete.layout.markers.length, "marker"), overlays: counted(visits, "Session overlay") })}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => deleteLayout(pendingDelete.layout)}
       />

@@ -199,7 +199,12 @@ export async function refreshBuiltInMaps(data: TrackMapData): Promise<TrackMapDa
 
   const fieldsByLayoutId = new Map(stale.map((entry) => [
     entry.layout.id,
-    builtInLayoutFields(entry.builtIn.track, entry.builtIn.layout, assets.get(entry.builtIn.layout.mapUrl)!),
+    {
+      ...builtInLayoutFields(entry.builtIn.track, entry.builtIn.layout, assets.get(entry.builtIn.layout.mapUrl)!),
+      // Fills a direction that was never chosen — records created before the registry knew one
+      // were all stamped Unknown. A direction the user picked is left alone.
+      ...(entry.layout.direction === "Unknown" ? { direction: entry.builtIn.track.direction } : {}),
+    },
   ]));
   const replacedAssetIds = new Set(stale.map((entry) => entry.layout.mapAssetId).filter((id): id is string => Boolean(id)));
   const timestamp = new Date().toISOString();

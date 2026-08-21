@@ -505,6 +505,22 @@ Possible later phases include:
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
 
+### Implemented prototype v1.10 — 2026-08-21
+
+- Counts no longer read "1 layouts". `lib/format.ts` holds one `counted` helper and every count in
+  the app goes through it, replacing five hand-written ternaries and two places that had none.
+  The counted nouns stay English in both languages, per the convention in `lib/i18n.tsx`, so this
+  is grammar rather than translation.
+- The restore confirmation was a bare English sentence that never passed through `t()`, so it
+  stayed English in the Chinese interface and read "1 events" on a small backup. The i18n test
+  scans `t()` calls, so an un-wrapped sentence was invisible to it. Now translated, and the three
+  delete-confirmation sentences with it.
+- A layout's direction is shown translated. It was interpolated raw, so a Chinese interface
+  displayed "Clockwise".
+- `refreshBuiltInMaps` fills a direction that was never chosen. Layouts created before the
+  registry knew one were all stamped Unknown, including the PF International record the app used
+  to create by hand. A direction the user picked is left alone.
+
 ### Implemented prototype v1.9 — 2026-08-20
 
 - Built-in maps now follow the app's light/dark toggle. They previously followed the device

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronRight, Download, ImageIcon, MapPinned, Pencil, Plus, Trash2, X } from "lucide-react";
+import { counted } from "@/lib/format";
 import type { BuiltInTrack } from "@/lib/track-map/built-in-maps";
 import type { Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
 import { EmptyMapState, FeatureHeader, useModalViewport } from "./shared";
@@ -22,7 +23,7 @@ export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenT
 
   return (
     <>
-      <FeatureHeader title={t("Track Library")} subtitle={`${data.tracks.length} ${data.tracks.length === 1 ? "track" : "tracks"}`} onBack={onBack} />
+      <FeatureHeader title={t("Track Library")} subtitle={counted(data.tracks.length, "track")} onBack={onBack} />
       <div className="page-content">
         <div className="section-heading">
           <div><p className="eyebrow">{t("TRACK MAP NOTEBOOK")}</p><h1>{t("Your circuits")}</h1></div>
@@ -40,7 +41,7 @@ export function TrackLibraryView({ data, search, onSearchChange, onBack, onOpenT
               return (
                 <button className="list-item" key={track.id} onClick={() => onOpenTrack(track.id)}>
                   <span className="list-icon"><MapPinned /></span>
-                  <span className="list-copy"><strong>{track.name}</strong><span>{track.location || t("Location not set")} · {layouts.length} layouts · {markers} markers</span></span>
+                  <span className="list-copy"><strong>{track.name}</strong><span>{track.location || t("Location not set")} · {counted(layouts.length, "layout")} · {counted(markers, "marker")}</span></span>
                   <ChevronRight />
                 </button>
               );
@@ -147,7 +148,7 @@ export function TrackDetailView({ track, layouts, onBack, onEditTrack, onDeleteT
             {layouts.map((layout) => (
               <button className="list-item" key={layout.id} onClick={() => onOpenLayout(layout.id)}>
                 <span className="list-icon"><ImageIcon /></span>
-                <span className="list-copy"><strong>{layout.name}</strong><span>{layout.direction} · {layout.markers.length} markers · {layout.mapAssetId ? t("Map ready") : t("Needs map image")}</span></span>
+                <span className="list-copy"><strong>{layout.name}</strong><span>{t(layout.direction)} · {counted(layout.markers.length, "marker")} · {layout.mapAssetId ? t("Map ready") : t("Needs map image")}</span></span>
                 <ChevronRight />
               </button>
             ))}

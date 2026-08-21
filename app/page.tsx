@@ -38,6 +38,7 @@ import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
+import { counted } from "@/lib/format";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -665,7 +666,7 @@ export default function HomePage() {
   } else if (screen === "events") {
     content = (
       <>
-        <TopBar title={t("All events")} subtitle={`${data.events.length} ${data.events.length === 1 ? "event" : "events"}`} onBack={() => setScreen("home")} />
+        <TopBar title={t("All events")} subtitle={counted(data.events.length, "event")} onBack={() => setScreen("home")} />
         <div className="page-content">
           <div className="section-heading"><h1>{t("Events")}</h1><button className="button button-primary button-small" onClick={openNewEventForm}><Plus /> {t("New")}</button></div>
           {data.events.length ? (
@@ -1167,7 +1168,17 @@ function ImportConfirmModal({ data, onCancel, onConfirm }: { data: ParsedBackup;
       <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="restore-title">
         <span className="danger-icon"><Upload /></span>
         <h2 id="restore-title">{t("Replace current data?")}</h2>
-        <p>This backup contains {data.appData.events.length} events, {sessionCount} sessions, {runCount} runs, {data.trackMapData.tracks.length} tracks, {data.trackMapData.layouts.length} layouts, {markerCount} markers and {data.trackMapData.assets.length} map images. Restoring it replaces all data currently stored on this device.</p>
+        {/* Was a bare English sentence: never translated, and it read "1 events" on a backup
+            holding one of anything. The counted nouns stay English on purpose; see lib/format.ts. */}
+        <p>{t("This backup contains {events}, {sessions}, {runs}, {tracks}, {layouts}, {markers} and {images}. Restoring it replaces all data currently stored on this device.", {
+          events: counted(data.appData.events.length, "event"),
+          sessions: counted(sessionCount, "session"),
+          runs: counted(runCount, "run"),
+          tracks: counted(data.trackMapData.tracks.length, "track"),
+          layouts: counted(data.trackMapData.layouts.length, "layout"),
+          markers: counted(markerCount, "marker"),
+          images: counted(data.trackMapData.assets.length, "map image"),
+        })}</p>
         <div className="action-stack">
           <button className="button button-primary button-block" onClick={onConfirm}>{t("Restore backup")}</button>
           <button className="button button-secondary button-block" onClick={onCancel}>{t("Cancel")}</button>
