@@ -220,7 +220,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           )}
           <MapCanvas
             asset={asset}
-            alt={`${track.name} ${layout.name} map`}
+            alt={t("{track} {layout} map", { track: track.name, layout: layout.name })}
             markers={layout.markers}
             corners={corners}
             selectedMarkerId={selectedMarkerId}
@@ -282,7 +282,7 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
 
       {pendingDelete && (
         <ConfirmDeleteDialog
-          title={`Delete marker ${markerLabel(pendingDelete, corners) || pendingDelete.type}?`}
+          title={t("Delete marker {name}?", { name: markerLabel(pendingDelete, corners) || t(pendingDelete.type) })}
           detail={observationCount(pendingDelete) > 0
             ? t("This also deletes {observations} recorded against it.", { observations: counted(observationCount(pendingDelete), "Session observation") })
             : undefined}

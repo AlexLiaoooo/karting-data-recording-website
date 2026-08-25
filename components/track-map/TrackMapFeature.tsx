@@ -55,7 +55,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
       const markers = layouts.reduce((total, layout) => total + layout.markers.length, 0);
       return (
         <ConfirmDeleteDialog
-          title={`Delete ${pendingDelete.track.name}?`}
+          title={t("Delete {name}?", { name: pendingDelete.track.name })}
           detail={t("This also deletes {layouts}, {markers}, their map images and every Session observation recorded on them.", { layouts: counted(layouts.length, "layout"), markers: counted(markers, "marker") })}
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => deleteTrack(pendingDelete.track)}
@@ -65,7 +65,7 @@ export function TrackMapFeature({ data, mode, session, onChange, onBack, notify 
     const visits = data.visits.filter((visit) => visit.layoutId === pendingDelete.layout.id).length;
     return (
       <ConfirmDeleteDialog
-        title={`Delete ${pendingDelete.layout.name}?`}
+        title={t("Delete {name}?", { name: pendingDelete.layout.name })}
         detail={t("This also deletes its map image, {markers} and {overlays}.", { markers: counted(pendingDelete.layout.markers.length, "marker"), overlays: counted(visits, "Session overlay") })}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => deleteLayout(pendingDelete.layout)}

@@ -505,6 +505,25 @@ Possible later phases include:
   circuit as a whole rather than about one marker. Session track summaries are unchanged and
   remain separate.
 
+### Implemented prototype v1.11 — 2026-08-25
+
+- Pending saves are flushed when the app is put away. Writes are debounced by 350ms and 500ms and
+  nothing flushed them; those timers do not fire once the page is hidden, and iOS suspends a
+  backgrounded PWA and may kill it without resuming. An edit made in the last moment before the
+  phone went into a pocket was lost silently, while the indicator still read "Saving…".
+  `visibilitychange` and `pagehide` now write whatever is waiting. `beforeunload` is not used: it
+  does not fire reliably on iOS.
+- Measured rather than assumed. Reading IndexedDB 50ms after a keystroke shows the value absent,
+  which is the loss window; backgrounding the page and reading again at 226ms shows it present,
+  and the debounce would not have fired until 350ms.
+- A run is renamed from its own heading. The Run label field stays in the Performance section,
+  which is where it used to live and where nobody looked for it: a run's name is not a performance
+  figure, and that section is collapsed by default, so the app appeared not to support renaming.
+- Translated the strings a scan of user-facing text turned up: the three delete confirmation
+  titles, the template delete button, the four tyre aria-labels and the map alt text. Two of those
+  keys were already in the dictionary and simply never used, because the call sites built the
+  string with a template literal instead of calling `t`.
+
 ### Implemented prototype v1.10 — 2026-08-21
 
 - Counts no longer read "1 layouts". `lib/format.ts` holds one `counted` helper and every count in

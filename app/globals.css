@@ -556,6 +556,31 @@ h2 {
   margin-bottom: 0;
 }
 
+/* The run's name is edited where it is read, so the input has to carry the heading's own type
+   rather than look like a form field dropped into the title. It keeps a resting underline so it
+   still reads as editable, which a bare heading would not. */
+.heading-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  max-width: 100%;
+  padding: 0 0 2px;
+  width: 100%;
+}
+
+.heading-input::placeholder {
+  color: inherit;
+  opacity: 0.55;
+}
+
+.heading-input:focus {
+  border-bottom-color: var(--blue);
+  outline: none;
+}
+
 .editor-stack {
   display: grid;
   gap: 11px;

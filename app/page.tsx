@@ -209,6 +209,8 @@ export default function HomePage() {
   const importRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
   const saveTracker = useRef({ pending: 0, failed: false });
+  /** The debounced writes waiting to run, so they can be flushed if the app is put away first. */
+  const pendingSaves = useRef<{ app?: () => Promise<void>; trackMap?: () => Promise<void> }>({});
 
   // App data and Track Map data save on separate debounces. "Saved" must only appear
   // once every in-flight write has settled, otherwise the faster save reports success
@@ -259,16 +261,53 @@ export default function HomePage() {
   useEffect(() => {
     if (!hydrated.current) return;
     setSaveState("Saving…");
-    const timer = window.setTimeout(() => beginSave(() => saveData(data)), 350);
+    const write = () => saveData(data);
+    pendingSaves.current.app = write;
+    const timer = window.setTimeout(() => {
+      if (pendingSaves.current.app === write) pendingSaves.current.app = undefined;
+      beginSave(write);
+    }, 350);
     return () => window.clearTimeout(timer);
   }, [data, beginSave]);
 
   useEffect(() => {
     if (!hydrated.current) return;
     setSaveState("Saving…");
-    const timer = window.setTimeout(() => beginSave(() => saveTrackMapData(trackMapData)), 500);
+    const write = () => saveTrackMapData(trackMapData);
+    pendingSaves.current.trackMap = write;
+    const timer = window.setTimeout(() => {
+      if (pendingSaves.current.trackMap === write) pendingSaves.current.trackMap = undefined;
+      beginSave(write);
+    }, 500);
     return () => window.clearTimeout(timer);
   }, [trackMapData, beginSave]);
+
+  /**
+   * Writes anything still waiting on its debounce timer when the app is put away.
+   *
+   * Those timers do not fire once the page is hidden, and iOS suspends a backgrounded PWA and may
+   * kill it without ever resuming — so an edit made in the last moment before the phone went into
+   * a pocket was lost, silently, while the indicator still read "Saving…". visibilitychange and
+   * pagehide are the events that actually fire on iOS; beforeunload does not.
+   */
+  useEffect(() => {
+    const flush = () => {
+      const { app, trackMap } = pendingSaves.current;
+      pendingSaves.current = {};
+      if (app) beginSave(app);
+      if (trackMap) beginSave(trackMap);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [beginSave]);
 
   useEffect(() => {
     if (!toast) return;
@@ -821,7 +860,7 @@ export default function HomePage() {
                 {data.setupTemplates.map((template) => (
                   <div className="template-item" key={template.id}>
                     <span className="list-copy"><strong>{template.name}</strong><span>{template.setup.axleType || t("Axle not set")} · {template.setup.rearSprocket ? `${template.setup.rearSprocket}T rear` : t("Sprocket not set")}</span></span>
-                    <IconButton label={`Delete ${template.name}`} onClick={() => requestDelete({ kind: "template", id: template.id, name: template.name })}><Trash2 /></IconButton>
+                    <IconButton label={t("Delete {name}", { name: template.name })} onClick={() => requestDelete({ kind: "template", id: template.id, name: template.name })}><Trash2 /></IconButton>
                   </div>
                 ))}
               </div>
@@ -1226,7 +1265,10 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
         action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{t(saveState)}</span>}
       />
       <div className="page-content run-page">
-        <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1>{run.label || t("Trackside entry")}</h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
+        {/* The heading is the run's name and is edited in place. The same value has a field in
+            the Performance section, which is where it used to live and where nobody looked for it:
+            a run's name is not a performance figure and that section is collapsed by default. */}
+        <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
         <div className="editor-stack">
           <details className="editor-section" open>
             <summary><span><CircleGauge /> {t("Tyres")} <small>{t("Cold / hot")}</small></span><ChevronRight /></summary>
@@ -1235,10 +1277,10 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
                 <div className={`tyre-card ${index === 2 ? "rear-start" : ""}`} key={key}>
                   <div className="tyre-head"><strong>{t(label)}</strong><span>{code}</span></div>
                   <div className="mini-grid">
-                    <Field label={t("Cold pressure")}><NumberInput unit="PSI" aria-label={`${label} cold pressure`} value={run.tyres[key].coldPressure} onChange={(event) => setTyre(key, "coldPressure", event.target.value)} /></Field>
-                    <Field label={t("Hot pressure")}><NumberInput unit="PSI" aria-label={`${label} hot pressure`} value={run.tyres[key].hotPressure} onChange={(event) => setTyre(key, "hotPressure", event.target.value)} /></Field>
-                    <Field label={t("Cold temp")}><NumberInput unit="°C" aria-label={`${label} cold temperature`} value={run.tyres[key].coldTemperature} onChange={(event) => setTyre(key, "coldTemperature", event.target.value)} /></Field>
-                    <Field label={t("Hot temp")}><NumberInput unit="°C" aria-label={`${label} hot temperature`} value={run.tyres[key].hotTemperature} onChange={(event) => setTyre(key, "hotTemperature", event.target.value)} /></Field>
+                    <Field label={t("Cold pressure")}><NumberInput unit="PSI" aria-label={`${t(label)} ${t("Cold pressure")}`} value={run.tyres[key].coldPressure} onChange={(event) => setTyre(key, "coldPressure", event.target.value)} /></Field>
+                    <Field label={t("Hot pressure")}><NumberInput unit="PSI" aria-label={`${t(label)} ${t("Hot pressure")}`} value={run.tyres[key].hotPressure} onChange={(event) => setTyre(key, "hotPressure", event.target.value)} /></Field>
+                    <Field label={t("Cold temp")}><NumberInput unit="°C" aria-label={`${t(label)} ${t("Cold temp")}`} value={run.tyres[key].coldTemperature} onChange={(event) => setTyre(key, "coldTemperature", event.target.value)} /></Field>
+                    <Field label={t("Hot temp")}><NumberInput unit="°C" aria-label={`${t(label)} ${t("Hot temp")}`} value={run.tyres[key].hotTemperature} onChange={(event) => setTyre(key, "hotTemperature", event.target.value)} /></Field>
                   </div>
                 </div>
               ))}

@@ -316,6 +316,8 @@ const zh: Record<string, string> = {
   "This also deletes {layouts}, {markers}, their map images and every Session observation recorded on them.": "同时会删除 {layouts}、{markers}、它们的地图图片，以及记录在其上的所有 Session 观察。",
   "This also deletes its map image, {markers} and {overlays}.": "同时会删除它的地图图片、{markers} 和 {overlays}。",
   "This also deletes {observations} recorded against it.": "同时会删除记录在其上的 {observations}。",
+  "Delete {name}": "删除 {name}",
+  "{track} {layout} map": "{track} {layout} 地图",
   "This backup contains {events}, {sessions}, {runs}, {tracks}, {layouts}, {markers} and {images}. Restoring it replaces all data currently stored on this device.": "此备份包含 {events}、{sessions}、{runs}、{tracks}、{layouts}、{markers} 和 {images}。恢复后会覆盖此设备上现有的全部数据。",
   "Location not set": "未填写位置",
   "Add a full, short or alternative circuit layout.": "新增全赛道、短赛道或其他 Layout。",
@@ -395,8 +397,6 @@ const zh: Record<string, string> = {
   "{name} created with {count} built-in layouts": "已建立 {name}，并载入 {count} 个内置 Layout",
   "{name} created — upload your map image next": "已建立 {name}，请接着上传地图图片",
   "Delete marker {name}?": "删除 Marker {name}？",
-  "This also deletes {count} Session observation recorded against it.": "同时会删除与它关联的 {count} 条 Session 观察。",
-  "This also deletes {count} Session observations recorded against it.": "同时会删除与它关联的 {count} 条 Session 观察。",
 
   // Marker sheet
   "Close marker": "关闭 Marker",
