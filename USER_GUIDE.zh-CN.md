@@ -337,6 +337,7 @@ Track Map Notebook 用于把刹车点、入弯点、弯心、出弯方式和赛�
 2. 点击 **内置** 打开内置赛道列表，其中包含：
    - **PF International** — Full Layout。
    - **Whilton Mill** — International。
+   - **Kart Silverstone** — Grand Prix。这张图是根据 OpenStreetMap 推测还原的：该赛道在 OpenStreetMap 中没有记录赛道组合，也没有记录行车方向，因此图上不画起点线和方向箭头，弯角编号是本网站自己按几何顺序排的，去过赛道后请自行核对。
    已经添加过的赛道会显示为 **已添加**，不会重复建立。
 3. 也可以点击 **新建** 自己建立赛道。
 4. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
@@ -350,7 +351,7 @@ Whilton Mill International 图上还画出了起点/终点线和行车方向箭�
 
 ### 弯角编号
 
-每张内置图都标有按实际行车顺序排列的弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T12，从起点直道之后的第一个左弯开始编号。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
+每张内置图都标有弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T12（从起点直道之后的第一个左弯开始，按实际行车顺序排列）。Kart Silverstone Grand Prix 是 T1 到 T15，但由于数据中没有行车方向，这组编号只是本网站自己的排序，不代表赛道官方的顺序。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
 
 ### 添加永久 Marker
 

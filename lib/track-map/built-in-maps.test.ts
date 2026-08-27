@@ -102,6 +102,31 @@ describe("BUILT_IN_TRACKS", () => {
   });
 
   /**
+   * Kart Silverstone is the one built-in whose layout its source does not establish: OpenStreetMap
+   * has no circuit relation and no oneway tagging there. The map must therefore not assert a
+   * direction it does not know, and the uncertainty has to reach the user rather than sitting only
+   * in a code comment.
+   */
+  describe("Kart Silverstone, which is a reconstruction", () => {
+    const silverstone = BUILT_IN_TRACKS.find((track) => track.key === "kart-silverstone")!;
+
+    it("leaves the direction unknown rather than inventing one", () => {
+      expect(silverstone.direction).toBe("Unknown");
+    });
+
+    it("tells the user in the track notes that the layout is reconstructed", () => {
+      expect(silverstone.notes).toMatch(/reconstructed/i);
+      expect(silverstone.notes).toMatch(/not a confirmed one|check them against the circuit/i);
+    });
+
+    it("draws no direction arrow, since the source records no direction", () => {
+      const markup = readFileSync(join(__dirname, "../../public", silverstone.layouts[0].mapUrl), "utf8");
+      expect(markup).not.toMatch(/>Direction</);
+      expect(markup).toMatch(/no start.finish line/i);
+    });
+  });
+
+  /**
    * The registry names files under public/; nothing else checks that they are there. A typo or a
    * deleted map would otherwise only surface as a track created with no artwork on a real device.
    */

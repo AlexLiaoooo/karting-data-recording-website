@@ -524,7 +524,31 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
-### Implemented prototype v1.10 — 2026-08-21
+### Implemented prototype v1.11 — 2026-08-28
+
+- Added Kart Silverstone as a third built-in circuit, with its Grand Prix layout.
+- Its OpenStreetMap data is much weaker than Whilton Mill's. There is no `type=circuit` relation
+  and no `oneway` tagging: eleven raceway ways form one connected network with infield
+  cut-throughs, and that network contains 154 distinct closed laps. Neither the circuit nor its
+  direction can be derived.
+- The lap is therefore pinned by hand in `scripts/build-silverstone-map.mjs`, as the set of network
+  edges it uses. It is the closed lap nearest the 1,377 m the circuit publishes for the Grand Prix,
+  and the best match when every candidate was aligned against the operator's own layout diagram —
+  but six candidates sit within 2% of that length and the winner beat the runner-up by 2 IoU
+  points, so it is a reconstruction rather than a confirmed layout.
+- What is not known is not drawn. The map has no start/finish line and no direction arrow, the
+  stored layout records its direction as `Unknown`, and the track note tells the user the layout is
+  reconstructed and the corner numbers are the app's own ordering. Tests assert all three, so the
+  caveat cannot quietly disappear.
+- The lap starts at its northernmost point. With no pit lane in the extract and no direction there
+  is no real start line to use, so this is an explicit drawing convention whose only job is to keep
+  the numbering stable between runs.
+- `scripts/lib/circuit-map.mjs` now holds the projection, corner detection and drawing shared by
+  both generators, which keep only the part that differs: how a lap is recovered from the extract.
+  Regenerating Whilton Mill after the extraction produces a byte-identical SVG, which is the check
+  that the shared module changed nothing about the circuit that was already shipping.
+
+
 
 - Counts no longer read "1 layouts". `lib/format.ts` holds one `counted` helper and every count in
   the app goes through it, replacing five hand-written ternaries and two places that had none.
