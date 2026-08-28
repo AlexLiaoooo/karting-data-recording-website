@@ -337,7 +337,7 @@ Track Map Notebook 用于把刹车点、入弯点、弯心、出弯方式和赛�
 2. 点击 **内置** 打开内置赛道列表，其中包含：
    - **PF International** — Full Layout。
    - **Whilton Mill** — International。
-   - **Kart Silverstone** — Grand Prix。这张图是根据 OpenStreetMap 推测还原的：该赛道在 OpenStreetMap 中没有记录赛道组合，也没有记录行车方向，因此图上不画起点线和方向箭头，弯角编号是本网站自己按几何顺序排的，去过赛道后请自行核对。
+   - **Kart Silverstone** — Grand Prix。这张图是根据 OpenStreetMap 推测还原的：该赛道在 OpenStreetMap 中没有记录赛道组合，因此这条路线是与官方公布的 1,377 m 最接近的一条，并非确定的官方组合。行车方向为逆时针（由车手确认，数据中没有），弯角按此顺序编号；但数据中没有起点线，所以 T1 只是本网站开始计数的位置，不一定是赛道官方的第一个弯。
    已经添加过的赛道会显示为 **已添加**，不会重复建立。
 3. 也可以点击 **新建** 自己建立赛道。
 4. 每个 Track 可以包含多个 Layout，例如 Full Layout、Short Layout 或不同方向。
@@ -351,7 +351,7 @@ Whilton Mill International 图上还画出了起点/终点线和行车方向箭�
 
 ### 弯角编号
 
-每张内置图都标有弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T12（从起点直道之后的第一个左弯开始，按实际行车顺序排列）。Kart Silverstone Grand Prix 是 T1 到 T15，但由于数据中没有行车方向，这组编号只是本网站自己的排序，不代表赛道官方的顺序。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
+每张内置图都标有弯角编号：PF International 是 T1 到 T15，Whilton Mill International 是 T1 到 T12（从起点直道之后的第一个左弯开始，按实际行车顺序排列）。Kart Silverstone Grand Prix 是 T1 到 T15，按逆时针行车顺序排列，但起点位置是本网站自己选的，T1 不一定对应赛道官方的第一个弯。编号由赛道几何数据自动推导，是这台车的自用编号，不使用赛道官方的弯角命名。
 
 ### 添加永久 Marker
 

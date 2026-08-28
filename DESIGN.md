@@ -524,7 +524,22 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
-### Implemented prototype v1.11 — 2026-08-28
+### Implemented prototype v1.12 — 2026-08-28
+
+- Kart Silverstone runs anti-clockwise. The owner supplied it; OpenStreetMap does not record it.
+- The generator now orients the lap anti-clockwise before numbering, so the corners run in the
+  order a driver meets them rather than in whichever order the pinned edges happened to chain.
+  The lap it had already chained turned out to be anti-clockwise, so the numbering did not move —
+  but it is now set deliberately instead of by luck, and a re-chain cannot silently reverse it.
+- The direction arrow is drawn; the start line still is not. Those were one option in the drawing
+  code and are now two, because they are known independently: nothing in the source marks a start
+  line, so the lap still begins at an arbitrary point. The layout note says as much — the corners
+  are in the right order, but T1 is where the app starts counting, not necessarily where the
+  circuit does.
+- The stored layout records `Anti-clockwise` in place of `Unknown`, and the version is bumped so
+  devices holding the old map replace it.
+
+
 
 - Added Kart Silverstone as a third built-in circuit, with its Grand Prix layout.
 - Its OpenStreetMap data is much weaker than Whilton Mill's. There is no `type=circuit` relation

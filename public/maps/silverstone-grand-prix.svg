@@ -3,19 +3,20 @@
   Do not hand-edit: re-run the script instead, and re-paste the corner list it prints.
 
   Kart Silverstone is mapped as a connected network of raceway ways with no type=circuit relation
-  and no oneway tagging, so neither the lap nor its direction comes from OpenStreetMap. The lap drawn
-  here is pinned by hand in the generator: it is the closed lap closest to the 1,377 m the circuit
-  publishes for its Grand Prix layout, and the best match against the operator's own diagram, but it
-  is a reconstruction rather than a confirmed layout.
+  and no oneway tagging, so the lap does not come from OpenStreetMap. The lap drawn here is pinned by
+  hand in the generator: it is the closed lap closest to the 1,377 m the circuit publishes for its
+  Grand Prix layout, and the best match against the operator's own diagram, but it is a
+  reconstruction rather than a confirmed layout.
 
-  No start/finish line and no direction arrow are drawn, because neither is known. The corner numbers
-  the app shows are its own ordering of this geometry, not the circuit's.
+  The anti-clockwise direction is not from the source either; it was supplied by the owner, who
+  drives there. No start/finish line is drawn, because nothing records one: the corner numbers run in
+  the right order but do not necessarily begin where the circuit counts Turn 1.
 
   Length is the measured centreline. The artwork carries no light or dark theme; see the style block.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 1000" role="img" aria-labelledby="title desc">
   <title id="title">Kart Silverstone Grand Prix circuit schematic</title>
-  <desc id="desc">A schematic of the Grand Prix circuit at Kart Silverstone, reconstructed from OpenStreetMap geometry. The racing direction is not shown because it is not recorded in the source.</desc>
+  <desc id="desc">A schematic of the Grand Prix circuit at Kart Silverstone, reconstructed from OpenStreetMap geometry, with an arrow showing the anti-clockwise racing direction. No start line is shown, because the source records none.</desc>
   <style>
     /* An SVG shown through &lt;img&gt; is its own document: it cannot see the app's light/dark
        toggle, and following prefers-color-scheme instead put a dark map inside a light app
@@ -44,10 +45,11 @@
 
   <path d="M 500.6,133 L 481.7,135.5 L 463.5,151.8 L 405.4,274.5 L 379.6,344.4 L 362.6,376.8 L 349.3,385.6 L 309.4,393.5 L 283.2,406.6 L 277.2,424.7 L 279.5,456.4 L 277.1,475.9 L 268.3,489.7 L 88.8,647.4 L 71.2,670.3 L 71,690.2 L 81.2,714.8 L 98.5,724.5 L 117.8,721.8 L 119.8,718.3 L 135.5,697.7 L 162.5,670.8 L 202.7,637.8 L 332.9,551.5 L 342.6,545.6 L 362.9,519.3 L 379.7,489.2 L 412.8,408.7 L 429.9,366.4 L 447.9,332.6 L 465.5,306.4 L 476.1,301.1 L 493.9,301.1 L 508.3,315.5 L 512.6,359.7 L 530.2,418.6 L 557.2,472.4 L 560.5,483.1 L 587.6,514.5 L 622.1,539.7 L 632.4,542.7 L 642.9,542.1 L 586.3,607.3 L 572.9,627.9 L 495.6,706.4 L 426.9,777.3 L 383.6,812 L 334.6,830 L 225.6,837 L 205.5,829.4 L 201.3,809.4 L 246.6,710.5 L 262,684.6 L 329.1,641.4 L 351.6,627.3 L 370.2,627 L 384.5,639.2 L 386.5,655.5 L 379,670.1 L 287.9,736.3 L 282.3,754.9 L 289.5,770 L 305.4,778.3 L 326.5,777.2 L 354.3,765.9 L 383,746.8 L 424.1,703.2 L 449.8,670.1 L 462.2,634.8 L 456.4,592.4 L 463.2,567.5 L 492.3,551.9 L 496.1,551 L 520.8,545.2 L 545.5,538.9 L 563,524.8 L 564.8,508.4 L 587.7,473.8 L 620.6,425.3 L 654.1,385.1 L 673.2,371.2 L 689,365.5 L 638.1,367.9 L 600.9,358.2 L 588,340.9 L 583.4,318.3 L 580.9,298.4 L 581.3,294.4 L 583.8,268.4 L 563.4,213.8 L 513.2,140.4 L 500.6,133" fill="none" stroke="#3b82f6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- No start/finish line: the source records neither a start line nor a direction. -->
+  <!-- No start/finish line: the source records no start line for this circuit. -->
+  <polygon class="map-mark" points="449.2,182.1 453.6,158.7 464.4,163.9" stroke-width="1"/>
 
   <g font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">
-    <g transform="translate(60 870)"><rect class="map-legend-surface" width="130" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text></g>
+    <g transform="translate(60 870)"><rect class="map-legend-surface" width="210" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text><polygon class="map-legend-mark" points="22,58 38,64 22,70"/><text class="map-legend-label" x="52" y="65">Direction</text></g>
   </g>
 
   <text class="map-caption" x="60" y="978" font-family="Arial, Helvetica, sans-serif" font-size="13">Schematic generated from OpenStreetMap raceway geometry · © OpenStreetMap contributors · ODbL 1.0</text>

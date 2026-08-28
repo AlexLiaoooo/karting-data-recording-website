@@ -103,26 +103,46 @@ describe("BUILT_IN_TRACKS", () => {
 
   /**
    * Kart Silverstone is the one built-in whose layout its source does not establish: OpenStreetMap
-   * has no circuit relation and no oneway tagging there. The map must therefore not assert a
-   * direction it does not know, and the uncertainty has to reach the user rather than sitting only
-   * in a code comment.
+   * has no circuit relation and no oneway tagging there. What is known and what is not are drawn
+   * differently, and the uncertainty has to reach the user rather than sitting in a code comment.
    */
   describe("Kart Silverstone, which is a reconstruction", () => {
     const silverstone = BUILT_IN_TRACKS.find((track) => track.key === "kart-silverstone")!;
+    const markup = () => readFileSync(join(__dirname, "../../public", silverstone.layouts[0].mapUrl), "utf8");
 
-    it("leaves the direction unknown rather than inventing one", () => {
-      expect(silverstone.direction).toBe("Unknown");
+    it("records the anti-clockwise direction the owner confirmed", () => {
+      expect(silverstone.direction).toBe("Anti-clockwise");
     });
 
     it("tells the user in the track notes that the layout is reconstructed", () => {
       expect(silverstone.notes).toMatch(/reconstructed/i);
-      expect(silverstone.notes).toMatch(/not a confirmed one|check them against the circuit/i);
+      expect(silverstone.notes).toMatch(/not a confirmed one/i);
     });
 
-    it("draws no direction arrow, since the source records no direction", () => {
-      const markup = readFileSync(join(__dirname, "../../public", silverstone.layouts[0].mapUrl), "utf8");
-      expect(markup).not.toMatch(/>Direction</);
-      expect(markup).toMatch(/no start.finish line/i);
+    it("says in the track notes that T1 is where the app starts counting, not the circuit", () => {
+      expect(silverstone.notes).toMatch(/not necessarily where the circuit does/i);
+    });
+
+    it("draws the direction, which is known", () => {
+      expect(markup()).toMatch(/>Direction</);
+    });
+
+    /** Nothing in the source marks a start line, so drawing one would invent it. */
+    it("draws no start line, which is not known", () => {
+      expect(markup()).not.toMatch(/>Start</);
+      expect(markup()).toMatch(/no start.finish line/i);
+    });
+
+    /**
+     * The lap is oriented anti-clockwise before the corners are numbered, so the numbering follows
+     * the order a driver meets them. On the canvas, where y grows downward, an anti-clockwise ring
+     * has a negative shoelace sum.
+     */
+    it("draws the lap anti-clockwise, which is what puts the corners in order", () => {
+      const path = markup().match(/<path d="([^"]+)" fill="none" stroke="#3b82f6"/)![1];
+      const points = [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      const twiceArea = points.slice(1).reduce((total, point, index) => total + (points[index][0] * point[1] - point[0] * points[index][1]), 0);
+      expect(twiceArea).toBeLessThan(0);
     });
   });
 

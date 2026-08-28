@@ -16,13 +16,16 @@
  * connected network with infield cut-throughs, and the network contains 154 distinct closed laps.
  * Nothing in OpenStreetMap says which of them is a circuit, or which way round any of them runs.
  *
- * So the lap is pinned by hand below rather than derived, and the map is drawn without a
- * start/finish line or a direction arrow, because neither is known. The corner numbering that
- * follows is therefore the app's own ordering of the geometry, not the circuit's — see the layout
- * note in lib/track-map/built-in-maps.ts, which says so to the user.
+ * So the lap is pinned by hand below rather than derived. The direction is not in the data either,
+ * and is supplied by the owner, who drives there: the circuit runs anti-clockwise, which is what
+ * ANTI_CLOCKWISE below orients the ring to. That fixes the order the corners are numbered in.
+ *
+ * A start line is still not known — there is no pit lane in the extract and nothing marks one — so
+ * none is drawn, and the lap has to begin at an arbitrary point. The corner numbers are therefore
+ * in the right order but do not necessarily begin where the circuit counts Turn 1.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { distance, layout, nodeKey, printCorners, project, renderSvg } from "./lib/circuit-map.mjs";
+import { layout, nodeKey, printCorners, project, renderSvg } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-silverstone-map.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/silverstone-osm.json", "utf8"));
@@ -155,9 +158,9 @@ function ringFromPinnedEdges() {
 /**
  * Rotates the ring to start at its northernmost point.
  *
- * With no pit lane in the extract and no direction in the data there is no real start line to use,
- * so this is an explicit drawing convention rather than a claim about the circuit. It only has to
- * be deterministic, so the numbering does not move when the script is re-run.
+ * Nothing in the source marks a start line, so this is an explicit drawing convention rather than
+ * a claim about the circuit. It only has to be deterministic, so the numbering does not move when
+ * the script is re-run.
  */
 function rotateToNorthernmost(ring) {
   const open = ring.slice(0, -1);
@@ -167,23 +170,39 @@ function rotateToNorthernmost(ring) {
   return [...rotated, rotated[0]];
 }
 
-const ring = rotateToNorthernmost(ringFromPinnedEdges());
-const built = layout(ring, { minTurn: MIN_CORNER_TURN, mergeGap: MERGE_GAP, withArrow: false, withStartTick: false });
+/**
+ * Orients the ring anti-clockwise, which is the way the circuit runs.
+ *
+ * Chaining the pinned edges gives a ring in whichever order they happened to join, so its
+ * direction is arbitrary until it is set. The shoelace sum is taken in projected coordinates,
+ * where y grows south as it does on the canvas: a positive sum there means the ring is traversed
+ * clockwise, so it gets reversed.
+ */
+function orientAntiClockwise(ring) {
+  const metres = project(ring, ring[0]);
+  const twiceArea = metres.slice(1).reduce((total, point, index) => total + (metres[index][0] * point[1] - point[0] * metres[index][1]), 0);
+  return twiceArea > 0 ? [...ring].reverse() : ring;
+}
+
+const ring = rotateToNorthernmost(orientAntiClockwise(ringFromPinnedEdges()));
+// The direction is known and drawn; the start line is not known and is not.
+const built = layout(ring, { minTurn: MIN_CORNER_TURN, mergeGap: MERGE_GAP, withArrow: true, withStartTick: false });
 
 const PROVENANCE = `Kart Silverstone is mapped as a connected network of raceway ways with no type=circuit relation
-and no oneway tagging, so neither the lap nor its direction comes from OpenStreetMap. The lap drawn
-here is pinned by hand in the generator: it is the closed lap closest to the 1,377 m the circuit
-publishes for its Grand Prix layout, and the best match against the operator's own diagram, but it
-is a reconstruction rather than a confirmed layout.
+and no oneway tagging, so the lap does not come from OpenStreetMap. The lap drawn here is pinned by
+hand in the generator: it is the closed lap closest to the 1,377 m the circuit publishes for its
+Grand Prix layout, and the best match against the operator's own diagram, but it is a
+reconstruction rather than a confirmed layout.
 
-No start/finish line and no direction arrow are drawn, because neither is known. The corner numbers
-the app shows are its own ordering of this geometry, not the circuit's.
+The anti-clockwise direction is not from the source either; it was supplied by the owner, who
+drives there. No start/finish line is drawn, because nothing records one: the corner numbers run in
+the right order but do not necessarily begin where the circuit counts Turn 1.
 
 Length is the measured centreline. The artwork carries no light or dark theme; see the style block.`;
 
 writeFileSync("public/maps/silverstone-grand-prix.svg", renderSvg({
   title: "Kart Silverstone Grand Prix circuit schematic",
-  description: "A schematic of the Grand Prix circuit at Kart Silverstone, reconstructed from OpenStreetMap geometry. The racing direction is not shown because it is not recorded in the source.",
+  description: "A schematic of the Grand Prix circuit at Kart Silverstone, reconstructed from OpenStreetMap geometry, with an arrow showing the anti-clockwise racing direction. No start line is shown, because the source records none.",
   caption: `Grand Prix Circuit · ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,
   generator: `${GENERATOR} from scripts/data/silverstone-osm.json`,
   provenance: PROVENANCE,
@@ -194,4 +213,4 @@ console.error(`public/maps/silverstone-grand-prix.svg  ${Math.round(built.lapMet
 printCorners("BUILT_IN_SILVERSTONE_GRAND_PRIX_CORNERS", built.corners, GENERATOR);
 console.error(`\nCorner turn angles (degrees, sign is turn direction):\n  ${built.corners.map((corner) => `${corner.label}:${corner.turn}`).join("  ")}`);
 console.error(`\nPublished Grand Prix layout: 1,377 m, 18 corners. Measured centreline: ${Math.round(built.lapMetres)} m, ${built.corners.length} corners detected.`);
-void distance; void project;
+

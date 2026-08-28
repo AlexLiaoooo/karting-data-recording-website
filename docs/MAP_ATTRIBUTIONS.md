@@ -28,9 +28,14 @@ but six candidates lie within 2% of that length, so the match is not established
 publishes 18 corners for this layout; the same detector that labels the other two circuits finds
 15 here, which is a further sign the reconstruction is approximate.
 
-Accordingly the map draws no start/finish line and no direction arrow, the layout records its
-direction as `Unknown`, and the track note in the app states that the layout is reconstructed and
-that the corner numbers are the app's own ordering of the geometry.
+The **anti-clockwise direction is not from OpenStreetMap either** — it was supplied by the owner,
+who drives there, and the generator orients the lap to it before numbering the corners. It is
+recorded here rather than in the extract so that its source is not mistaken for the survey.
+
+No start/finish line is drawn, because nothing records one: the lap begins at its northernmost
+point purely so the numbering is stable between runs. The track note in the app says the layout is
+reconstructed, and that the corners run in the circuit's order but start where the app counts from
+rather than necessarily where the circuit does.
 
 ## Whilton Mill International circuit schematic
 
