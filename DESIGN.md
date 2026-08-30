@@ -524,7 +524,27 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
-### Implemented prototype v1.12 — 2026-08-28
+### Implemented prototype v1.13 — 2026-08-30
+
+- Added Buckmore Park, chosen after surveying every karting raceway way in Great Britain — 607 of
+  them across 172 venues — and scoring each by whether OpenStreetMap records a direction and
+  whether the ways form one unambiguous lap.
+- It is the easiest of the three to derive and the opposite case to Kart Silverstone: the circuit
+  is a single closed way tagged `oneway=yes`, so the lap is the way itself and the racing direction
+  is the order of its nodes. Nothing is chained and nothing is chosen. The lap starts at the pit
+  exit, the same rule Whilton Mill's cadet circuit uses.
+- The rest of the extract is deliberately unused: five short cut-throughs make the shorter layouts
+  the circuit also runs, two ways are access roads, and the two named pit lane ways are stubs of 11
+  and 28 metres — too short to draw as a lane, so none is drawn.
+- `MAX_CORNER_TURN` is raised from 180 to 200 degrees. A hairpin is not always exactly a half turn:
+  Buckmore has two measuring 182 and 188 degrees, and splitting those in half invented two corners
+  the circuit does not count. At 200 the detector finds twelve, which is what the circuit
+  publishes. Whilton Mill and Kart Silverstone are unaffected — both maps regenerate byte-identical
+  and both corner lists are unchanged, which was checked rather than assumed.
+- Measured centreline is 854 m against a published 929 m, the same 8% kind of gap the other
+  circuits show, and it is labelled "centreline" as they are.
+
+
 
 - Kart Silverstone runs anti-clockwise. The owner supplied it; OpenStreetMap does not record it.
 - The generator now orients the lap anti-clockwise before numbering, so the corners run in the

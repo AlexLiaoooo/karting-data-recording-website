@@ -17,11 +17,16 @@ export const TRACK_WIDTH = 22;
 export const VERTEX_TURN_FLOOR = 6; // degrees; below this is survey noise on a straight
 
 /**
- * Degrees. A single corner tops out at a hairpin, so a continuous sweep past this is two corners a
- * driver would name separately and gets split into equal-turn parts. A sweep that long has no
- * straight inside it for the merge gap to break at, so nothing else would catch one.
+ * Degrees. Beyond this a continuous sweep is two corners a driver would name separately, and gets
+ * split into equal-turn parts. A sweep that long has no straight inside it for the merge gap to
+ * break at, so nothing else would catch one.
+ *
+ * 200 rather than 180, because a hairpin is not always exactly a half turn. Buckmore Park has two
+ * that measure 182 and 188 degrees, and splitting those in half invented two corners the circuit
+ * does not count — its published total is 12, which is what 200 yields. The sweeps that genuinely
+ * need splitting run past 190 with no straight anywhere inside them.
  */
-export const MAX_CORNER_TURN = 180;
+export const MAX_CORNER_TURN = 200;
 
 export const nodeKey = (point) => `${point.lat.toFixed(7)},${point.lon.toFixed(7)}`;
 

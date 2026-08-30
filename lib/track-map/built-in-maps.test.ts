@@ -147,6 +147,37 @@ describe("BUILT_IN_TRACKS", () => {
   });
 
   /**
+   * Buckmore Park is the opposite case to Kart Silverstone: OpenStreetMap maps it as one closed way
+   * tagged oneway=yes, so the lap and the direction are both in the data and nothing was chosen.
+   * Everything the map asserts should therefore be drawn.
+   */
+  describe("Buckmore Park, which comes straight from the data", () => {
+    const buckmore = BUILT_IN_TRACKS.find((track) => track.key === "buckmore-park")!;
+    const markup = () => readFileSync(join(__dirname, "../../public", buckmore.layouts[0].mapUrl), "utf8");
+
+    it("takes its clockwise direction from the oneway tagging", () => {
+      expect(buckmore.direction).toBe("Clockwise");
+    });
+
+    /** The circuit publishes twelve turns, and the detector finds twelve. */
+    it("numbers twelve corners, matching the count the circuit publishes", () => {
+      expect(buckmore.layouts[0].corners).toHaveLength(12);
+    });
+
+    it("draws both the start line and the direction, since both are known", () => {
+      expect(markup()).toMatch(/>Start</);
+      expect(markup()).toMatch(/>Direction</);
+    });
+
+    it("draws the lap clockwise, which is what puts the corners in order", () => {
+      const path = markup().match(/<path d="([^"]+)" fill="none" stroke="#3b82f6"/)![1];
+      const points = [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      const twiceArea = points.slice(1).reduce((total, point, index) => total + (points[index][0] * point[1] - point[0] * points[index][1]), 0);
+      expect(twiceArea).toBeGreaterThan(0);
+    });
+  });
+
+  /**
    * The registry names files under public/; nothing else checks that they are there. A typo or a
    * deleted map would otherwise only surface as a track created with no artwork on a real device.
    */

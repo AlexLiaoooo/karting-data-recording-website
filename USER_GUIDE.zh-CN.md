@@ -337,6 +337,7 @@ Track Map Notebook 用于把刹车点、入弯点、弯心、出弯方式和赛�
 2. 点击 **内置** 打开内置赛道列表，其中包含：
    - **PF International** — Full Layout。
    - **Whilton Mill** — International。
+   - **Buckmore Park** — Full Circuit。该赛道在 OpenStreetMap 中是一条完整的封闭路径，并标注了单行方向，因此路线和顺时针方向都直接来自数据。弯角共 12 个，与赛道官方公布的数量一致。
    - **Kart Silverstone** — Grand Prix。这张图是根据 OpenStreetMap 推测还原的：该赛道在 OpenStreetMap 中没有记录赛道组合，因此这条路线是与官方公布的 1,377 m 最接近的一条，并非确定的官方组合。行车方向为逆时针（由车手确认，数据中没有），弯角按此顺序编号；但数据中没有起点线，所以 T1 只是本网站开始计数的位置，不一定是赛道官方的第一个弯。
    已经添加过的赛道会显示为 **已添加**，不会重复建立。
 3. 也可以点击 **新建** 自己建立赛道。
