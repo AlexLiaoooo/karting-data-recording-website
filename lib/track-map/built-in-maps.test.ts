@@ -178,6 +178,51 @@ describe("BUILT_IN_TRACKS", () => {
   });
 
   /**
+   * Clay Pigeon is the same case as Buckmore Park — one closed way tagged oneway=yes — but with
+   * nothing to calibrate the corner count against, because its listings publish eight, nine and
+   * twelve for the same layout. The count is asserted together with the note that admits the
+   * disagreement, so a threshold change cannot renumber the circuit while leaving the user told
+   * the number is settled.
+   */
+  describe("Clay Pigeon Raceway, whose published corner count is disputed", () => {
+    const clay = BUILT_IN_TRACKS.find((track) => track.key === "clay-pigeon")!;
+    const markup = () => readFileSync(join(__dirname, "../../public", clay.layouts[0].mapUrl), "utf8");
+
+    it("takes its clockwise direction from the oneway tagging", () => {
+      expect(clay.direction).toBe("Clockwise");
+    });
+
+    it("numbers the eight corners its own detection finds", () => {
+      expect(clay.layouts[0].corners).toHaveLength(8);
+    });
+
+    it("tells the user the count is not an official one", () => {
+      expect(clay.notes).toMatch(/listings disagree/i);
+      expect(clay.notes).toMatch(/not necessarily where the circuit does/i);
+    });
+
+    /** 806 m measured against 815 m published is the closest agreement of any built-in map, but it
+     *  is still a measured centreline and the note has to say so. */
+    it("still calls its length a measured centreline rather than the published one", () => {
+      expect(clay.notes).toMatch(/centreline/i);
+      expect(markup()).toMatch(/centreline/);
+    });
+
+    it("draws the start line, the direction and the pit lane, all three being known", () => {
+      expect(markup()).toMatch(/>Start</);
+      expect(markup()).toMatch(/>Direction</);
+      expect(markup()).toMatch(/>Pit lane</);
+    });
+
+    it("draws the lap clockwise, which is what puts the corners in order", () => {
+      const path = markup().match(/<path d="([^"]+)" fill="none" stroke="#3b82f6"/)![1];
+      const points = [...path.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      const twiceArea = points.slice(1).reduce((total, point, index) => total + (points[index][0] * point[1] - point[0] * points[index][1]), 0);
+      expect(twiceArea).toBeGreaterThan(0);
+    });
+  });
+
+  /**
    * The registry names files under public/; nothing else checks that they are there. A typo or a
    * deleted map would otherwise only surface as a track created with no artwork on a real device.
    */

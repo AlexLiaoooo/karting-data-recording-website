@@ -524,6 +524,34 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
+### Implemented prototype v1.14 — 2026-08-30
+
+- Added Clay Pigeon Raceway, the fourth built-in circuit and the least reconstructed of them. Like
+  Buckmore Park it is a single closed OpenStreetMap way tagged `oneway=yes`, so the lap and its
+  clockwise direction both come from the data. Unlike Buckmore it has no cut-through ways at all,
+  so the extract cannot be ambiguous about a second layout, and the clockwise reading agrees with
+  the circuit's own listings.
+- Its pit lane is drawn, where Buckmore Park's could not be: three ways chain into a 129 m run that
+  leaves the circuit and rejoins it, against Buckmore's 11 and 28 m stubs. Only Whilton Mill's maps
+  otherwise show one. The lap starts where the lane rejoins, and the 105 m arc it bypasses measures
+  95% straight with only 64 degrees of accumulated kink — the "kinked pit straight" the listings
+  describe. That is what confirms the lap starts on the right part of the circuit, and so that T1
+  is the first corner after the straight rather than an arbitrary vertex.
+- The venue is identified by way 103913854, a `leisure=sports_centre` named Clay Pigeon Raceway
+  tagged `sport=karting` with postcode DT2 9PW, and all 119 nodes of the four raceway ways fall
+  inside its polygon. Picking a circuit out of an extract by position alone is how the wrong venue
+  gets mapped, so the check is written down rather than done once and forgotten.
+- Measured centreline is 806 m against a published 815 m — 1.1%, where the other OpenStreetMap
+  circuits run about 8% short. Nothing in the pipeline changed to achieve that; the tracing here is
+  simply closer, and the map still says "centreline".
+- The corner count is the opposite case. Listings publish eight, nine and twelve for the same
+  layout, and the nine-corner list names only eight of them, so there is no single figure to
+  calibrate against. `MIN_CORNER_TURN` stays at the shared 38 and the detector's eight is what the
+  map numbers. It agrees with the eight-corner listing, but that was arrived at rather than aimed
+  for, and the track note tells the user the listings disagree.
+- No shared constant changed this time, but all four corner lists were still compared against the
+  registry rather than assumed, and the three existing maps regenerate byte-identical.
+
 ### Implemented prototype v1.13 — 2026-08-30
 
 - Added Buckmore Park, chosen after surveying every karting raceway way in Great Britain — 607 of
