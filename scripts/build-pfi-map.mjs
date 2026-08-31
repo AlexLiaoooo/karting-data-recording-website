@@ -27,8 +27,8 @@
  * old fit onto the ground, snapped to the rebuilt lap, and re-emitted. Same corners, same numbers,
  * right places.
  */
-import { readFileSync, writeFileSync } from "node:fs";
-import { MARGIN, TRACK_WIDTH, VIEW, layout, nodeKey, pathLength, printCorners, project, renderSvg, round4 } from "./lib/circuit-map.mjs";
+import { readFileSync } from "node:fs";
+import { MARGIN, TRACK_WIDTH, VIEW, layout, nodeKey, pathLength, printCorners, project, renderSvg, round4, writeArtwork } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-pfi-map.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/pf-international-osm.json", "utf8"));
@@ -152,7 +152,7 @@ Length is the measured centreline, which runs shorter than the figure the circui
 
 The artwork carries no light or dark theme; see the style block.`;
 
-writeFileSync("public/maps/pfi-international-owner-driver.svg", renderSvg({
+writeArtwork("public/maps/pfi-international-owner-driver.svg", renderSvg({
   title: "PF International kart circuit schematic",
   description: "A schematic of the PF International kart circuit in three coloured sectors, with the start/finish line, the racing direction and a dashed pit lane, all taken from OpenStreetMap.",
   caption: `PF International - ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,

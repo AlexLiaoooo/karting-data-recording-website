@@ -18,8 +18,8 @@
  * The source is scripts/data/whilton-mill-osm.json rather than a live Overpass call, so the
  * artwork is reproducible without a network and a change to it shows up as a diff.
  */
-import { readFileSync, writeFileSync } from "node:fs";
-import { layout, nodeKey, printCorners, renderSvg } from "./lib/circuit-map.mjs";
+import { readFileSync } from "node:fs";
+import { layout, nodeKey, printCorners, renderSvg, writeArtwork } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-whilton-maps.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/whilton-mill-osm.json", "utf8"));
@@ -30,7 +30,7 @@ const relations = new Map(OSM.elements.filter((element) => element.type === "rel
 const MAIN_PIT_LANE = 1208334015;
 
 const CIRCUITS = [
-  { key: "whilton-mill-international", file: "whilton-mill-international", name: "International", relation: 16338535, pitLane: MAIN_PIT_LANE },
+  { key: "whilton-mill-international", constant: "BUILT_IN_WHILTON_INTERNATIONAL_CORNERS", file: "whilton-mill-international", name: "International", relation: 16338535, pitLane: MAIN_PIT_LANE },
 ];
 
 /**
@@ -107,7 +107,7 @@ for (const circuit of CIRCUITS) {
   });
 
   const path = `public/maps/${circuit.file}.svg`;
-  writeFileSync(path, renderSvg({
+  writeArtwork(path, renderSvg({
     title: `Whilton Mill ${circuit.name} Circuit schematic`,
     description: `A schematic of the ${circuit.name} circuit at Whilton Mill, with the start/finish line, the racing direction and a dashed pit lane.`,
     caption: `${circuit.name} Circuit · ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,
@@ -117,6 +117,6 @@ for (const circuit of CIRCUITS) {
   }));
 
   console.error(`${path}  ${Math.round(built.lapMetres)} m  ${chain.length} ways  ${built.corners.length} corners`);
-  printCorners(`BUILT_IN_${circuit.key.replace(/-/g, "_").toUpperCase()}_CORNERS`, built.corners, GENERATOR);
+  printCorners(circuit.constant, built.corners, GENERATOR);
   console.error(`\nCorner turn angles (degrees, sign is turn direction):\n  ${built.corners.map((c) => `${c.label}:${c.turn}`).join("  ")}`);
 }

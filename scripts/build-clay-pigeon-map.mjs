@@ -18,8 +18,8 @@
  * website. Picking a kart circuit out of an extract by coordinates alone is how the wrong venue
  * gets mapped.
  */
-import { readFileSync, writeFileSync } from "node:fs";
-import { layout, nodeKey, pathLength, printCorners, project, renderSvg } from "./lib/circuit-map.mjs";
+import { readFileSync } from "node:fs";
+import { layout, nodeKey, pathLength, printCorners, project, renderSvg, writeArtwork } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-clay-pigeon-map.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/clay-pigeon-osm.json", "utf8"));
@@ -124,7 +124,7 @@ Length is the measured centreline, which runs shorter than the figure the circui
 
 The artwork carries no light or dark theme; see the style block.`;
 
-writeFileSync("public/maps/clay-pigeon.svg", renderSvg({
+writeArtwork("public/maps/clay-pigeon.svg", renderSvg({
   title: "Clay Pigeon Raceway kart circuit schematic",
   description: "A schematic of the Clay Pigeon Raceway kart circuit, with the start/finish line, the racing direction and a dashed pit lane, all taken from OpenStreetMap.",
   caption: `Clay Pigeon Raceway - ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,

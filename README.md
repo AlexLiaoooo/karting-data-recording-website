@@ -74,6 +74,11 @@ data rather than looking wrong:
   circuit; a name typed by hand wins; and records written before corner numbers existed are
   matched back to their corner by position, never by the label, which after a renumber names a
   corner the marker is no longer on.
+- **Generated maps** (`lib/track-map/generated-maps.test.ts`) — runs every circuit generator
+  against its committed OpenStreetMap extract and asserts that the corner list it prints is still
+  the one the registry ships, and that no built-in layout is left unchecked. Comparing the artwork
+  would not catch this: a change to corner detection renumbers a circuit while leaving every SVG
+  byte identical, because the numbers live in the registry rather than in the drawing.
 - **Counted nouns** (`lib/format.test.ts`) — "1 layout" rather than "1 layouts", including zero,
   multi-word nouns and nouns that do not simply take an s.
 - **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string

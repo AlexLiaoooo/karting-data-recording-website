@@ -524,6 +524,26 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
+### Implemented prototype v1.16 — 2026-08-31
+
+- Made the registry-versus-generator corner check a test (`lib/track-map/generated-maps.test.ts`)
+  instead of something run by hand at the end of each circuit. It runs all five generators from
+  their committed extracts and compares the corner lists they print against the ones the registry
+  ships.
+- This is the check no byte-comparison can do. Corner numbers live in the registry, not in the
+  artwork, so a change to detection can renumber a circuit while every SVG stays byte identical.
+  Proven rather than asserted: reverting `MAX_CORNER_TURN` to 180 fails Buckmore Park and Clay
+  Pigeon and nothing else — exactly the two circuits with hairpins past 180 degrees — and
+  nudging one corner in the registry by hand fails PF International alone.
+- A second test asserts every built-in layout is covered, so a circuit added to the registry but
+  not to the check cannot quietly stop being verified.
+- Generators take a `CIRCUIT_MAP_CORNERS_ONLY` escape via the new `writeArtwork` helper, so the
+  test gets their stdout without rewriting five SVG files as a side effect and dirtying the working
+  tree wherever git checks out CRLF.
+- The Whilton Mill generator built its printed constant name from the layout key, which did not
+  match the name the registry actually exports. Named explicitly now, so the check compares like
+  with like rather than through a translation table.
+
 ### Implemented prototype v1.15 — 2026-08-31
 
 - Settled what the PF International map actually was, and rebuilt it. It was the only built-in whose

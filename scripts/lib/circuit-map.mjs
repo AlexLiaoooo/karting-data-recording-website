@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+
 /**
  * The geometry, corner detection and drawing shared by the circuit map generators.
  *
@@ -281,6 +283,18 @@ ${startTick?.line ? `  <!-- Start/finish, and the racing direction taken from th
   <text class="map-caption" x="60" y="${VIEW.height - 22}" font-family="Arial, Helvetica, sans-serif" font-size="13">Schematic generated from OpenStreetMap raceway geometry · © OpenStreetMap contributors · ODbL 1.0</text>
 </svg>
 `;
+}
+
+/**
+ * Writes a generated map, unless the caller only wants the corner list.
+ *
+ * lib/track-map/generated-maps.test.ts runs every generator to check that what it prints still
+ * matches what the registry ships. It only needs stdout, and rewriting five SVG files as a side
+ * effect of running the tests would dirty the working tree on any machine that checks out CRLF.
+ */
+export function writeArtwork(path, markup) {
+  if (process.env.CIRCUIT_MAP_CORNERS_ONLY) return;
+  writeFileSync(path, markup);
 }
 
 /** Prints the TrackCorner[] literal to paste into lib/track-map/built-in-maps.ts. */

@@ -24,8 +24,8 @@
  * none is drawn, and the lap has to begin at an arbitrary point. The corner numbers are therefore
  * in the right order but do not necessarily begin where the circuit counts Turn 1.
  */
-import { readFileSync, writeFileSync } from "node:fs";
-import { layout, nodeKey, printCorners, project, renderSvg } from "./lib/circuit-map.mjs";
+import { readFileSync } from "node:fs";
+import { layout, nodeKey, printCorners, project, renderSvg, writeArtwork } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-silverstone-map.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/silverstone-osm.json", "utf8"));
@@ -200,7 +200,7 @@ the right order but do not necessarily begin where the circuit counts Turn 1.
 
 Length is the measured centreline. The artwork carries no light or dark theme; see the style block.`;
 
-writeFileSync("public/maps/silverstone-grand-prix.svg", renderSvg({
+writeArtwork("public/maps/silverstone-grand-prix.svg", renderSvg({
   title: "Kart Silverstone Grand Prix circuit schematic",
   description: "A schematic of the Grand Prix circuit at Kart Silverstone, reconstructed from OpenStreetMap geometry, with an arrow showing the anti-clockwise racing direction. No start line is shown, because the source records none.",
   caption: `Grand Prix Circuit · ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,

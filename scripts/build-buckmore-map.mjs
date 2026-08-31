@@ -16,8 +16,8 @@
  * the two named Pit Lane ways are stubs of 11 and 28 metres. A pit lane that short would draw as
  * two dashes rather than a lane, so none is drawn; its exit node is still used, to start the lap.
  */
-import { readFileSync, writeFileSync } from "node:fs";
-import { layout, nodeKey, printCorners, project, renderSvg } from "./lib/circuit-map.mjs";
+import { readFileSync } from "node:fs";
+import { layout, nodeKey, printCorners, project, renderSvg, writeArtwork } from "./lib/circuit-map.mjs";
 
 const GENERATOR = "scripts/build-buckmore-map.mjs";
 const OSM = JSON.parse(readFileSync("scripts/data/buckmore-park-osm.json", "utf8"));
@@ -78,7 +78,7 @@ Length is the measured centreline, which runs shorter than the figure the circui
 
 The artwork carries no light or dark theme; see the style block.`;
 
-writeFileSync("public/maps/buckmore-park.svg", renderSvg({
+writeArtwork("public/maps/buckmore-park.svg", renderSvg({
   title: "Buckmore Park kart circuit schematic",
   description: "A schematic of the Buckmore Park kart circuit, with the start/finish line and the racing direction taken from OpenStreetMap.",
   caption: `Buckmore Park · ${Math.round(built.lapMetres).toLocaleString("en-GB")} m centreline`,
