@@ -8,7 +8,7 @@ import {
   loadBuiltInMapAsset,
   refreshBuiltInMaps,
 } from "./built-in-maps";
-import { makeLayout, makeMapAsset, makeTrack, makeTrackMapData } from "../test-fixtures";
+import { makeLayout, makeMapAsset, makeMarker, makeTrack, makeTrackMapData } from "../test-fixtures";
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 20 760 1000"><rect/></svg>';
 const PFI = BUILT_IN_TRACKS.find((track) => track.key === "pf-international")!;
@@ -84,6 +84,45 @@ describe("BUILT_IN_TRACKS", () => {
   it("still ships PF International's corner list unchanged", () => {
     expect(PFI_LAYOUT.corners).toBe(BUILT_IN_PFI_CORNERS);
     expect(BUILT_IN_PFI_CORNERS).toHaveLength(15);
+  });
+
+  /**
+   * PF International is drawn from the same OpenStreetMap pipeline as the rest now, and it is the
+   * only one whose source names sectors. Fulbeck Kart Circuit sits about 800 m away and lands in
+   * any box drawn round this one, so the notes carry what the map is and is not.
+   */
+  describe("PF International, rebuilt from its source", () => {
+    const markup = () => readFileSync(join(__dirname, "../../public", PFI_LAYOUT.mapUrl), "utf8");
+
+    it("draws the lap in its three named sectors", () => {
+      for (const sector of ["Sector 1", "Sector 2", "Sector 3"]) expect(markup()).toContain(`>${sector}<`);
+    });
+
+    it("draws the start line, the direction and the pit lane, all of which the source records", () => {
+      expect(markup()).toMatch(/>Start</);
+      expect(markup()).toMatch(/>Direction</);
+      expect(markup()).toMatch(/>Pit lane</);
+    });
+
+    /**
+     * The defect the rebuild fixed. The old artwork was fitted to each axis separately, so a
+     * circuit 198 m by 396 m on the ground was drawn at an aspect of 0.83 instead of 0.50. Guarded
+     * by measuring the drawing itself rather than trusting the generator.
+     */
+    it("draws the circuit in proportion, which the artwork it replaced did not", () => {
+      const points = [...markup().matchAll(/<path d="M ([^"]+)"/g)]
+        .flatMap((match) => [...match[1].matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((p) => [Number(p[1]), Number(p[2])]));
+      const xs = points.map((p) => p[0]);
+      const ys = points.map((p) => p[1]);
+      const aspect = (Math.max(...xs) - Math.min(...xs)) / (Math.max(...ys) - Math.min(...ys));
+      expect(aspect).toBeGreaterThan(0.45);
+      expect(aspect).toBeLessThan(0.60);
+    });
+
+    it("says in the track notes that markers were moved, since the user placed those", () => {
+      expect(PFI.notes).toMatch(/markers you had placed/i);
+      expect(PFI.notes).toMatch(/numbering are unchanged/i);
+    });
   });
 
   it("offers the Whilton Mill International circuit", () => {
@@ -407,11 +446,92 @@ describe("refreshBuiltInMaps", () => {
 
   it("keeps marker positions, which are relative to the asset box", async () => {
     stubFetch();
-    const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM" })] });
+    // Whilton Mill rather than PF International: replacing artwork must not disturb a marker, and
+    // PF International is the one circuit where that rule is deliberately suspended, just below.
+    const data = makeTrackMapData({ ...pfi(), assets: [makeMapAsset()], layouts: [makeLayout({ sourceAttribution: "OSM", builtInLayoutKey: "whilton-international" })] });
     const before = data.layouts[0].markers.map((marker) => ({ x: marker.x, y: marker.y }));
 
     const after = (await refreshBuiltInMaps(data)).layouts[0].markers.map((marker) => ({ x: marker.x, y: marker.y }));
     expect(after).toEqual(before);
+  });
+
+  /**
+   * The PF International artwork was redrawn because the old one was fitted per axis and so drew
+   * the circuit 1.65x too wide. Markers are stored as fractions of the image, so correcting the
+   * shape without moving them would have left every one of them off the track.
+   */
+  describe("the PF International redraw", () => {
+    const withMarkers = (markers: ReturnType<typeof makeMarker>[]) => makeTrackMapData({
+      ...pfi(),
+      assets: [makeMapAsset()],
+      layouts: [makeLayout({ sourceAttribution: "OSM", markers })],
+    });
+
+    it("moves a marker off the stretched artwork onto the corrected shape", async () => {
+      stubFetch();
+      const data = withMarkers([makeMarker({ x: 0.42, y: 0.63 })]);
+
+      expect((await refreshBuiltInMaps(data)).layouts[0].markers[0]).toMatchObject({ x: 0.4757, y: 0.6873 });
+    });
+
+    /**
+     * The check that matters. A marker sitting on a corner of the old drawing has to still sit on
+     * that same corner of the new one — same corner number, not merely somewhere plausible.
+     */
+    it("lands markers that were on a corner back on that corner", async () => {
+      stubFetch();
+      const RETIRED = [[0, 0.4214, 0.5753], [7, 0.3403, 0.5312], [14, 0.7161, 0.2653]] as const;
+      const data = withMarkers(RETIRED.map(([, x, y], index) => makeMarker({ id: `marker-${index}`, x, y })));
+
+      const moved = (await refreshBuiltInMaps(data)).layouts[0].markers;
+      RETIRED.forEach(([corner], index) => {
+        const target = BUILT_IN_PFI_CORNERS[corner];
+        expect(Math.hypot(moved[index].x - target.x, moved[index].y - target.y), target.label).toBeLessThan(0.0005);
+      });
+    });
+
+    it("does not move them a second time once the layout is on the new version", async () => {
+      stubFetch();
+      const data = makeTrackMapData({
+        ...pfi(),
+        assets: [makeMapAsset()],
+        layouts: [makeLayout({ sourceAttribution: "OSM", builtInMapVersion: PFI_LAYOUT.version, markers: [makeMarker({ x: 0.42, y: 0.63 })] })],
+      });
+
+      expect((await refreshBuiltInMaps(data)).layouts[0].markers[0]).toMatchObject({ x: 0.42, y: 0.63 });
+    });
+
+    it("fills in the track note, which a record this old was never given", async () => {
+      stubFetch();
+      const data = withMarkers([makeMarker({ x: 0.42, y: 0.63 })]);
+
+      expect((await refreshBuiltInMaps(data)).tracks[0].notes).toMatch(/markers you had placed/i);
+    });
+
+    /** The note field is editable from the track page; telling the user must not cost them theirs. */
+    it("leaves a note the user wrote themselves alone", async () => {
+      stubFetch();
+      const data = makeTrackMapData({
+        tracks: [makeTrack({ notes: "Bring the wet tyres." })],
+        visits: [],
+        assets: [makeMapAsset()],
+        layouts: [makeLayout({ sourceAttribution: "OSM" })],
+      });
+
+      expect((await refreshBuiltInMaps(data)).tracks[0].notes).toBe("Bring the wet tyres.");
+    });
+
+    /** A user who supplied their own image never had the stretched one, so nothing may move. */
+    it("leaves markers alone on a layout whose map the user replaced", async () => {
+      stubFetch();
+      const data = makeTrackMapData({
+        ...pfi(),
+        assets: [makeMapAsset()],
+        layouts: [makeLayout({ sourceAttribution: undefined, markers: [makeMarker({ x: 0.42, y: 0.63 })] })],
+      });
+
+      expect((await refreshBuiltInMaps(data)).layouts[0].markers[0]).toMatchObject({ x: 0.42, y: 0.63 });
+    });
   });
 });
 

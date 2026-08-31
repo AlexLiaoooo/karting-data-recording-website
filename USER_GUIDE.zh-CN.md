@@ -335,7 +335,7 @@ Track Map Notebook 用于把刹车点、入弯点、弯心、出弯方式和赛�
 
 1. 在首页打开 **Track Library**，或在 **数据与设置** 中点击 **管理 Track Maps**。
 2. 点击 **内置** 打开内置赛道列表，其中包含：
-   - **PF International** — Full Layout。
+   - **PF International** — Full Layout。该地图于 2026 年 8 月 31 日重新绘制：旧图横向被拉伸了 1.65 倍，赛道形状并不准确。你之前在旧图上标记的位置会自动迁移到新图的对应位置，15 个弯角及其编号保持不变。地图上的 1,376 m 为实测中心线长度（官方公布为 1,382 m）。
    - **Whilton Mill** — International。
    - **Buckmore Park** — Full Circuit。该赛道在 OpenStreetMap 中是一条完整的封闭路径，并标注了单行方向，因此路线和顺时针方向都直接来自数据。弯角共 12 个，与赛道官方公布的数量一致。
    - **Clay Pigeon Raceway** — Full Circuit。该赛道在 OpenStreetMap 中同样是一条完整的封闭路径，并标注了单行方向，因此路线和顺时针方向都直接来自数据。地图上的 806 m 是实测中心线长度，与赛道公布的 815 m 非常接近。弯角数量各家说法不一（八、九、十二都有公布），因此这里的 8 个弯角是本网站自行识别的结果，T1 只是本网站开始计数的位置。

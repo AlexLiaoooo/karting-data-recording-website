@@ -524,6 +524,44 @@ Possible later phases include:
   keys were already in the dictionary and simply never used, because the call sites built the
   string with a template literal instead of calling `t`.
 
+### Implemented prototype v1.15 — 2026-08-31
+
+- Settled what the PF International map actually was, and rebuilt it. It was the only built-in whose
+  artwork had no source and no generator: `derive-corners.mjs` read corners back out of the drawing,
+  so the map could not be rebuilt, re-checked, or compared against anything.
+- The doubt was specific. Fulbeck Kart Circuit sits about **800 m** from PF International and falls
+  inside any bounding box drawn around it, and the survey done for Buckmore Park had already
+  confused the two. The artwork was made from an area query with no record of which ways it used.
+- It is PF International. Three independent checks agree: every way lies inside PF International's
+  own `sports_centre` polygon (way 240643729, postcode NG32 3JE); the artwork's five track paths
+  carry 49, 49, 2, 11 and 41 points and the circuit's five ways carry 49, 49, 2, 11 and 41; and once
+  aspect is cancelled the two shapes agree to a mean nearest-neighbour of **0.00007**. The naming is
+  a clean separator too — PF International's ways are all `Sector`, Fulbeck's are all `Turn`.
+- That last check is what exposed the real defect. The old artwork was fitted to each axis
+  independently, so a circuit measuring 198 m by 396 m on the ground was drawn at an aspect of 0.83
+  instead of 0.50 — **1.65 times too wide**. The corner detection had run on that stretched
+  drawing too, so its turn angles were measured on distorted geometry.
+- `scripts/build-pfi-map.mjs` replaces `derive-corners.mjs` and builds the map the way the other
+  four are built, from a committed extract through `layout()`, which scales both axes together. The
+  generator refuses to draw a way outside the venue polygon, so the Fulbeck mistake cannot recur
+  silently. Measured centreline is 1,376 m against a published 1,382 m — 0.4%, the closest of the
+  five.
+- The corners are **not** re-detected. Three of the fifteen were placed by hand precisely because
+  curvature detection misses a long sweep, which is knowledge the geometry does not contain. They
+  are stored as vertex numbers along the lap, recovered by mapping the retired positions back
+  through the old stretched fit; every one landed on a lap vertex to within 4 cm. Same corners, same
+  numbers, right places.
+- Markers the user placed are moved with the map. They are stored as fractions of the image, so
+  correcting the shape without moving them would have left every one off the track. Both fits are
+  linear per axis, so one multiply and add carries a marker across; a test asserts that a marker
+  which sat on a retired corner lands back on that same corner. Layouts whose map the user replaced
+  are untouched, and markers already on the new version are never moved twice.
+- The sector colouring survived the rebuild. A first pass dropped it for consistency with the other
+  four maps, which would have shipped a worse map than the one being replaced — sector boundaries
+  are in the source and no other built-in has them. `renderSvg` gained an opt-in `sectors` argument,
+  written as a separate branch rather than a generalised legend, and all four other maps regenerate
+  byte-identical. The map now also shows the start line and direction arrow, which it never had.
+
 ### Implemented prototype v1.14 — 2026-08-30
 
 - Added Clay Pigeon Raceway, the fourth built-in circuit and the least reconstructed of them. Like

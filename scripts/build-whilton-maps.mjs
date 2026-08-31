@@ -11,8 +11,9 @@
  * single closed way rather than a relation and would also need a lap start chosen for it, since
  * a closed way begins wherever the surveyor started rather than at the line.
  *
- * This differs from scripts/derive-corners.mjs, which reads corners back out of artwork it did
- * not draw. Here one pass owns both, so the labels cannot drift from the map they sit on.
+ * One pass owns both the artwork and the corner list, so the labels cannot drift from the map they
+ * sit on. Every built-in circuit is built this way now; PF International was the last that was not,
+ * and it could not be rebuilt or even checked until it was.
  *
  * The source is scripts/data/whilton-mill-osm.json rather than a live Overpass call, so the
  * artwork is reproducible without a network and a change to it shows up as a diff.
@@ -35,10 +36,10 @@ const CIRCUITS = [
 /**
  * Degrees. A vertex group turning less than this reads as part of a straight.
  *
- * Set per circuit rather than shared with scripts/derive-corners.mjs, which uses 55 for PF
- * International: the number encodes the owner's judgement of what counts as a corner here, and
- * the two circuits do not answer that the same way. 55 missed the left-hand bend out of the
- * start straight, which he counts as Turn 1 and which measures 44 degrees.
+ * Set per circuit rather than shared: the number encodes the owner's judgement of what counts as a
+ * corner here, and two circuits do not answer that the same way. The 55 degrees PF International
+ * was once detected at missed the left-hand bend out of this start straight, which he counts as
+ * Turn 1 and which measures 44 degrees.
  *
  * 38 sits mid-plateau. Every value from 34 to 42 yields the same twelve corners, so the
  * threshold is not perched on an edge: 43 and above drops Turn 1 again, and 33 and below picks

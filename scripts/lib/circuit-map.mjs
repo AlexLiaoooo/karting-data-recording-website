@@ -190,6 +190,34 @@ export function layout(loop, { pitGeometry = null, minTurn, mergeGap, withArrow 
 }
 
 /**
+ * The legend for a lap drawn in named sectors.
+ *
+ * Written alongside the single-colour legend rather than generalised into it. Only PF International
+ * has sectors, and the four maps that do not must keep rendering byte-identical; a shared layout
+ * routine would have put that at the mercy of every future tweak to this one.
+ */
+function sectorLegend(sectors, startTick, withPit) {
+  const swatch = (x, y, inner, label) => `${inner}<text class="map-legend-label" x="${x + 30}" y="${y + 7}">${label}</text>`;
+  const entries = sectors.map((sector) => (x, y) =>
+    swatch(x, y, `<line x1="${x}" y1="${y}" x2="${x + 16}" y2="${y}" stroke="${sector.stroke}" stroke-width="8" stroke-linecap="round"/>`, sector.label));
+  if (withPit) {
+    entries.push((x, y) => swatch(x, y, `<line x1="${x}" y1="${y}" x2="${x + 16}" y2="${y}" stroke="#94a3b8" stroke-width="6" stroke-dasharray="5 4"/>`, "Pit lane"));
+  }
+  if (startTick?.line) {
+    entries.push((x, y) => swatch(x, y, `<line class="map-legend-mark" x1="${x + 8}" y1="${y - 8}" x2="${x + 8}" y2="${y + 8}" stroke-width="5" stroke-linecap="round"/>`, "Start"));
+  }
+  if (startTick?.arrow) {
+    entries.push((x, y) => swatch(x, y, `<polygon class="map-legend-mark" points="${x},${y - 6} ${x + 16},${y} ${x},${y + 6}"/>`, "Direction"));
+  }
+
+  // Two columns, filled down. The panel grows upward from the same baseline the other legend uses.
+  const rows = Math.ceil(entries.length / 2);
+  const height = rows * 30 + 26;
+  const body = entries.map((entry, index) => entry(22 + Math.floor(index / rows) * 154, 28 + (index % rows) * 30)).join("");
+  return `<g transform="translate(60 ${VIEW.height - height - 44})"><rect class="map-legend-surface" width="290" height="${height}" rx="16"/>${body}</g>`;
+}
+
+/**
  * Draws a fitted lap.
  *
  * The artwork carries no background and no light or dark theme: an SVG shown through an img tag
@@ -198,7 +226,7 @@ export function layout(loop, { pitGeometry = null, minTurn, mergeGap, withArrow 
  * surface, already themed, and every colour here is a mid-tone that reads on both of its
  * backgrounds (#f5f7fb light, #1d2a3a dark).
  */
-export function renderSvg({ title, description, caption, generator, provenance, built }) {
+export function renderSvg({ title, description, caption, generator, provenance, built, sectors = null }) {
   const { canvas, pitCanvas, startTick } = built;
   const legendWidth = startTick?.arrow && startTick?.line ? 290 : startTick?.arrow || startTick?.line ? 210 : 130;
 
@@ -240,12 +268,14 @@ ${pitCanvas ? `
   <!-- Pit lane, intentionally shown separately from the circuit loop. -->
   <path d="${toPath(pitCanvas)}" fill="none" stroke="#94a3b8" stroke-width="10" stroke-dasharray="18 14" stroke-linecap="round"/>
 ` : ""}
-  <path d="${toPath(canvas)}" fill="none" stroke="#3b82f6" stroke-width="${TRACK_WIDTH}" stroke-linecap="round" stroke-linejoin="round"/>
+  ${sectors
+    ? sectors.map((sector) => `<path d="${toPath(canvas.slice(sector.from, sector.to + 1))}" fill="none" stroke="${sector.stroke}" stroke-width="${TRACK_WIDTH}" stroke-linecap="round" stroke-linejoin="round"/>`).join("\n  ")
+    : `<path d="${toPath(canvas)}" fill="none" stroke="#3b82f6" stroke-width="${TRACK_WIDTH}" stroke-linecap="round" stroke-linejoin="round"/>`}
 
 ${startTick?.line ? `  <!-- Start/finish, and the racing direction taken from the ways' oneway tagging. -->
   <line class="map-mark" x1="${startTick.line[0]}" y1="${startTick.line[1]}" x2="${startTick.line[2]}" y2="${startTick.line[3]}" stroke-width="6" stroke-linecap="round"/>\n` : "  <!-- No start/finish line: the source records no start line for this circuit. -->\n"}${startTick?.arrow ? `  <polygon class="map-mark" points="${startTick.arrow}" stroke-width="1"/>\n` : "  <!-- No direction arrow: the source records no racing direction for this circuit. -->\n"}
   <g font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">
-    <g transform="translate(60 ${VIEW.height - 130})"><rect class="map-legend-surface" width="${legendWidth}" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text>${pitCanvas ? `<line x1="176" y1="28" x2="192" y2="28" stroke="#94a3b8" stroke-width="6" stroke-dasharray="5 4"/><text class="map-legend-label" x="206" y="35">Pit lane</text>` : ""}${startTick?.line ? `<line class="map-legend-mark" x1="30" y1="50" x2="30" y2="66" stroke-width="5" stroke-linecap="round"/><text class="map-legend-label" x="52" y="65">Start</text>` : ""}${startTick?.arrow ? `<polygon class="map-legend-mark" points="${startTick.line ? "176,58 192,64 176,70" : "22,58 38,64 22,70"}"/><text class="map-legend-label" x="${startTick.line ? 206 : 52}" y="65">Direction</text>` : ""}</g>
+    ${sectors ? sectorLegend(sectors, startTick, Boolean(pitCanvas)) : `<g transform="translate(60 ${VIEW.height - 130})"><rect class="map-legend-surface" width="${legendWidth}" height="86" rx="16"/><line x1="22" y1="28" x2="38" y2="28" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/><text class="map-legend-label" x="52" y="35">Circuit</text>${pitCanvas ? `<line x1="176" y1="28" x2="192" y2="28" stroke="#94a3b8" stroke-width="6" stroke-dasharray="5 4"/><text class="map-legend-label" x="206" y="35">Pit lane</text>` : ""}${startTick?.line ? `<line class="map-legend-mark" x1="30" y1="50" x2="30" y2="66" stroke-width="5" stroke-linecap="round"/><text class="map-legend-label" x="52" y="65">Start</text>` : ""}${startTick?.arrow ? `<polygon class="map-legend-mark" points="${startTick.line ? "176,58 192,64 176,70" : "22,58 38,64 22,70"}"/><text class="map-legend-label" x="${startTick.line ? 206 : 52}" y="65">Direction</text>` : ""}</g>`}
   </g>
 
   <text class="map-caption" x="60" y="${VIEW.height - 22}" font-family="Arial, Helvetica, sans-serif" font-size="13">Schematic generated from OpenStreetMap raceway geometry · © OpenStreetMap contributors · ODbL 1.0</text>
