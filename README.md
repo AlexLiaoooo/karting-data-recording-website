@@ -8,6 +8,11 @@ A mobile-first, local-first web application for recording competition karting ty
 
 - [中文用户操作手册](USER_GUIDE.zh-CN.md)
 
+## Design notes
+
+- [`DESIGN.md`](DESIGN.md) is the living design document for the whole app, with a change log.
+- [karting-tools-notes](https://github.com/AlexLiaoooo/karting-tools-notes) holds the design history: the original Track Map Notebook architecture note, the wider karting tools idea backlog, and dated UI screenshots. Where it and `DESIGN.md` disagree, `DESIGN.md` is current.
+
 ## Current features
 
 - Event → Session → Run record hierarchy.
