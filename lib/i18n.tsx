@@ -382,6 +382,12 @@ const zh: Record<string, string> = {
   "Choose map image": "选择地图图片",
   "Preparing image…": "正在处理图片…",
   "General notes": "总体笔记",
+  "Gearing used here": "这里用过的齿比",
+  "best {lap}": "最快 {lap}",
+  "max {rpm} rpm": "最高 {rpm} rpm",
+  "Last used {date} · {event}": "最近一次 {date} · {event}",
+  "No gearing recorded against this Layout yet.": "这个 Layout 下还没有齿比记录。",
+  "Gearing recorded at {events} is not counted here, because no saved Layout was chosen there. Choose this Layout on the Event to include it.": "在 {events} 中记录的齿比没有计入，因为那里没有选定已保存的 Layout。在该 Event 上选定这个 Layout 即可纳入。",
   "Anything about this layout as a whole: surface, kerbs, the wet line, gearing…":
     "关于此 Layout 的整体信息：路面、路肩、湿地走线、齿比…",
   "Overall Session track summary": "本 Session 赛道总结",

@@ -1578,3 +1578,44 @@ h2 {
     transition: none !important;
   }
 }
+
+/* Past gearing on a circuit's Layout page. The teeth are the identifier, so they lead and the
+   ratio sits under them at a smaller size; the rest is one wrapping line of detail. */
+.gearing-history .item-list {
+  gap: 6px;
+}
+
+.gearing-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.gearing-teeth {
+  display: flex;
+  flex-direction: column;
+  min-width: 68px;
+}
+
+.gearing-teeth strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gearing-teeth span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gearing-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}

@@ -35,6 +35,7 @@ import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
+import type { GearingHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
@@ -362,6 +363,41 @@ export default function HomePage() {
   const historicalRuns = useMemo<HistoricalRun[]>(() => data.events.flatMap((event) =>
     event.sessions.flatMap((session) => session.runs.map((run) => ({ run, eventName: event.name, sessionName: session.name }))),
   ), [data.events]);
+
+  /**
+   * Past gearing, keyed by the Layout its Event named, for the Track Map pages.
+   *
+   * Assembled here because this is the only component holding both the Events and the Track Maps.
+   * An Event with no saved Layout contributes only its track name, so a Layout showing nothing can
+   * explain why rather than appearing to have no history.
+   */
+  const gearingHistory = useMemo<GearingHistory>(() => {
+    const byLayout: GearingHistory["byLayout"] = [];
+    const unlinkedTrackNames: string[] = [];
+
+    for (const event of data.events) {
+      if (!event.trackLayoutId) {
+        if (event.track.trim()) unlinkedTrackNames.push(event.track);
+        continue;
+      }
+      for (const session of event.sessions) {
+        for (const run of session.runs) {
+          byLayout.push({
+            layoutId: event.trackLayoutId,
+            front: run.setup.frontSprocket,
+            rear: run.setup.rearSprocket,
+            fastestLap: run.fastestLap,
+            maxRpm: run.maxRpm,
+            condition: event.condition,
+            date: event.startDate,
+            eventName: event.name,
+          });
+        }
+      }
+    }
+
+    return { byLayout, unlinkedTrackNames };
+  }, [data.events]);
 
   function flash(message: string) {
     setToast(message);
@@ -904,6 +940,7 @@ export default function HomePage() {
       <TrackMapFeature
         data={trackMapData}
         mode="library"
+        gearing={gearingHistory}
         onChange={(updater) => setTrackMapData(updater)}
         onBack={() => setScreen("home")}
         notify={flash}
@@ -922,6 +959,7 @@ export default function HomePage() {
           layoutId: selectedEvent.trackLayoutId,
           condition: selectedEvent.condition,
         }}
+        gearing={gearingHistory}
         onChange={(updater) => setTrackMapData(updater)}
         onBack={() => setScreen("session")}
         notify={flash}

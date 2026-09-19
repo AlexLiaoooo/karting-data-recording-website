@@ -78,8 +78,13 @@ describe("summariseGearing", () => {
       run({ fastestLap: "51.900", maxRpm: "15900" }),
     ]);
 
-    expect(summary[0].bestLap).toBe("51.9");
+    expect(summary[0].bestLap).toBe("51.900");
     expect(summary[0].maxRpm).toBe("15900");
+  });
+
+  /** A lap typed "51.800" is written to three places deliberately; String(51.8) loses that. */
+  it("reports the lap as it was typed rather than as the number it parses to", () => {
+    expect(summariseGearing([run({ fastestLap: "51.800" })])[0].bestLap).toBe("51.800");
   });
 
   /**
@@ -89,7 +94,7 @@ describe("summariseGearing", () => {
   it("ignores a lap time it cannot read rather than reporting NaN", () => {
     const summary = summariseGearing([run({ fastestLap: "1:02.5" }), run({ fastestLap: "52.400" })]);
 
-    expect(summary[0].bestLap).toBe("52.4");
+    expect(summary[0].bestLap).toBe("52.400");
   });
 
   it("leaves best lap and RPM blank when nothing usable was recorded", () => {

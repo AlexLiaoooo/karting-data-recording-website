@@ -73,7 +73,18 @@ function numeric(value: string): number | null {
  * gearing are left out entirely, since a row with no sprockets answers nothing.
  */
 export function summariseGearing(runs: GearingRun[]): GearingSummary[] {
-  const groups = new Map<string, GearingSummary & { laps: number[]; rpms: number[] }>();
+  /**
+   * The winning entry is reported as the text it was typed as, not as the number it parsed to.
+   * A lap entered "51.800" is written that way on purpose, and String(51.8) throws the precision
+   * away.
+   */
+  const best = (current: { value: number; text: string } | null, text: string, wins: (a: number, b: number) => boolean) => {
+    const value = numeric(text);
+    if (value === null) return current;
+    return current === null || wins(value, current.value) ? { value, text: text.trim() } : current;
+  };
+
+  const groups = new Map<string, GearingSummary & { lap: { value: number; text: string } | null; rpm: { value: number; text: string } | null }>();
 
   for (const run of runs) {
     const ratio = gearRatio(run.front, run.rear);
@@ -83,14 +94,12 @@ export function summariseGearing(runs: GearingRun[]): GearingSummary[] {
     const group = groups.get(key) ?? {
       front: run.front, rear: run.rear, ratio, runs: 0,
       bestLap: "", maxRpm: "", conditions: [], lastUsed: "", lastEvent: "",
-      laps: [], rpms: [],
+      lap: null, rpm: null,
     };
 
     group.runs += 1;
-    const lap = numeric(run.fastestLap);
-    if (lap !== null) group.laps.push(lap);
-    const rpm = numeric(run.maxRpm);
-    if (rpm !== null) group.rpms.push(rpm);
+    group.lap = best(group.lap, run.fastestLap, (a, b) => a < b);
+    group.rpm = best(group.rpm, run.maxRpm, (a, b) => a > b);
     if (run.condition && !group.conditions.includes(run.condition)) group.conditions.push(run.condition);
     if (run.date >= group.lastUsed) {
       group.lastUsed = run.date;
@@ -101,11 +110,7 @@ export function summariseGearing(runs: GearingRun[]): GearingSummary[] {
   }
 
   return [...groups.values()]
-    .map(({ laps, rpms, ...group }) => ({
-      ...group,
-      bestLap: laps.length ? String(Math.min(...laps)) : "",
-      maxRpm: rpms.length ? String(Math.max(...rpms)) : "",
-    }))
+    .map(({ lap, rpm, ...group }) => ({ ...group, bestLap: lap?.text ?? "", maxRpm: rpm?.text ?? "" }))
     // Most recent first: the question is usually "what did I run here last time".
     .sort((a, b) => (b.lastUsed === a.lastUsed ? a.ratio - b.ratio : b.lastUsed.localeCompare(a.lastUsed)));
 }

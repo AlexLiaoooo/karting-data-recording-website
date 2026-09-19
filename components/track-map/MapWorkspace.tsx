@@ -18,7 +18,8 @@ import {
 } from "@/lib/track-map/types";
 import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
-import { ConfirmDeleteDialog, EmptyMapState, now, SessionContext, TrackMapChange } from "./shared";
+import { ConfirmDeleteDialog, EmptyMapState, GearingHistory, now, SessionContext, TrackMapChange } from "./shared";
+import { summariseGearing } from "@/lib/gearing";
 import { useTranslation } from "@/lib/i18n";
 
 type MapWorkspaceProps = {
@@ -26,11 +27,62 @@ type MapWorkspaceProps = {
   layout: TrackLayout;
   track: Track;
   session?: SessionContext;
+  gearing?: GearingHistory;
   onChange: TrackMapChange;
   notify: (message: string) => void;
 };
 
-export function MapWorkspace({ data, layout, track, session, onChange, notify }: MapWorkspaceProps) {
+/**
+ * What was fitted at this circuit before, read out of past Runs.
+ *
+ * Shown in Session mode as well as the reference page, because "what did we run here last time"
+ * is a question asked in the paddock rather than at home.
+ */
+function GearingHistorySection({ history, layout, track }: { history?: GearingHistory; layout: TrackLayout; track: Track }) {
+  const { t, language } = useTranslation();
+  if (!history) return null;
+
+  const rows = summariseGearing(history.byLayout.filter((entry) => entry.layoutId === layout.id));
+  const unlinked = history.unlinkedTrackNames.filter((name) => name.trim().toLowerCase() === track.name.trim().toLowerCase()).length;
+  if (!rows.length && !unlinked) return null;
+
+  const formatDate = (value: string) => value
+    ? new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`))
+    : "";
+
+  return (
+    <section className="settings-section gearing-history">
+      <h2>{t("Gearing used here")}</h2>
+      {rows.length > 0 ? (
+        <div className="item-list">
+          {rows.map((row) => (
+            <div className="gearing-row" key={`${row.front}/${row.rear}`}>
+              <span className="gearing-teeth"><strong>{row.front}/{row.rear}</strong><span>{row.ratio.toFixed(2)}</span></span>
+              <span className="gearing-detail">
+                <span>{[
+                  counted(row.runs, "run"),
+                  row.bestLap && t("best {lap}", { lap: row.bestLap }),
+                  row.maxRpm && t("max {rpm} rpm", { rpm: row.maxRpm }),
+                  row.conditions.map((condition) => t(condition)).join(", "),
+                ].filter(Boolean).join(" · ")}</span>
+                <span className="muted">{t("Last used {date} · {event}", { date: formatDate(row.lastUsed), event: row.lastEvent })}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="help-text">{t("No gearing recorded against this Layout yet.")}</p>
+      )}
+      {/* Phrased with the count as the object rather than the subject: a subject phrasing gives
+          "1 Event name this track", and counted() cannot fix the verb. */}
+      {unlinked > 0 && (
+        <p className="help-text">{t("Gearing recorded at {events} is not counted here, because no saved Layout was chosen there. Choose this Layout on the Event to include it.", { events: counted(unlinked, "Event") })}</p>
+      )}
+    </section>
+  );
+}
+
+export function MapWorkspace({ data, layout, track, session, gearing, onChange, notify }: MapWorkspaceProps) {
   const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
@@ -265,6 +317,8 @@ export function MapWorkspace({ data, layout, track, session, onChange, notify }:
           <p className="auto-save-note"><Check /> {t("Saved separately from permanent Track notes")}</p>
         </section>
       )}
+
+      <GearingHistorySection history={gearing} layout={layout} track={track} />
 
       {!session && (
         <section className="settings-section layout-notes">

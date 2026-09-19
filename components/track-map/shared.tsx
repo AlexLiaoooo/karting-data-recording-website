@@ -3,6 +3,7 @@
 import { ArrowLeft, MapPinned, Moon, Sun, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useEffect } from "react";
 import type { MapAsset, TrackMapData, TrackMarkerType } from "@/lib/track-map/types";
+import type { GearingRun } from "@/lib/gearing";
 import { LanguageToggle, useTranslation } from "@/lib/i18n";
 
 export type SessionContext = {
@@ -15,6 +16,19 @@ export type SessionContext = {
 };
 
 export type TrackMapChange = (updater: (current: TrackMapData) => TrackMapData) => void;
+
+/**
+ * What was fitted at a circuit before, assembled from Runs rather than typed in again.
+ *
+ * An Event is tied to a Layout only when the user picks one in the Event form, so that link is
+ * the only thing matched on. Matching the Event's free-text track name instead would attribute a
+ * Run to every Layout of a track that has several, which is worse than showing nothing. The
+ * unlinked names are carried so a Layout with an empty list can say why.
+ */
+export type GearingHistory = {
+  byLayout: Array<GearingRun & { layoutId: string }>;
+  unlinkedTrackNames: string[];
+};
 
 export const markerShortNames: Record<TrackMarkerType, string> = {
   In: "I",
