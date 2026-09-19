@@ -39,6 +39,7 @@ import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted } from "@/lib/format";
+import { formatRatio, gearRatio } from "@/lib/gearing";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -1308,6 +1309,16 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
               <Field label={t("Wheel / rim type")}><TextInput value={run.setup.wheelType} onChange={(event) => setSetup("wheelType", event.target.value)} /></Field>
               <Field label={t("Front sprocket")}><TextInput inputMode="numeric" value={run.setup.frontSprocket} onChange={(event) => setSetup("frontSprocket", event.target.value)} /></Field>
               <Field label={t("Rear sprocket")}><TextInput inputMode="numeric" value={run.setup.rearSprocket} onChange={(event) => setSetup("rearSprocket", event.target.value)} /></Field>
+              {/* Derived live from the two fields above rather than stored; see lib/gearing.ts. */}
+              <p className="help-text field-full">
+                {gearRatio(run.setup.frontSprocket, run.setup.rearSprocket) === null
+                  ? t("Enter both sprockets to see the gear ratio.")
+                  : t("Gear ratio {ratio} · {front}/{rear} teeth", {
+                    ratio: formatRatio(run.setup.frontSprocket, run.setup.rearSprocket),
+                    front: run.setup.frontSprocket,
+                    rear: run.setup.rearSprocket,
+                  })}
+              </p>
               <Field label={t("Setup notes")} className="field-full"><textarea className="textarea" value={run.setup.notes} onChange={(event) => setSetup("notes", event.target.value)} /></Field>
             </div>
           </details>

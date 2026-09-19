@@ -208,6 +208,8 @@ const zh: Record<string, string> = {
   "Seat stays": "座椅支撑",
   "Front sprocket": "前齿盘",
   "Rear sprocket": "后齿盘",
+  "Gear ratio {ratio} · {front}/{rear} teeth": "齿比 {ratio} · {front}/{rear} 齿",
+  "Enter both sprockets to see the gear ratio.": "填写前后齿盘齿数后会显示齿比。",
   "Wheel / rim type": "轮圈类型",
   "Setup notes": "Setup 备注",
   Performance: "成绩",
