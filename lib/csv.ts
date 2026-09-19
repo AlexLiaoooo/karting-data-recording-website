@@ -27,7 +27,7 @@ const setupFields: Array<[keyof ChassisSetup, string]> = [
   ["notes", "Setup notes"],
 ];
 
-const baseHeaders = [
+const eventHeaders = [
   "Event name",
   "Track",
   "Event start date",
@@ -38,10 +38,18 @@ const baseHeaders = [
   "Track temperature (C)",
   "Track condition",
   "Event notes",
-  "Session name",
-  "Session type",
-  "Session start time",
-  "Session notes",
+];
+
+const sessionHeaders = ["Session name", "Session type", "Session start time", "Session notes"];
+
+/**
+ * The Run's own columns, in the order runValues emits them.
+ *
+ * Split out and counted rather than folded into one list with a hard-coded width, because the
+ * padding for a Session with no Runs has to match this length exactly and a literal there goes
+ * stale the moment a column is added.
+ */
+const runHeaders = [
   "Run number",
   "Run label",
   "Recorded at",
@@ -49,8 +57,11 @@ const baseHeaders = [
   "Laps",
   "Fastest lap (s)",
   "Average lap (s)",
+  "Max RPM",
   "Position",
 ];
+
+const baseHeaders = [...eventHeaders, ...sessionHeaders, ...runHeaders];
 
 const tyreHeaders = tyreLabels.flatMap(([, label]) => [
   `${label} cold pressure (PSI)`,
@@ -82,7 +93,7 @@ function numericDelta(hot: string, cold: string) {
 function runValues(run?: RunRecord) {
   if (!run) {
     // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
-    return Array(8 + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length).fill("");
+    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length).fill("");
   }
 
   return [
@@ -93,6 +104,7 @@ function runValues(run?: RunRecord) {
     run.laps,
     run.fastestLap,
     run.averageLap,
+    run.maxRpm,
     run.position,
     ...tyreLabels.flatMap(([corner]) => {
       const tyre = run.tyres[corner];

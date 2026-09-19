@@ -1433,6 +1433,7 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
         value(t("Laps"), runA.laps, runB.laps),
         value(t("Fastest lap"), unit(runA.fastestLap, "s"), unit(runB.fastestLap, "s")),
         value(t("Average lap"), unit(runA.averageLap, "s"), unit(runB.averageLap, "s")),
+        value(t("Max RPM"), runA.maxRpm, runB.maxRpm),
         value(t("Position"), runA.position, runB.position),
       ],
     },
