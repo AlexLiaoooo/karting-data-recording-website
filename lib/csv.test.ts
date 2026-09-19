@@ -34,6 +34,19 @@ describe("buildCsv", () => {
     expect(row["FR pressure gain (PSI)"]).toBe("");
   });
 
+  /**
+   * The ratio is derived, so it has a header but no field in setupFields. That asymmetry is what
+   * the blank-run padding has to account for, and the column-count test below is what catches it.
+   */
+  it("exports the gear ratio derived from the sprockets", () => {
+    const [runs] = tables(buildCsv(makeAppData(), emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["Front sprocket"]).toBe("11");
+    expect(row["Rear sprocket"]).toBe("82");
+    expect(row["Gear ratio"]).toBe("7.45");
+  });
+
   it("keeps every row in a table at the header's column count", () => {
     const [runs, markers, observations] = tables(buildCsv(makeAppData(), makeTrackMapData()));
 

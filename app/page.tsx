@@ -860,7 +860,9 @@ export default function HomePage() {
               <div className="template-list">
                 {data.setupTemplates.map((template) => (
                   <div className="template-item" key={template.id}>
-                    <span className="list-copy"><strong>{template.name}</strong><span>{template.setup.axleType || t("Axle not set")} · {template.setup.rearSprocket ? `${template.setup.rearSprocket}T rear` : t("Sprocket not set")}</span></span>
+                    {/* Gearing identifies a saved setup more usefully than the rear sprocket
+                        alone, which says nothing without the front it runs against. */}
+                    <span className="list-copy"><strong>{template.name}</strong><span>{template.setup.axleType || t("Axle not set")} · {gearRatio(template.setup.frontSprocket, template.setup.rearSprocket) === null ? t("Sprocket not set") : `${template.setup.frontSprocket}/${template.setup.rearSprocket} · ${formatRatio(template.setup.frontSprocket, template.setup.rearSprocket)}`}</span></span>
                     <IconButton label={t("Delete {name}", { name: template.name })} onClick={() => requestDelete({ kind: "template", id: template.id, name: template.name })}><Trash2 /></IconButton>
                   </div>
                 ))}

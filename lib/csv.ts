@@ -1,5 +1,6 @@
 import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
 import { markerLabel, type TrackMapData } from "./track-map/types";
+import { gearRatio } from "./gearing";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -80,7 +81,8 @@ function numericDelta(hot: string, cold: string) {
 
 function runValues(run?: RunRecord) {
   if (!run) {
-    return Array(8 + tyreHeaders.length + setupFields.length + feedbackHeaders.length).fill("");
+    // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
+    return Array(8 + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length).fill("");
   }
 
   return [
@@ -104,6 +106,9 @@ function runValues(run?: RunRecord) {
       ];
     }),
     ...setupFields.map(([field]) => run.setup[field]),
+    // Derived rather than stored, and exported for the same reason pressure gain is: the
+    // spreadsheet should not have to recompute what the app already knows how to compute.
+    gearRatio(run.setup.frontSprocket, run.setup.rearSprocket)?.toFixed(2) ?? "",
     run.balance,
     run.grip,
     run.braking,
@@ -218,7 +223,7 @@ function section(title: string, header: string[], rows: unknown[][]) {
 }
 
 export function buildCsv(data: AppData, trackMap: TrackMapData) {
-  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), ...feedbackHeaders];
+  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders];
   const rows: unknown[][] = [];
 
   for (const event of data.events) {
