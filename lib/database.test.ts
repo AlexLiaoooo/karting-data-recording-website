@@ -3,7 +3,7 @@ import { emptyAppData, loadData, normalizeAppData, openKartDatabase, saveData, v
 import { loadTrackMapData, migrateMarkerTypes, saveTrackMapData } from "./track-map/database";
 import { makeLayout, makeMarker } from "./test-fixtures";
 import type { TrackMarker } from "./track-map/types";
-import { makeAppData, makeTrackMapData } from "./test-fixtures";
+import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData } from "./test-fixtures";
 
 const DB_NAME = "kart-data-recorder";
 
@@ -35,12 +35,33 @@ function seedVersion1Database(payload: unknown) {
 beforeEach(deleteDatabase);
 
 describe("normalizeAppData", () => {
-  it("upgrades a version 1 payload without touching its events", () => {
+  it("upgrades a version 1 payload without changing records that are already current", () => {
     const legacy = { ...makeAppData(), version: 1 };
     const normalized = normalizeAppData(legacy);
 
     expect(normalized?.version).toBe(2);
     expect(normalized?.events).toEqual(legacy.events);
+  });
+
+  /**
+   * React treats an input whose value is undefined as uncontrolled: the Run editor would warn on
+   * render and then fight the first keystroke. Backfilling here covers stored data and restored
+   * backups alike, because both arrive through this function.
+   */
+  it("backfills maxRpm on Runs recorded before the field existed", () => {
+    const run: Record<string, unknown> = { ...makeRun() };
+    delete run.maxRpm;
+    const legacy = { ...makeAppData(), events: [{ ...makeEvent(), sessions: [{ ...makeSession(), runs: [run] }] }] };
+
+    const restored = normalizeAppData(legacy)?.events[0].sessions[0].runs[0];
+    expect(restored?.maxRpm).toBe("");
+    // Everything else on the Run has to survive the migration untouched.
+    expect(restored?.fastestLap).toBe("48.21");
+    expect(restored?.setup.rearSprocket).toBe("82");
+  });
+
+  it("leaves a maxRpm that was already recorded alone", () => {
+    expect(normalizeAppData(makeAppData())?.events[0].sessions[0].runs[0].maxRpm).toBe("15800");
   });
 
   it("defaults setupTemplates when the payload predates them", () => {

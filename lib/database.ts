@@ -1,4 +1,4 @@
-import type { AppData } from "./types";
+import type { AppData, EventRecord } from "./types";
 
 const DB_NAME = "kart-data-recorder";
 const DB_VERSION = 2;
@@ -12,6 +12,24 @@ export const emptyAppData = (): AppData => ({
   setupTemplates: [],
 });
 
+/**
+ * Fills Run fields added after a record was written.
+ *
+ * A Run stored before `maxRpm` existed has no such property. React treats an input whose value is
+ * undefined as uncontrolled, so the field would warn on render and then fight the first keystroke.
+ * Backfilling here covers stored data and restored backups alike, since both pass through
+ * normalizeAppData, and lets the field stay non-optional everywhere else.
+ */
+function migrateRuns(events: EventRecord[]): EventRecord[] {
+  return events.map((event) => ({
+    ...event,
+    sessions: (event.sessions ?? []).map((session) => ({
+      ...session,
+      runs: (session.runs ?? []).map((run) => ({ ...run, maxRpm: run.maxRpm ?? "" })),
+    })),
+  }));
+}
+
 export function normalizeAppData(value: unknown): AppData | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as {
@@ -24,7 +42,7 @@ export function normalizeAppData(value: unknown): AppData | null {
 
   return {
     version: 2,
-    events: candidate.events,
+    events: migrateRuns(candidate.events as EventRecord[]),
     lastEventId: typeof candidate.lastEventId === "string" ? candidate.lastEventId : null,
     setupTemplates: Array.isArray(candidate.setupTemplates) ? candidate.setupTemplates : [],
   };

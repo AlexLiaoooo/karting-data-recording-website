@@ -19,6 +19,7 @@ export function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
     setup: { ...emptySetup(), frontSprocket: "11", rearSprocket: "82" },
     fastestLap: "48.21",
     averageLap: "48.90",
+    maxRpm: "15800",
     position: "3",
     balance: "Understeer",
     grip: "Medium",

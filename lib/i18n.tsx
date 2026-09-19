@@ -218,6 +218,8 @@ const zh: Record<string, string> = {
   "Number of laps": "圈数",
   "Fastest lap": "最快圈",
   "Average lap": "平均圈速",
+  "Max RPM": "最高转速",
+  "From the data logger": "读自记录仪",
   Position: "名次",
   "Driver feedback": "Driver feedback",
   Balance: "平衡",

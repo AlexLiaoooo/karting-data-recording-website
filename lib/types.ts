@@ -43,6 +43,8 @@ export type RunRecord = {
   setup: ChassisSetup;
   fastestLap: string;
   averageLap: string;
+  /** Peak RPM seen on the data logger. Blank on Runs recorded before the field existed. */
+  maxRpm: string;
   position: string;
   balance: "" | "Understeer" | "Neutral" | "Oversteer";
   grip: "" | "Low" | "Medium" | "High";
@@ -129,6 +131,7 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     setup: previous ? structuredClone(previous.setup) : emptySetup(),
     fastestLap: "",
     averageLap: "",
+    maxRpm: "",
     position: "",
     balance: "",
     grip: "",

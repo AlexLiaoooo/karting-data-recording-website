@@ -1332,6 +1332,9 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
               <Field label={t("Number of laps")}><TextInput inputMode="numeric" value={run.laps} onChange={(event) => setField("laps", event.target.value)} /></Field>
               <Field label={t("Fastest lap")}><NumberInput unit="s" value={run.fastestLap} onChange={(event) => setField("fastestLap", event.target.value)} /></Field>
               <Field label={t("Average lap")}><NumberInput unit="s" value={run.averageLap} onChange={(event) => setField("averageLap", event.target.value)} /></Field>
+              {/* Read off the data logger. Pairs with the gear ratio: together they answer whether
+                  a sprocket change put the engine on the limiter or left revs unused. */}
+              <Field label={t("Max RPM")}><TextInput inputMode="numeric" placeholder={t("From the data logger")} value={run.maxRpm} onChange={(event) => setField("maxRpm", event.target.value)} /></Field>
               <Field label={t("Position")}><TextInput inputMode="numeric" value={run.position} onChange={(event) => setField("position", event.target.value)} /></Field>
             </div>
           </details>
