@@ -39,7 +39,7 @@ import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted } from "@/lib/format";
-import { formatRatio, gearRatio } from "@/lib/gearing";
+import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -1360,6 +1360,12 @@ function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord;
   const runB = session.runs.find((run) => run.id === ids[1]);
   const sections = runA && runB ? comparisonSections(runA, runB, t) : [];
   const fastestDelta = numericComparisonDelta(runA?.fastestLap, runB?.fastestLap, t, "s");
+  const gearing = runA && runB
+    ? ratioChange(
+      { front: runA.setup.frontSprocket, rear: runA.setup.rearSprocket },
+      { front: runB.setup.frontSprocket, rear: runB.setup.rearSprocket },
+    )
+    : null;
   return (
     <>
       <TopBar title={t("Compare runs")} subtitle={session.name} onBack={onBack} />
@@ -1370,6 +1376,9 @@ function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord;
         </div>
         <div className="compare-summary">
           <div><span>{t("Fastest-lap change")}</span><strong>{fastestDelta}</strong><small>Run {runB?.number} compared with Run {runA?.number}</small></div>
+          {/* A change is one figure, not two columns, so it belongs here beside the lap delta
+              rather than in the table. Shown only when both Runs have usable sprockets. */}
+          {gearing && <div><span>{t("Gearing change")}</span><strong>{gearingSummary(gearing, t)}</strong><small>{formatRatio(runA!.setup.frontSprocket, runA!.setup.rearSprocket)} → {formatRatio(runB!.setup.frontSprocket, runB!.setup.rearSprocket)}</small></div>}
           <label className="difference-toggle"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} /> {t("Differences only")}</label>
         </div>
         <div className="compare-table" role="table" aria-label={t("Run comparison")}>
@@ -1440,6 +1449,9 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
         value(t("Wheel / rim type"), runA.setup.wheelType, runB.setup.wheelType),
         value(t("Front sprocket"), runA.setup.frontSprocket, runB.setup.frontSprocket),
         value(t("Rear sprocket"), runA.setup.rearSprocket, runB.setup.rearSprocket),
+        // Derived, so it is the one row here whose two sides can differ while the fields above
+        // read the same: 12/80 and 6/40 are different sprockets and identical gearing.
+        value(t("Gear ratio"), formatRatio(runA.setup.frontSprocket, runA.setup.rearSprocket), formatRatio(runB.setup.frontSprocket, runB.setup.rearSprocket)),
         value(t("Setup notes"), runA.setup.notes, runB.setup.notes),
       ],
     },
@@ -1456,6 +1468,17 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
       ],
     },
   ];
+}
+
+/**
+ * "+1.3% shorter", "-1.2% longer", or "Unchanged".
+ *
+ * The word carries the meaning: shorter gearing trades top speed for acceleration, and nobody
+ * reading "6.67 → 6.75" should have to recall which direction that is.
+ */
+function gearingSummary(change: NonNullable<ReturnType<typeof ratioChange>>, t: Translate) {
+  if (change.direction === "same") return t("Unchanged");
+  return `${change.percent > 0 ? "+" : ""}${change.percent.toFixed(1)}% ${change.direction === "shorter" ? t("shorter") : t("longer")}`;
 }
 
 function measurementGain(cold: string, hot: string, suffix: string) {
