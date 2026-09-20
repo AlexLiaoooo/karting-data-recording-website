@@ -1064,6 +1064,23 @@ h2 {
   background: var(--surface-soft);
 }
 
+/* A comparison column names its Run and, under it, the Event and Session that Run came from:
+   two Runs from different Events are both "Run 01", so the number alone no longer identifies one. */
+.compare-head strong {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.compare-head small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: right;
+}
+
 .compare-row.changed {
   background: var(--surface-blue);
 }

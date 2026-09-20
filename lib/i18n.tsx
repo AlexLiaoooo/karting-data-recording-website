@@ -257,6 +257,8 @@ const zh: Record<string, string> = {
   "First run": "第一个 Run",
   "Second run": "第二个 Run",
   "Fastest-lap change": "最快圈变化",
+  "Second run compared with first": "第二个 Run 与第一个相比",
+  "Not chosen": "未选择",
   "Gearing change": "齿比变化",
   "Gear ratio": "齿比",
   Unchanged: "未变",

@@ -49,7 +49,9 @@ type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "set
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes">;
-type HistoricalRun = { run: RunRecord; eventName: string; sessionName: string };
+/** A Run with the Event and Session it belongs to, so it can be named away from its own screen.
+ *  The ids group the comparison pickers; two Events can share a name, so the names cannot. */
+type HistoricalRun = { run: RunRecord; eventId: string; sessionId: string; eventName: string; sessionName: string };
 type WeatherState = "idle" | "loading" | "success" | "error";
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
@@ -361,7 +363,9 @@ export default function HomePage() {
   );
   const activeEvent = data.events.find((event) => event.id === data.lastEventId) ?? data.events[0];
   const historicalRuns = useMemo<HistoricalRun[]>(() => data.events.flatMap((event) =>
-    event.sessions.flatMap((session) => session.runs.map((run) => ({ run, eventName: event.name, sessionName: session.name }))),
+    event.sessions.flatMap((session) => session.runs.map((run) => ({
+      run, eventId: event.id, sessionId: session.id, eventName: event.name, sessionName: session.name,
+    }))),
   ), [data.events]);
 
   /**
@@ -875,7 +879,7 @@ export default function HomePage() {
       />
     );
   } else if (screen === "compare" && selectedSession) {
-    content = <CompareRuns session={selectedSession} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen("session")} />;
+    content = <CompareRuns runs={historicalRuns} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen("session")} />;
   } else if (screen === "settings") {
     content = (
       <>
@@ -1396,11 +1400,21 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
   );
 }
 
-function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord; ids: [string, string]; setIds: (ids: [string, string]) => void; onBack: () => void }) {
+/**
+ * Compares any two Runs on record, not only two from the same Session.
+ *
+ * The useful question is usually "this circuit in June against this circuit today", which the
+ * Session-only version could not express at all. Both pickers therefore draw from every Run, and
+ * because two Runs from different Events are both "Run 01", each column and each option says
+ * where it came from.
+ */
+function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids: [string, string]; setIds: (ids: [string, string]) => void; onBack: () => void }) {
   const { t } = useTranslation();
   const [differencesOnly, setDifferencesOnly] = useState(false);
-  const runA = session.runs.find((run) => run.id === ids[0]);
-  const runB = session.runs.find((run) => run.id === ids[1]);
+  const entryA = runs.find((item) => item.run.id === ids[0]);
+  const entryB = runs.find((item) => item.run.id === ids[1]);
+  const runA = entryA?.run;
+  const runB = entryB?.run;
   const sections = runA && runB ? comparisonSections(runA, runB, t) : [];
   const fastestDelta = numericComparisonDelta(runA?.fastestLap, runB?.fastestLap, t, "s");
   const gearing = runA && runB
@@ -1411,21 +1425,23 @@ function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord;
     : null;
   return (
     <>
-      <TopBar title={t("Compare runs")} subtitle={session.name} onBack={onBack} />
+      <TopBar title={t("Compare runs")} subtitle={counted(runs.length, "run")} onBack={onBack} />
       <div className="page-content">
         <div className="compare-selectors">
-          <Field label={t("First run")}><select className="select" value={ids[0]} onChange={(event) => setIds([event.target.value, ids[1]])}>{session.runs.map((run) => <option disabled={run.id === ids[1]} key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}</select></Field>
-          <Field label={t("Second run")}><select className="select" value={ids[1]} onChange={(event) => setIds([ids[0], event.target.value])}>{session.runs.map((run) => <option disabled={run.id === ids[0]} key={run.id} value={run.id}>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}</select></Field>
+          <Field label={t("First run")}><RunPicker runs={runs} value={ids[0]} exclude={ids[1]} onChange={(id) => setIds([id, ids[1]])} /></Field>
+          <Field label={t("Second run")}><RunPicker runs={runs} value={ids[1]} exclude={ids[0]} onChange={(id) => setIds([ids[0], id])} /></Field>
         </div>
         <div className="compare-summary">
-          <div><span>{t("Fastest-lap change")}</span><strong>{fastestDelta}</strong><small>Run {runB?.number} compared with Run {runA?.number}</small></div>
+          {/* The columns below carry which Run is which, so this only has to say the direction.
+              Naming them here would repeat two Event names in a line this narrow. */}
+          <div><span>{t("Fastest-lap change")}</span><strong>{fastestDelta}</strong><small>{t("Second run compared with first")}</small></div>
           {/* A change is one figure, not two columns, so it belongs here beside the lap delta
               rather than in the table. Shown only when both Runs have usable sprockets. */}
           {gearing && <div><span>{t("Gearing change")}</span><strong>{gearingSummary(gearing, t)}</strong><small>{formatRatio(runA!.setup.frontSprocket, runA!.setup.rearSprocket)} → {formatRatio(runB!.setup.frontSprocket, runB!.setup.rearSprocket)}</small></div>}
           <label className="difference-toggle"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} /> {t("Differences only")}</label>
         </div>
         <div className="compare-table" role="table" aria-label={t("Run comparison")}>
-          <div className="compare-row compare-head" role="row"><span>{t("Measurement")}</span><strong>Run {runA?.number}</strong><strong>Run {runB?.number}</strong></div>
+          <div className="compare-row compare-head" role="row"><span>{t("Measurement")}</span><CompareColumnHead entry={entryA} /><CompareColumnHead entry={entryB} /></div>
           {sections.map((section) => {
             const values = differencesOnly ? section.values.filter((value) => value.a !== value.b) : section.values;
             if (!values.length) return null;
@@ -1439,6 +1455,51 @@ function CompareRuns({ session, ids, setIds, onBack }: { session: SessionRecord;
         </div>
       </div>
     </>
+  );
+}
+
+const runNumber = (run: RunRecord) => `Run ${String(run.number).padStart(2, "0")}`;
+
+/**
+ * Picks one Run out of every Run on record, grouped under its Event and Session.
+ *
+ * Optgroups rather than one flat list, because a flat list repeats the Event name on every row
+ * and gives a phone's native picker nothing to scroll by. The Runs arrive already ordered Event
+ * by Event and Session by Session, so grouping is a walk rather than a sort.
+ */
+function RunPicker({ runs, value, exclude, onChange }: { runs: HistoricalRun[]; value: string; exclude: string; onChange: (id: string) => void }) {
+  const groups: Array<{ key: string; label: string; items: HistoricalRun[] }> = [];
+  for (const item of runs) {
+    const key = `${item.eventId}/${item.sessionId}`;
+    const current = groups.at(-1);
+    if (current?.key === key) current.items.push(item);
+    else groups.push({ key, label: `${item.eventName} · ${item.sessionName}`, items: [item] });
+  }
+
+  return (
+    <select className="select" value={value} onChange={(event) => onChange(event.target.value)}>
+      {groups.map((group) => (
+        <optgroup key={group.key} label={group.label}>
+          {group.items.map(({ run }) => (
+            <option disabled={run.id === exclude} key={run.id} value={run.id}>
+              {runNumber(run)}{run.label ? ` · ${run.label}` : ""}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
+/** A comparison column's heading: the Run number, and where it came from. */
+function CompareColumnHead({ entry }: { entry?: HistoricalRun }) {
+  const { t } = useTranslation();
+  if (!entry) return <strong>{t("Not chosen")}</strong>;
+  return (
+    <strong>
+      {runNumber(entry.run)}
+      <small>{entry.eventName} · {entry.sessionName}</small>
+    </strong>
   );
 }
 
