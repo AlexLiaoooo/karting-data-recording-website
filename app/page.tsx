@@ -616,10 +616,30 @@ export default function HomePage() {
     setDeleteTarget(null);
   }
 
+  /**
+   * Opens the comparison on the two Runs most worth looking at from here.
+   *
+   * Two Runs in this Session is the common case and stays the default. With only one, that Run is
+   * paired with the most recent Run recorded anywhere, which is the whole point of comparing
+   * across Events: the first Run of a day has nothing to compare against within its own Session.
+   *
+   * The older Run goes first, so the summary's "second compared with first" reads as the change.
+   */
   function startCompare() {
-    if (!selectedSession || selectedSession.runs.length < 2) return;
-    const lastTwo = selectedSession.runs.slice(-2);
-    setCompareIds([lastTwo[0].id, lastTwo[1].id]);
+    if (historicalRuns.length < 2) return;
+    const sessionRuns = selectedSession?.runs ?? [];
+    const newestFirst = [...historicalRuns].sort((a, b) => b.run.recordedAt.localeCompare(a.run.recordedAt));
+
+    if (sessionRuns.length >= 2) {
+      const [older, newer] = sessionRuns.slice(-2);
+      setCompareIds([older.id, newer.id]);
+    } else if (sessionRuns.length === 1) {
+      const previous = newestFirst.find((item) => item.run.id !== sessionRuns[0].id);
+      if (!previous) return;
+      setCompareIds([previous.run.id, sessionRuns[0].id]);
+    } else {
+      setCompareIds([newestFirst[1].run.id, newestFirst[0].run.id]);
+    }
     setScreen("compare");
   }
 
@@ -838,7 +858,9 @@ export default function HomePage() {
             <button className="button button-primary button-block" onClick={() => addRun()}><Plus /> {t("Add blank Run {number}", { number: String(selectedSession.runs.length + 1).padStart(2, "0") })}</button>
             {selectedSession.runs.length > 0 && <button className="button button-soft button-block" onClick={() => addRun(selectedSession.runs.at(-1))}><Copy /> {t("Duplicate last run")}</button>}
             {historicalRuns.length > 0 && <button className="button button-secondary button-block" onClick={() => setShowRunHistoryForm(true)}><History /> {t("Copy a historical run")}</button>}
-            {selectedSession.runs.length > 1 && <button className="button button-secondary button-block" onClick={startCompare}><CircleGauge /> {t("Compare runs")}</button>}
+            {/* Two Runs anywhere, not two in this Session: the first Run of a day used to have
+                nothing to compare against, which is exactly when last time out is worth seeing. */}
+            {historicalRuns.length > 1 && <button className="button button-secondary button-block" onClick={startCompare}><CircleGauge /> {t("Compare runs")}</button>}
           </div>
           <section className="list-section">
             <div className="section-heading"><h2>{t("Runs")}</h2><span className="muted">{t("Newest first")}</span></div>
