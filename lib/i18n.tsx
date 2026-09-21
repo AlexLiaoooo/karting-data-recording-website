@@ -160,8 +160,8 @@ const zh: Record<string, string> = {
   // Run creation, templates and confirmations
   "NEW RUN": "新的 RUN",
   "Source run": "来源 Run",
-  "Tyre readings and chassis setup will be copied. Lap times and driver feedback start blank.":
-    "会复制轮胎数据和 Chassis setup。圈速和 Driver feedback 保持空白。",
+  "Cold tyre readings and chassis setup will be copied. Hot readings, lap times and driver feedback start blank.":
+    "会复制冷胎读数和 Chassis setup。热胎读数、圈速和 Driver feedback 保持空白。",
   "Copy into new run": "复制到新的 Run",
   "Save setup template": "保存 Setup 模板",
   "CHASSIS SETUP": "CHASSIS SETUP",
@@ -296,7 +296,7 @@ const zh: Record<string, string> = {
   "{name} deleted": "已删除 {name}",
   "{name} saved as a setup template": "已将 {name} 保存为 Setup 模板",
   "{name} applied": "已应用 {name}",
-  "Tyres and setup copied from Run {number}": "已从 Run {number} 复制轮胎和 Setup",
+  "Cold tyres and setup copied from Run {number}": "已从 Run {number} 复制冷胎读数和 Setup",
   "Location access was denied. Allow location access in your browser settings, or enter the temperature manually.":
     "定位权限被拒绝。请在浏览器设置中允许定位，或手动填写温度。",
   "Your current location is unavailable. Check your location settings or enter the temperature manually.":

@@ -547,7 +547,7 @@ export default function HomePage() {
     setRunId(run.id);
     setScreen("run");
     setShowRunHistoryForm(false);
-    if (source) flash(t("Tyres and setup copied from Run {number}", { number: String(source.number).padStart(2, "0") }));
+    if (source) flash(t("Cold tyres and setup copied from Run {number}", { number: String(source.number).padStart(2, "0") }));
   }
 
   function saveSetupTemplate(name: string) {
@@ -1219,7 +1219,7 @@ function RunHistoryModal({ runs, onClose, onCopy }: { runs: HistoricalRun[]; onC
     <div className="modal-backdrop">
       <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="copy-run-title">
         <div className="modal-head"><div><p className="eyebrow">{t("NEW RUN")}</p><h2 id="copy-run-title">{t("Copy a historical run")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
-        <p className="help-text">{t("Tyre readings and chassis setup will be copied. Lap times and driver feedback start blank.")}</p>
+        <p className="help-text">{t("Cold tyre readings and chassis setup will be copied. Hot readings, lap times and driver feedback start blank.")}</p>
         <Field label={t("Source run")} className="field-full">
           <select className="select" value={runId} onChange={(event) => setRunId(event.target.value)}>
             {runs.map(({ run, eventName, sessionName }) => <option key={run.id} value={run.id}>{eventName} · {sessionName} · Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}

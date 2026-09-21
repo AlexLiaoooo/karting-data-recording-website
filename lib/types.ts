@@ -117,6 +117,24 @@ export const emptySetup = (): ChassisSetup => ({
   notes: "",
 });
 
+/**
+ * Carries a Run's cold tyre readings into the next one and leaves the hot ones blank.
+ *
+ * Cold pressures are set in the paddock before going out, so repeating them is most of the point
+ * of duplicating a Run. Hot pressures and temperatures are measured when the kart comes back in,
+ * and copying those forward filled a new Run with the previous Run's measurements — on screen
+ * indistinguishable from readings actually taken, and silently wrong in every export and
+ * comparison until someone overwrote all eight of them.
+ */
+function carryColdTyres(tyres: RunRecord["tyres"]): RunRecord["tyres"] {
+  const carry = (tyre: TyreReading): TyreReading => ({
+    ...emptyTyre(),
+    coldPressure: tyre.coldPressure,
+    coldTemperature: tyre.coldTemperature,
+  });
+  return { fl: carry(tyres.fl), fr: carry(tyres.fr), rl: carry(tyres.rl), rr: carry(tyres.rr) };
+}
+
 export const createRun = (number: number, previous?: RunRecord): RunRecord => {
   const now = new Date().toISOString();
   return {
@@ -126,7 +144,7 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     recordedAt: now,
     laps: "",
     tyres: previous
-      ? structuredClone(previous.tyres)
+      ? carryColdTyres(previous.tyres)
       : { fl: emptyTyre(), fr: emptyTyre(), rl: emptyTyre(), rr: emptyTyre() },
     setup: previous ? structuredClone(previous.setup) : emptySetup(),
     fastestLap: "",
