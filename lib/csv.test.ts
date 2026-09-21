@@ -47,6 +47,27 @@ describe("buildCsv", () => {
     expect(row["Gear ratio"]).toBe("7.45");
   });
 
+  /**
+   * The column is headed "(s)", so a lap typed in minutes and seconds has to be converted or the
+   * header is a lie. A lap already in seconds passes through untouched, trailing zeros included,
+   * so exports made before this change still match.
+   */
+  it("exports a lap written in minutes and seconds as seconds", () => {
+    const withClockLap = makeAppData();
+    withClockLap.events[0].sessions[0].runs[0].fastestLap = "1:02.5";
+    const [runs] = tables(buildCsv(withClockLap, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["Fastest lap (s)"]).toBe("62.5");
+  });
+
+  it("leaves a lap already written in seconds exactly as typed", () => {
+    const [runs] = tables(buildCsv(makeAppData(), emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["Fastest lap (s)"]).toBe("48.21");
+  });
+
   it("keeps every row in a table at the header's column count", () => {
     const [runs, markers, observations] = tables(buildCsv(makeAppData(), makeTrackMapData()));
 

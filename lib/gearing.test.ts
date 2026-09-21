@@ -87,12 +87,21 @@ describe("summariseGearing", () => {
     expect(summariseGearing([run({ fastestLap: "51.800" })])[0].bestLap).toBe("51.800");
   });
 
-  /**
-   * Lap times are free text, so "1:02.5" is not a number. It is left out rather than poisoning the
-   * best lap with NaN; that the app cannot read such a lap at all is a separate fault.
-   */
-  it("ignores a lap time it cannot read rather than reporting NaN", () => {
-    const summary = summariseGearing([run({ fastestLap: "1:02.5" }), run({ fastestLap: "52.400" })]);
+  /** A lap over a minute is a real lap and has to compete for the best, not be skipped. */
+  it("counts a lap written in minutes and seconds", () => {
+    const summary = summariseGearing([run({ fastestLap: "1:02.500" }), run({ fastestLap: "1:05.100" })]);
+
+    expect(summary[0].bestLap).toBe("1:02.500");
+  });
+
+  it("compares the two notations against each other correctly", () => {
+    const summary = summariseGearing([run({ fastestLap: "1:02.500" }), run({ fastestLap: "58.400" })]);
+
+    expect(summary[0].bestLap).toBe("58.400");
+  });
+
+  it("still ignores text that is not a lap time at all", () => {
+    const summary = summariseGearing([run({ fastestLap: "quickest" }), run({ fastestLap: "52.400" })]);
 
     expect(summary[0].bestLap).toBe("52.400");
   });

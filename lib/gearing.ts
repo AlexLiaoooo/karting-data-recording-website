@@ -24,6 +24,8 @@ export function formatRatio(frontSprocket: string, rearSprocket: string): string
   return ratio === null ? "—" : ratio.toFixed(2);
 }
 
+import { parseLapTime } from "./lap-time";
+
 /** One Run's gearing, with the context needed to say when and in what it was used. */
 export type GearingRun = {
   front: string;
@@ -52,13 +54,7 @@ export type GearingSummary = {
   lastEvent: string;
 };
 
-/**
- * A number typed into a free-text field, or null.
- *
- * Lap times are stored as text, so a lap entered as "1:02.5" is not a number and is left out of
- * the best-lap figure rather than becoming NaN. That the app cannot read such a lap at all is a
- * separate fault; this function only declines to make it worse.
- */
+/** A plain number typed into a free-text field, or null. Used for RPM, not for lap times. */
 function numeric(value: string): number | null {
   if (value.trim() === "") return null;
   const parsed = Number(value);
@@ -78,8 +74,13 @@ export function summariseGearing(runs: GearingRun[]): GearingSummary[] {
    * A lap entered "51.800" is written that way on purpose, and String(51.8) throws the precision
    * away.
    */
-  const best = (current: { value: number; text: string } | null, text: string, wins: (a: number, b: number) => boolean) => {
-    const value = numeric(text);
+  const best = (
+    current: { value: number; text: string } | null,
+    text: string,
+    parse: (value: string) => number | null,
+    wins: (a: number, b: number) => boolean,
+  ) => {
+    const value = parse(text);
     if (value === null) return current;
     return current === null || wins(value, current.value) ? { value, text: text.trim() } : current;
   };
@@ -98,8 +99,9 @@ export function summariseGearing(runs: GearingRun[]): GearingSummary[] {
     };
 
     group.runs += 1;
-    group.lap = best(group.lap, run.fastestLap, (a, b) => a < b);
-    group.rpm = best(group.rpm, run.maxRpm, (a, b) => a > b);
+    // Laps go through the lap reader, so a lap over a minute counts; RPM is a plain number.
+    group.lap = best(group.lap, run.fastestLap, parseLapTime, (a, b) => a < b);
+    group.rpm = best(group.rpm, run.maxRpm, numeric, (a, b) => a > b);
     if (run.condition && !group.conditions.includes(run.condition)) group.conditions.push(run.condition);
     if (run.date >= group.lastUsed) {
       group.lastUsed = run.date;

@@ -41,6 +41,7 @@ import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
+import { formatLapTime, parseLapTime } from "@/lib/lap-time";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -77,8 +78,14 @@ function formatDate(value: string, t: Translate, locale: string) {
 }
 
 function bestLap(session: SessionRecord) {
-  const laps = session.runs.map((run) => Number(run.fastestLap)).filter((lap) => Number.isFinite(lap) && lap > 0);
-  return laps.length ? Math.min(...laps).toFixed(3) : "—";
+  const laps = session.runs.map((run) => parseLapTime(run.fastestLap)).filter((lap): lap is number => lap !== null);
+  return laps.length ? formatLapTime(Math.min(...laps)) : "—";
+}
+
+/** A lap as the app writes it, or the text as typed when that is not a lap at all. */
+function lapText(value: string) {
+  const seconds = parseLapTime(value);
+  return seconds === null ? value || "—" : formatLapTime(seconds);
 }
 
 function totalLaps(session: SessionRecord) {
@@ -1438,7 +1445,7 @@ function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids
   const runA = entryA?.run;
   const runB = entryB?.run;
   const sections = runA && runB ? comparisonSections(runA, runB, t) : [];
-  const fastestDelta = numericComparisonDelta(runA?.fastestLap, runB?.fastestLap, t, "s");
+  const fastestDelta = lapDelta(runA?.fastestLap, runB?.fastestLap, t);
   const gearing = runA && runB
     ? ratioChange(
       { front: runA.setup.frontSprocket, rear: runA.setup.rearSprocket },
@@ -1552,8 +1559,10 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
         value(t("Run label"), runA.label, runB.label),
         value(t("Completed"), runA.completed ? "Yes" : "No", runB.completed ? "Yes" : "No"),
         value(t("Laps"), runA.laps, runB.laps),
-        value(t("Fastest lap"), unit(runA.fastestLap, "s"), unit(runB.fastestLap, "s")),
-        value(t("Average lap"), unit(runA.averageLap, "s"), unit(runB.averageLap, "s")),
+        // Written as the app writes laps, so a lap over a minute reads 1:02.500 rather than
+        // "1:02.5 s", which is what appending a unit to the raw text produced.
+        value(t("Fastest lap"), lapText(runA.fastestLap), lapText(runB.fastestLap)),
+        value(t("Average lap"), lapText(runA.averageLap), lapText(runB.averageLap)),
         value(t("Max RPM"), runA.maxRpm, runB.maxRpm),
         value(t("Position"), runA.position, runB.position),
       ],
@@ -1614,11 +1623,18 @@ function measurementGain(cold: string, hot: string, suffix: string) {
   return Number.isFinite(delta) ? `${delta >= 0 ? "+" : ""}${delta.toFixed(2)} ${suffix}` : "—";
 }
 
-function numericComparisonDelta(first: string | undefined, second: string | undefined, t: Translate, suffix = "") {
-  if (!first || !second) return t("Not enough data");
-  const delta = Number(second) - Number(first);
-  if (!Number.isFinite(delta)) return t("Not enough data");
-  return `${delta >= 0 ? "+" : ""}${delta.toFixed(3)} ${suffix}`;
+/**
+ * The gap between two lap times, in seconds however each was written.
+ *
+ * Replaces a Number()-based delta, which returned "Not enough data" for any lap over a minute
+ * entered as m:ss, and would have compared 1:02.5 against 52.4 as if the first were smaller.
+ */
+function lapDelta(first: string | undefined, second: string | undefined, t: Translate) {
+  const a = parseLapTime(first ?? "");
+  const b = parseLapTime(second ?? "");
+  if (a === null || b === null) return t("Not enough data");
+  const delta = b - a;
+  return `${delta >= 0 ? "+" : ""}${delta.toFixed(3)} s`;
 }
 
 function unit(value: string, suffix: string) {

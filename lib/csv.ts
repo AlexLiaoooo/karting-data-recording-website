@@ -1,6 +1,7 @@
 import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
 import { markerLabel, type TrackMapData } from "./track-map/types";
 import { gearRatio } from "./gearing";
+import { parseLapTime } from "./lap-time";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -102,8 +103,8 @@ function runValues(run?: RunRecord) {
     run.recordedAt,
     run.completed ? "Yes" : "No",
     run.laps,
-    run.fastestLap,
-    run.averageLap,
+    lapSeconds(run.fastestLap),
+    lapSeconds(run.averageLap),
     run.maxRpm,
     run.position,
     ...tyreLabels.flatMap(([corner]) => {
@@ -129,6 +130,19 @@ function runValues(run?: RunRecord) {
     run.cornerExit,
     run.comments,
   ];
+}
+
+/**
+ * A lap time for a column headed "(s)".
+ *
+ * A lap typed "1:02.5" belongs in that column as 62.5, or the header is a lie and the spreadsheet
+ * cannot sort it. A lap already written in seconds is passed through exactly as typed, so its
+ * trailing zeros survive and exports made before this stay byte-identical.
+ */
+function lapSeconds(value: string) {
+  if (!value.includes(":")) return value;
+  const seconds = parseLapTime(value);
+  return seconds === null ? value : String(seconds);
 }
 
 function escapeCsv(value: unknown) {
