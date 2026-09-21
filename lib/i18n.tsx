@@ -218,6 +218,7 @@ const zh: Record<string, string> = {
   "Number of laps": "圈数",
   "Fastest lap": "最快圈",
   "Average lap": "平均圈速",
+  "Not read as a lap time, so it will not count towards best laps or comparisons. Use 52.400 or 1:02.500.": "无法识别为圈速，因此不会计入最快圈与对比。请使用 52.400 或 1:02.500 这样的格式。",
   "Max RPM": "最高转速",
   "From the data logger": "读自记录仪",
   Position: "名次",

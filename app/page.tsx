@@ -1044,6 +1044,22 @@ function Field({ label, children, className = "" }: { label: string; children: R
   return <label className={`field ${className}`}><span>{label}</span>{children}</label>;
 }
 
+/**
+ * Says so when a lap time cannot be read, instead of letting it vanish from every figure.
+ *
+ * An unreadable lap is still stored and the Run still saves — the design forbids demanding a
+ * field before a record can be kept — but it is left out of the Session best, the comparison
+ * delta and the gearing history. That used to happen in silence, which is the same fault as
+ * dropping a lap over a minute: the number is simply missing and nothing says why.
+ *
+ * Amber rather than an error: nothing is broken, the value just will not count.
+ */
+function LapWarning({ value }: { value: string }) {
+  const { t } = useTranslation();
+  if (value.trim() === "" || parseLapTime(value) !== null) return null;
+  return <small className="field-warning">{t("Not read as a lap time, so it will not count towards best laps or comparisons. Use 52.400 or 1:02.500.")}</small>;
+}
+
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className="input" {...props} />;
 }
@@ -1401,8 +1417,14 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
             <div className="editor-body form-grid">
               <Field label={t("Run label")}><TextInput placeholder={t("Optional")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></Field>
               <Field label={t("Number of laps")}><TextInput inputMode="numeric" value={run.laps} onChange={(event) => setField("laps", event.target.value)} /></Field>
-              <Field label={t("Fastest lap")}><NumberInput unit="s" value={run.fastestLap} onChange={(event) => setField("fastestLap", event.target.value)} /></Field>
-              <Field label={t("Average lap")}><NumberInput unit="s" value={run.averageLap} onChange={(event) => setField("averageLap", event.target.value)} /></Field>
+              <Field label={t("Fastest lap")}>
+                <NumberInput unit="s" value={run.fastestLap} onChange={(event) => setField("fastestLap", event.target.value)} />
+                <LapWarning value={run.fastestLap} />
+              </Field>
+              <Field label={t("Average lap")}>
+                <NumberInput unit="s" value={run.averageLap} onChange={(event) => setField("averageLap", event.target.value)} />
+                <LapWarning value={run.averageLap} />
+              </Field>
               {/* Read off the data logger. Pairs with the gear ratio: together they answer whether
                   a sprocket change put the engine on the limiter or left revs unused. */}
               <Field label={t("Max RPM")}><TextInput inputMode="numeric" placeholder={t("From the data logger")} value={run.maxRpm} onChange={(event) => setField("maxRpm", event.target.value)} /></Field>
