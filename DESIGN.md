@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v0.8
-**Last updated:** 2026-08-15
+**Document status:** Implemented prototype v1.17
+**Last updated:** 2026-09-22
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -445,6 +445,44 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.17 — 2026-09-22
+
+Gearing, comparison across Events, and two faults that had been losing data quietly.
+
+- **Gear ratio, derived from the sprockets already recorded.** Section 5.5 has listed "calculated
+  or entered gear ratio" since the first draft and nothing divided one by the other. `lib/gearing.ts`
+  computes it rather than storing it, so it cannot disagree with the sprockets it came from, and no
+  migration was needed. It appears live under the two fields in the Run editor, as a row and a
+  percentage change in the comparison, in the saved-template summary, and as a CSV column. The
+  change reads "-7.7% longer", because which way 6.67 to 6.15 went is the only reason to show it.
+- **Maximum RPM on the Run.** A ratio alone is arithmetic; the decision it serves is whether a
+  sprocket change hit the limiter or left revs unused, and nothing recorded the peak. Runs stored
+  before the field exists are backfilled in `normalizeAppData`, which is the single funnel for both
+  stored data and restored backups.
+- **Gearing used at a circuit**, on its Layout page and in Session mode. Assembled from past Runs
+  rather than typed again: each sprocket pair with its ratio, the Runs on it, the best lap and
+  highest RPM seen, the conditions, and when it was last used. Matched only on the Event's saved
+  Layout, never its track name, because a name match would attribute a Run to every Layout of a
+  circuit that has several. Events naming the track without a Layout are counted and explained.
+- **The comparison reaches every Run**, not two from one Session. The useful question is one
+  circuit in June against the same circuit today, which it could not express. Two Runs from
+  different Events are both "Run 01", so each column now carries its Event and Session and the
+  pickers group by them. The button appears whenever two Runs exist anywhere, which is what makes
+  the first Run of a day comparable with last time out.
+- **A duplicated Run no longer inherits the previous Run's hot readings.** `createRun` cloned all
+  four tyres whole, so a new Run opened holding the last one's hot pressures and temperatures,
+  indistinguishable on screen from readings actually taken and present in every export and
+  pressure-gain figure. Cold readings still carry; that is the point of duplicating.
+- **A lap over a minute is no longer dropped.** Four places read lap times through `Number()`,
+  which returns NaN for "1:02.5", so such a lap vanished from the Session best, the comparison
+  delta, the gearing history and the CSV column headed seconds. `lib/lap-time.ts` reads both
+  notations and writes them back the way a timing screen does. The CSV converts only laps written
+  with a colon, so exports made earlier still match byte for byte.
+- **An unreadable lap now says so.** Rejecting "1:60" is right, since reading it as 2:00 commits to
+  reading "1:75" as 2:15, but the rejection was silent, which was the same fault again. Both lap
+  fields warn beneath themselves, naming the consequence and both accepted forms. The Run still
+  saves: section 8 forbids requiring a field before a record can be kept.
 
 ### Implemented prototype v1.16 — 2026-08-31
 
