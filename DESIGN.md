@@ -440,89 +440,11 @@ Possible later phases include:
 
 ## 15. Change log
 
-### Implemented prototype v1.8 — 2026-08-17
-
-- Added Simplified Chinese for the whole interface, switched from a button in every top bar and
-  remembered in the browser. Roughly 300 strings.
-- Chinese follows the convention already set by `USER_GUIDE.zh-CN.md`: the structural nouns of
-  the data model — Event, Session, Run, Setup, Marker, Track, Layout — and product names such
-  as Track Library stay in English, with Chinese prose around them. That is how the owner
-  writes about the app; inventing Chinese equivalents would not match how he or the paddock
-  talk about it.
-- Dictionary keys are the English source strings, so anything untranslated falls back to
-  readable English rather than a missing-key placeholder.
-- Values written into records are never translated. `Full Layout` and `PF International` are
-  record values, and marker types and enumerations are stored in English with only their label
-  translated, so switching language cannot alter stored data or a CSV export.
-- Dates use the chosen language's locale.
-- The language is exposed through `useSyncExternalStore` with a server snapshot rather than read
-  in an effect. The prerendered markup has no access to localStorage, and reading it in an effect
-  would mean calling setState there, which cascades a render.
-- `lib/i18n.test.ts` reads the components and fails if any string passed to `t()` lacks a
-  translation, if a placeholder is lost in translation, or if a stored record value is ever
-  added to the dictionary.
-
-- Rewrote `USER_GUIDE.zh-CN.md` against the Chinese interface. It previously quoted English UI
-  labels throughout, because it was written when the interface was English only. It now also
-  documents the language switch, the reduced marker types, corner numbering, placing a marker by
-  corner, Layout general notes, pinch zoom, and the three-table CSV. The screenshots still show
-  the English interface, which the guide states.
-
-### Implemented prototype v1.7 — 2026-08-16
-
-- Added an "Others" marker type for anything that is neither a phase of a corner nor a pedal
-  input. It is marked `*` rather than a letter, since every letter would either collide with a
-  phase or read as one, and coloured outside the brake-to-throttle sequence.
-- Legacy Hazard, Overtaking and Focus markers now migrate to Others rather than Mid, which is
-  what they always meant. Their original type is still recorded in the marker's general note.
-  A marker migrated before this change stays as Mid; the note preserves the original either
-  way, so no second migration is warranted.
-- Removed the auto-save note under the Layout's general notes. It described where the notes
-  were kept rather than telling the user anything they needed at the circuit.
-
-### Implemented prototype v1.6 — 2026-08-16
-
-- Added pinch to zoom on touch, and ctrl or cmd with the wheel on a pointer device. Plain
-  scrolling still scrolls the page, matching what browsers and map tools already do. The point
-  under the fingers or cursor is held in place as the zoom changes, so the map does not drift
-  away mid-gesture. Both gestures call preventDefault, so their listeners are attached
-  directly rather than through React props, which are passive.
-- A marker can now be placed anywhere on the map. Corner labels and existing markers stop
-  click propagation, so while placing they were dead zones scattered across the map; they are
-  now inert until placement finishes. Placing on a named corner is still available through the
-  "At corner" picker.
-
-### Implemented prototype v1.5 — 2026-08-16
-
-- Reduced the marker types to In, Mid, Out, Brake and Gas: the phases of a corner plus the
-  two pedal inputs. The previous eight mixed corner phases with things that were not phases
-  at all, such as Hazard and Overtaking.
-- Markers already stored under the old types migrate on load and on backup restore. Turn-in,
-  Apex, Exit and Braking map straight across; Corner, Hazard, Overtaking and Focus have no
-  equivalent, so they become Mid and their original type is written into the marker's general
-  note rather than being lost.
-- Added general notes to the Layout, at the foot of the map page, for anything about the
-  circuit as a whole rather than about one marker. Session track summaries are unchanged and
-  remain separate.
-
-### Implemented prototype v1.11 — 2026-08-25
-
-- Pending saves are flushed when the app is put away. Writes are debounced by 350ms and 500ms and
-  nothing flushed them; those timers do not fire once the page is hidden, and iOS suspends a
-  backgrounded PWA and may kill it without resuming. An edit made in the last moment before the
-  phone went into a pocket was lost silently, while the indicator still read "Saving…".
-  `visibilitychange` and `pagehide` now write whatever is waiting. `beforeunload` is not used: it
-  does not fire reliably on iOS.
-- Measured rather than assumed. Reading IndexedDB 50ms after a keystroke shows the value absent,
-  which is the loss window; backgrounding the page and reading again at 226ms shows it present,
-  and the debounce would not have fired until 350ms.
-- A run is renamed from its own heading. The Run label field stays in the Performance section,
-  which is where it used to live and where nobody looked for it: a run's name is not a performance
-  figure, and that section is collapsed by default, so the app appeared not to support renaming.
-- Translated the strings a scan of user-facing text turned up: the three delete confirmation
-  titles, the template delete button, the four tyre aria-labels and the map alt text. Two of those
-  keys were already in the dictionary and simply never used, because the call sites built the
-  string with a template literal instead of calling `t`.
+Newest first. Four entries were renumbered on 2026-09-22 to make that true: two version numbers
+had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6, 1.5, 1.11,
+1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
+and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
+now v1.12.
 
 ### Implemented prototype v1.16 — 2026-08-31
 
@@ -685,7 +607,26 @@ Possible later phases include:
   registry knew one were all stamped Unknown, including the PF International record the app used
   to create by hand. A direction the user picked is left alone.
 
-### Implemented prototype v1.9 — 2026-08-20
+### Implemented prototype v1.12 — 2026-08-25
+
+- Pending saves are flushed when the app is put away. Writes are debounced by 350ms and 500ms and
+  nothing flushed them; those timers do not fire once the page is hidden, and iOS suspends a
+  backgrounded PWA and may kill it without resuming. An edit made in the last moment before the
+  phone went into a pocket was lost silently, while the indicator still read "Saving…".
+  `visibilitychange` and `pagehide` now write whatever is waiting. `beforeunload` is not used: it
+  does not fire reliably on iOS.
+- Measured rather than assumed. Reading IndexedDB 50ms after a keystroke shows the value absent,
+  which is the loss window; backgrounding the page and reading again at 226ms shows it present,
+  and the debounce would not have fired until 350ms.
+- A run is renamed from its own heading. The Run label field stays in the Performance section,
+  which is where it used to live and where nobody looked for it: a run's name is not a performance
+  figure, and that section is collapsed by default, so the app appeared not to support renaming.
+- Translated the strings a scan of user-facing text turned up: the three delete confirmation
+  titles, the template delete button, the four tyre aria-labels and the map alt text. Two of those
+  keys were already in the dictionary and simply never used, because the call sites built the
+  string with a template literal instead of calling `t`.
+
+### Implemented prototype v1.11 — 2026-08-20
 
 - Built-in maps now follow the app's light/dark toggle. They previously followed the device
   colour scheme, because an SVG shown through `<img>` is its own document and cannot see the
@@ -748,7 +689,7 @@ Possible later phases include:
   rather than to a corner, but a marker placed on a corner by name now sits one number further on
   than its label implies and is worth re-checking.
 
-### Implemented prototype v1.6 — 2026-08-19
+### Implemented prototype v1.10 — 2026-08-19
 
 - Reduced Whilton Mill to the International layout. The National, Indy and Mill circuits and
   their artwork are removed; only the circuit actually driven is shipped.
@@ -766,7 +707,7 @@ Possible later phases include:
   their maps and markers intact; the three extra ones simply stop receiving artwork updates and
   can be deleted from the Layout page.
 
-### Implemented prototype v1.5 — 2026-08-19
+### Implemented prototype v1.9 — 2026-08-19
 
 - Added Whilton Mill as a second built-in circuit, with all four of its layouts: International
   (1,040 m), National (845 m), Indy (665 m) and Mill (441 m). Each is a generated schematic
@@ -796,6 +737,71 @@ Possible later phases include:
 - Fixed a latent overflow in `.item-list`: with no explicit grid column the track was sized by
   its content, so a long track name or layout list widened every row past its container and
   pushed the chevron off screen.
+
+### Implemented prototype v1.8 — 2026-08-17
+
+- Added Simplified Chinese for the whole interface, switched from a button in every top bar and
+  remembered in the browser. Roughly 300 strings.
+- Chinese follows the convention already set by `USER_GUIDE.zh-CN.md`: the structural nouns of
+  the data model — Event, Session, Run, Setup, Marker, Track, Layout — and product names such
+  as Track Library stay in English, with Chinese prose around them. That is how the owner
+  writes about the app; inventing Chinese equivalents would not match how he or the paddock
+  talk about it.
+- Dictionary keys are the English source strings, so anything untranslated falls back to
+  readable English rather than a missing-key placeholder.
+- Values written into records are never translated. `Full Layout` and `PF International` are
+  record values, and marker types and enumerations are stored in English with only their label
+  translated, so switching language cannot alter stored data or a CSV export.
+- Dates use the chosen language's locale.
+- The language is exposed through `useSyncExternalStore` with a server snapshot rather than read
+  in an effect. The prerendered markup has no access to localStorage, and reading it in an effect
+  would mean calling setState there, which cascades a render.
+- `lib/i18n.test.ts` reads the components and fails if any string passed to `t()` lacks a
+  translation, if a placeholder is lost in translation, or if a stored record value is ever
+  added to the dictionary.
+
+- Rewrote `USER_GUIDE.zh-CN.md` against the Chinese interface. It previously quoted English UI
+  labels throughout, because it was written when the interface was English only. It now also
+  documents the language switch, the reduced marker types, corner numbering, placing a marker by
+  corner, Layout general notes, pinch zoom, and the three-table CSV. The screenshots still show
+  the English interface, which the guide states.
+
+### Implemented prototype v1.7 — 2026-08-16
+
+- Added an "Others" marker type for anything that is neither a phase of a corner nor a pedal
+  input. It is marked `*` rather than a letter, since every letter would either collide with a
+  phase or read as one, and coloured outside the brake-to-throttle sequence.
+- Legacy Hazard, Overtaking and Focus markers now migrate to Others rather than Mid, which is
+  what they always meant. Their original type is still recorded in the marker's general note.
+  A marker migrated before this change stays as Mid; the note preserves the original either
+  way, so no second migration is warranted.
+- Removed the auto-save note under the Layout's general notes. It described where the notes
+  were kept rather than telling the user anything they needed at the circuit.
+
+### Implemented prototype v1.6 — 2026-08-16
+
+- Added pinch to zoom on touch, and ctrl or cmd with the wheel on a pointer device. Plain
+  scrolling still scrolls the page, matching what browsers and map tools already do. The point
+  under the fingers or cursor is held in place as the zoom changes, so the map does not drift
+  away mid-gesture. Both gestures call preventDefault, so their listeners are attached
+  directly rather than through React props, which are passive.
+- A marker can now be placed anywhere on the map. Corner labels and existing markers stop
+  click propagation, so while placing they were dead zones scattered across the map; they are
+  now inert until placement finishes. Placing on a named corner is still available through the
+  "At corner" picker.
+
+### Implemented prototype v1.5 — 2026-08-16
+
+- Reduced the marker types to In, Mid, Out, Brake and Gas: the phases of a corner plus the
+  two pedal inputs. The previous eight mixed corner phases with things that were not phases
+  at all, such as Hazard and Overtaking.
+- Markers already stored under the old types migrate on load and on backup restore. Turn-in,
+  Apex, Exit and Braking map straight across; Corner, Hazard, Overtaking and Focus have no
+  equivalent, so they become Mid and their original type is written into the marker's general
+  note rather than being lost.
+- Added general notes to the Layout, at the foot of the map page, for anything about the
+  circuit as a whole rather than about one marker. Session track summaries are unchanged and
+  remain separate.
 
 ### Implemented prototype v1.4 — 2026-08-16
 
@@ -863,6 +869,11 @@ Possible later phases include:
 - Tied map object-URL lifetime to the mounted image element, so replacing map images during a long trackside session no longer leaks one object URL per image.
 - Split the Track Map feature into the component modules named in section 7 — Track Library, Map Workspace, Map Canvas, Marker Sheet, editors and shared primitives — instead of a single feature file.
 
+### Implemented prototype v0.9 — 2026-08-15
+
+- Added a generated PF International owner-driver schematic based on OpenStreetMap raceway geometry, with visible ODbL attribution and source documentation.
+- Added automatic startup backfill for legacy PF International Full Layout records that do not yet have a map image.
+
 ### Implemented prototype v0.8 — 2026-08-15
 
 - Added the integrated Track Map Notebook and Track Library.
@@ -873,11 +884,6 @@ Possible later phases include:
 - Added Session-specific marker observations and overall Session map summaries without changing permanent reference notes.
 - Upgraded IndexedDB with separate Track, Layout, Visit and map-asset stores while preserving the existing app store.
 - Extended full JSON backup and restore to include Track Maps and embedded map images with record counts in the restore confirmation.
-
-### Implemented prototype v0.9 — 2026-08-15
-
-- Added a generated PF International owner-driver schematic based on OpenStreetMap raceway geometry, with visible ODbL attribution and source documentation.
-- Added automatic startup backfill for legacy PF International Full Layout records that do not yet have a map image.
 
 ### Implemented prototype v0.5 — 2026-08-13
 
