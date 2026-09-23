@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.17
-**Last updated:** 2026-09-22
+**Document status:** Implemented prototype v1.18
+**Last updated:** 2026-09-23
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -98,6 +98,9 @@ The following fields are provisional defaults. They will be refined after the fi
 - Session name, for example Practice 1 or Heat 2.
 - Session type: Practice, Qualifying, Heat, Pre-final, Final, or Other.
 - Scheduled or actual start time.
+- Track condition, ambient temperature and track temperature. Each is optional and inherits the
+  Event's value when left blank, so they are only filled in for a Session that ran in something
+  different, such as a wet heat on a dry day.
 - Session notes.
 
 ### 5.3 Run identification
@@ -445,6 +448,33 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.18 — 2026-09-23
+
+- **A Session can record its own conditions.** Condition and temperatures lived on the Event
+  alone, so a wet Heat 2 inside a dry Event was recorded as dry. A Session gains an optional
+  condition, ambient and track temperature, each inheriting the Event's when blank. Blank is what
+  every Session recorded before this should mean, so nothing needed migrating.
+- **Read through one resolver.** `lib/conditions.ts` gives what a Session actually ran in and which
+  values it inherited. Everything reads through it except the form that edits the fields, because a
+  blank here means "same as the Event" rather than "unknown", and any other direct reader would get
+  that wrong.
+- **Blank is stored as absent, not as "".** That is what makes clearing a field on edit revert the
+  Session to inheriting; storing "" would look the same on screen and leave a Session that could
+  never follow its Event again.
+- **The wet note now shows in a wet Session.** The track notes were handed the Event's condition,
+  so a marker showed its dry reference note trackside exactly when the wet one mattered, and every
+  observation recorded there was filed as dry. The gearing history had the same fault. Both now
+  take the Session's condition.
+- **Shown where it was set.** The Session screen reads "Wet · track 19 °C · set for this Session"
+  or "Dry · from the Event", since "Dry" alone is ambiguous between "it was dry" and "nobody said".
+  An Event's Session list shows a condition only where it was set for that Session, which is what
+  makes a wet heat stand out in a dry day.
+- **Exported.** The CSV Run table gains the Session's condition and temperatures as it actually ran.
+  The observation table reads the Session rather than the condition stamped on a visit when it was
+  filed, which a Session marked wet afterwards would otherwise contradict; the stamp remains the
+  fallback for a deleted Session. An Event with no Sessions had its row padded with a literal four
+  blanks that stopped matching at seven columns, and now counts them from the header.
 
 ### Implemented prototype v1.17 — 2026-09-22
 
