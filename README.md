@@ -28,7 +28,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Versioned JSON backup/restore with confirmation, and an Excel-ready CSV export containing three tables: Events/Sessions/Runs, Track reference markers, and Session track observations.
 - Reusable chassis setup templates.
 - Explicit confirmation for cascading Event, Session and Run deletion.
-- Editable Event and Session details.
+- Editable Event and Session details. A Session can record its own track condition and temperatures where it ran in something different from the rest of the Event, such as a wet heat on a dry day; left blank, it inherits the Event's. The Session's condition decides which reference note a map marker shows trackside, and it is what the CSV exports for that Session.
 - One-tap ambient temperature lookup using the device location and Open-Meteo, with manual entry retained as a fallback.
 - Light and dark display modes with system-theme detection and a locally remembered manual toggle. The built-in maps carry no theme of their own, so they follow the toggle rather than the device setting.
 - English and Simplified Chinese, switched from a button in every top bar and remembered in the browser. Dates follow the chosen language. Record values stay in English so data does not change with the interface.
@@ -90,6 +90,7 @@ data rather than looking wrong:
 - **Gearing** (`lib/gearing.test.ts`) — the ratio from free-text sprockets, including a zero front refused rather than divided by; which way a change is called shorter or longer; and grouping past Runs by sprocket pair, where 12/80 and 6/40 stay separate rows despite the identical ratio.
 - **Lap times** (`lib/lap-time.test.ts`) — both notations read and written back, a seconds part of sixty or more refused as a mistyped clock reading, and a round trip through parse and format.
 - **New Runs** (`lib/types.test.ts`) — a duplicated Run carries the cold tyre readings and leaves every hot field blank, copies rather than shares them, and inherits no lap time, RPM or feedback.
+- **Session conditions** (`lib/conditions.test.ts`) — a Session with nothing of its own inherits everything from its Event, its own condition and each temperature override independently, and a blank or whitespace-only temperature counts as not recorded rather than as an empty reading.
 - **Counted nouns** (`lib/format.test.ts`) — "1 layout" rather than "1 layouts", including zero,
   multi-word nouns and nouns that do not simply take an s.
 - **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string
