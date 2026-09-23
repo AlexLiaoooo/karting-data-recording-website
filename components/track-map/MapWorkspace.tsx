@@ -18,7 +18,7 @@ import {
 } from "@/lib/track-map/types";
 import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
-import { ConfirmDeleteDialog, EmptyMapState, GearingHistory, now, SessionContext, TrackMapChange } from "./shared";
+import { ConfirmDeleteDialog, EmptyMapState, now, RunHistory, SessionContext, TrackMapChange } from "./shared";
 import { summariseGearing } from "@/lib/gearing";
 import { useTranslation } from "@/lib/i18n";
 
@@ -27,7 +27,7 @@ type MapWorkspaceProps = {
   layout: TrackLayout;
   track: Track;
   session?: SessionContext;
-  gearing?: GearingHistory;
+  history?: RunHistory;
   onChange: TrackMapChange;
   notify: (message: string) => void;
 };
@@ -38,7 +38,7 @@ type MapWorkspaceProps = {
  * Shown in Session mode as well as the reference page, because "what did we run here last time"
  * is a question asked in the paddock rather than at home.
  */
-function GearingHistorySection({ history, layout, track }: { history?: GearingHistory; layout: TrackLayout; track: Track }) {
+function GearingHistorySection({ history, layout, track }: { history?: RunHistory; layout: TrackLayout; track: Track }) {
   const { t, language } = useTranslation();
   if (!history) return null;
 
@@ -82,7 +82,7 @@ function GearingHistorySection({ history, layout, track }: { history?: GearingHi
   );
 }
 
-export function MapWorkspace({ data, layout, track, session, gearing, onChange, notify }: MapWorkspaceProps) {
+export function MapWorkspace({ data, layout, track, session, history, onChange, notify }: MapWorkspaceProps) {
   const { t } = useTranslation();
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
@@ -318,7 +318,7 @@ export function MapWorkspace({ data, layout, track, session, gearing, onChange, 
         </section>
       )}
 
-      <GearingHistorySection history={gearing} layout={layout} track={track} />
+      <GearingHistorySection history={history} layout={layout} track={track} />
 
       {!session && (
         <section className="settings-section layout-notes">

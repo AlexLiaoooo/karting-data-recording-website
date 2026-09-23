@@ -8,7 +8,7 @@ import { BUILT_IN_TRACKS, BuiltInTrack, createBuiltInTrack } from "@/lib/track-m
 import { LayoutEditor, TrackEditor } from "./editors";
 import { MapWorkspace } from "./MapWorkspace";
 import { BuiltInTrackPicker, TrackDetailView, TrackLibraryView } from "./TrackLibrary";
-import { ConfirmDeleteDialog, FeatureHeader, GearingHistory, MissingRecord, now, SessionContext, TrackMapChange, useModalViewport } from "./shared";
+import { ConfirmDeleteDialog, FeatureHeader, MissingRecord, now, RunHistory, SessionContext, TrackMapChange, useModalViewport } from "./shared";
 import { useTranslation } from "@/lib/i18n";
 
 export type { SessionContext } from "./shared";
@@ -17,9 +17,9 @@ type TrackMapFeatureProps = {
   data: TrackMapData;
   mode: "library" | "session";
   session?: SessionContext;
-  /** Past Runs by Layout, so a circuit can show what was fitted there; assembled in app/page.tsx,
-   *  which is the only place that holds both the Events and the Track Maps. */
-  gearing?: GearingHistory;
+  /** Past Runs by Layout, so a circuit can show what was fitted there and what its pressures did;
+   *  assembled in app/page.tsx, which is the only place that holds both the Events and the Track Maps. */
+  history?: RunHistory;
   onChange: TrackMapChange;
   onBack: () => void;
   notify: (message: string) => void;
@@ -40,7 +40,7 @@ type PendingDelete =
   | { kind: "layout"; layout: TrackLayout }
   | null;
 
-export function TrackMapFeature({ data, mode, session, gearing, onChange, onBack, notify }: TrackMapFeatureProps) {
+export function TrackMapFeature({ data, mode, session, history, onChange, onBack, notify }: TrackMapFeatureProps) {
   const { t } = useTranslation();
   const [view, setView] = useState<LibraryView>(() => mode === "session" && session?.layoutId
     ? { name: "workspace", layoutId: session.layoutId }
@@ -233,7 +233,7 @@ export function TrackMapFeature({ data, mode, session, gearing, onChange, onBack
           </>
         ) : undefined}
       />
-      <MapWorkspace data={data} layout={layout} track={track} session={mode === "session" ? session : undefined} gearing={gearing} onChange={onChange} notify={notify} />
+      <MapWorkspace data={data} layout={layout} track={track} session={mode === "session" ? session : undefined} history={history} onChange={onChange} notify={notify} />
       {editor?.kind === "layout" && <LayoutEditor layout={editor.layout} onClose={() => setEditor(null)} onSave={saveLayout} />}
       {deleteDialog()}
     </>

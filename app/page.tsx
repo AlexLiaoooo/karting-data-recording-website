@@ -35,7 +35,7 @@ import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
-import type { GearingHistory } from "@/components/track-map/shared";
+import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
@@ -395,14 +395,15 @@ export default function HomePage() {
   ), [data.events]);
 
   /**
-   * Past gearing, keyed by the Layout its Event named, for the Track Map pages.
+   * Every past Run, keyed by the Layout its Event named, for the Track Map pages' gearing and
+   * pressure histories.
    *
    * Assembled here because this is the only component holding both the Events and the Track Maps.
    * An Event with no saved Layout contributes only its track name, so a Layout showing nothing can
    * explain why rather than appearing to have no history.
    */
-  const gearingHistory = useMemo<GearingHistory>(() => {
-    const byLayout: GearingHistory["byLayout"] = [];
+  const runHistory = useMemo<RunHistory>(() => {
+    const byLayout: RunHistory["byLayout"] = [];
     const unlinkedTrackNames: string[] = [];
 
     for (const event of data.events) {
@@ -411,9 +412,9 @@ export default function HomePage() {
         continue;
       }
       for (const session of event.sessions) {
-        // The Session's own condition where it recorded one: gearing run in a wet Heat 2 was
-        // previously listed as dry because it inherited the Event's.
-        const { condition } = sessionConditions(event, session);
+        // What the Session actually ran in, not the Event's: a wet Heat 2 was previously listed
+        // as dry. The pressure history depends on this far more than the gearing one does.
+        const conditions = sessionConditions(event, session);
         for (const run of session.runs) {
           byLayout.push({
             layoutId: event.trackLayoutId,
@@ -421,9 +422,14 @@ export default function HomePage() {
             rear: run.setup.rearSprocket,
             fastestLap: run.fastestLap,
             maxRpm: run.maxRpm,
-            condition,
+            tyres: run.tyres,
+            condition: conditions.condition,
+            trackTemperature: conditions.trackTemperature,
+            ambientTemperature: conditions.ambientTemperature,
             date: event.startDate,
             eventName: event.name,
+            sessionName: session.name,
+            runNumber: run.number,
           });
         }
       }
@@ -1002,7 +1008,7 @@ export default function HomePage() {
       <TrackMapFeature
         data={trackMapData}
         mode="library"
-        gearing={gearingHistory}
+        history={runHistory}
         onChange={(updater) => setTrackMapData(updater)}
         onBack={() => setScreen("home")}
         notify={flash}
@@ -1024,7 +1030,7 @@ export default function HomePage() {
           // Session in a dry Event used to show dry notes and file its observations as dry.
           condition: sessionConditions(selectedEvent, selectedSession).condition,
         }}
-        gearing={gearingHistory}
+        history={runHistory}
         onChange={(updater) => setTrackMapData(updater)}
         onBack={() => setScreen("session")}
         notify={flash}
