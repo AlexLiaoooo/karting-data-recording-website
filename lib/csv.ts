@@ -2,6 +2,7 @@ import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
 import { markerLabel, type TrackMapData } from "./track-map/types";
 import { gearRatio } from "./gearing";
 import { parseLapTime } from "./lap-time";
+import { sessionConditions } from "./conditions";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -41,7 +42,20 @@ const eventHeaders = [
   "Event notes",
 ];
 
-const sessionHeaders = ["Session name", "Session type", "Session start time", "Session notes"];
+/**
+ * The Session's own columns. Its conditions are what the Session actually ran in — its own where
+ * it recorded them, the Event's where it did not — so a spreadsheet can group Runs by the
+ * conditions they were run in without reconstructing the inheritance in a formula.
+ */
+const sessionHeaders = [
+  "Session name",
+  "Session type",
+  "Session start time",
+  "Session notes",
+  "Session track condition",
+  "Session ambient temperature (C)",
+  "Session track temperature (C)",
+];
 
 /**
  * The Run's own columns, in the order runValues emits them.
@@ -220,7 +234,11 @@ function observationRows(data: AppData, trackMap: TrackMapData) {
       track?.name ?? "",
       layout?.name ?? "",
       visit.date,
-      visit.condition,
+      // Read from the Session rather than trusting the value stamped on the visit when it was
+      // filed. A Session marked wet after its observations were recorded still holds the old
+      // stamp, and this export is the only place that value is read. The stamp remains the
+      // fallback for a visit whose Event or Session has since been deleted.
+      event && session ? sessionConditions(event, session).condition : visit.condition,
     ];
 
     if (!visit.observations.length) {
@@ -267,12 +285,23 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
     ];
 
     if (!event.sessions.length) {
-      rows.push([...eventValues, "", "", "", "", ...runValues()]);
+      // Counted from the header, not written as a row of blanks: a literal four stopped matching
+      // the moment the Session gained its conditions.
+      rows.push([...eventValues, ...Array(sessionHeaders.length).fill(""), ...runValues()]);
       continue;
     }
 
     for (const session of event.sessions) {
-      const sessionValues = [session.name, session.type, session.startTime, session.notes];
+      const conditions = sessionConditions(event, session);
+      const sessionValues = [
+        session.name,
+        session.type,
+        session.startTime,
+        session.notes,
+        conditions.condition,
+        conditions.ambientTemperature,
+        conditions.trackTemperature,
+      ];
       if (!session.runs.length) {
         rows.push([...eventValues, ...sessionValues, ...runValues()]);
         continue;

@@ -68,6 +68,44 @@ describe("buildCsv", () => {
     expect(row["Fastest lap (s)"]).toBe("48.21");
   });
 
+  it("exports the Event's conditions for a Session that recorded none of its own", () => {
+    const [runs] = tables(buildCsv(makeAppData(), emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["Session track condition"]).toBe(row["Track condition"]);
+    expect(row["Session track temperature (C)"]).toBe(row["Track temperature (C)"]);
+  });
+
+  /** The point of the columns: a wet Session inside a dry Event is exported as wet. */
+  it("exports a Session's own conditions where it recorded them", () => {
+    const data = makeAppData();
+    data.events[0].condition = "Dry";
+    data.events[0].sessions[0].condition = "Wet";
+    data.events[0].sessions[0].trackTemperature = "14";
+    const [runs] = tables(buildCsv(data, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["Track condition"]).toBe("Dry");
+    expect(row["Session track condition"]).toBe("Wet");
+    expect(row["Session track temperature (C)"]).toBe("14");
+  });
+
+  /**
+   * An observation is stamped with its Session's condition when filed. A Session marked wet
+   * afterwards keeps the old stamp, so the export reads the Session instead.
+   */
+  it("exports an observation under its Session's current condition, not the stamp it was filed with", () => {
+    const data = makeAppData();
+    data.events[0].condition = "Dry";
+    data.events[0].sessions[0].condition = "Wet";
+    const trackMap = makeTrackMapData();
+    trackMap.visits = trackMap.visits.map((visit) => ({ ...visit, condition: "Dry" }));
+    const [, , observations] = tables(buildCsv(data, trackMap));
+    const row = Object.fromEntries(observations[1].map((header, index) => [header, observations[2][index]]));
+
+    expect(row["Condition"]).toBe("Wet");
+  });
+
   it("keeps every row in a table at the header's column count", () => {
     const [runs, markers, observations] = tables(buildCsv(makeAppData(), makeTrackMapData()));
 
