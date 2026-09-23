@@ -411,6 +411,9 @@ export default function HomePage() {
         continue;
       }
       for (const session of event.sessions) {
+        // The Session's own condition where it recorded one: gearing run in a wet Heat 2 was
+        // previously listed as dry because it inherited the Event's.
+        const { condition } = sessionConditions(event, session);
         for (const run of session.runs) {
           byLayout.push({
             layoutId: event.trackLayoutId,
@@ -418,7 +421,7 @@ export default function HomePage() {
             rear: run.setup.rearSprocket,
             fastestLap: run.fastestLap,
             maxRpm: run.maxRpm,
-            condition: event.condition,
+            condition,
             date: event.startDate,
             eventName: event.name,
           });
@@ -1016,7 +1019,10 @@ export default function HomePage() {
           eventName: selectedEvent.name,
           sessionName: selectedSession.name,
           layoutId: selectedEvent.trackLayoutId,
-          condition: selectedEvent.condition,
+          // What this Session ran in, not the Event's. It decides which reference note a marker
+          // shows trackside, and is stamped onto the observations recorded here, so a wet
+          // Session in a dry Event used to show dry notes and file its observations as dry.
+          condition: sessionConditions(selectedEvent, selectedSession).condition,
         }}
         gearing={gearingHistory}
         onChange={(updater) => setTrackMapData(updater)}

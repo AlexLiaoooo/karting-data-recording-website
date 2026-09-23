@@ -66,8 +66,9 @@ export type SessionRecord = {
   /**
    * Set only when this Session ran in something other than the Event's conditions. Absent means
    * it inherits them, which is also exactly what every Session recorded before these fields
-   * existed should mean, so no migration is needed. Read through sessionConditions, never
-   * directly: a blank here is not "unknown", it is "same as the Event".
+   * existed should mean, so no migration is needed. Read through sessionConditions everywhere
+   * except the form that edits these fields: a blank here is not "unknown", it is "same as the
+   * Event", and any other direct reader would get that wrong.
    */
   condition?: EventRecord["condition"];
   ambientTemperature?: string;
