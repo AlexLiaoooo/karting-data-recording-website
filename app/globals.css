@@ -1646,3 +1646,9 @@ h2 {
   font-size: 0.84rem;
   line-height: 1.45;
 }
+
+/* The conditions a Session ran in, under its summary figures. */
+.session-conditions {
+  font-size: 0.84rem;
+  margin: 12px 0 0;
+}

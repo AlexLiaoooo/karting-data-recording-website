@@ -286,6 +286,12 @@ const zh: Record<string, string> = {
   // Toasts and errors
   "Event updated": "Event 已更新",
   "Session updated": "Session 已更新",
+  "Same as the Event ({condition})": "与 Event 相同（{condition}）",
+  "Leave these blank where they match the Event's.": "若与 Event 相同，这几项留空即可。",
+  "track {value} °C": "赛道 {value} °C",
+  "ambient {value} °C": "环境 {value} °C",
+  "set for this Session": "本 Session 单独设定",
+  "from the Event": "沿用 Event",
   "Backup could not be created": "无法建立备份",
   "Full backup exported, including Track Maps": "已导出完整备份，包含 Track Maps",
   "Excel-ready CSV exported": "已导出 Excel 可用的 CSV",

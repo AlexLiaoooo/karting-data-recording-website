@@ -42,6 +42,7 @@ import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
+import { sessionConditions } from "@/lib/conditions";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -49,7 +50,25 @@ import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
-type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes">;
+/** As the form holds it. A blank condition or temperature means "same as the Event". */
+type SessionFormData = Pick<SessionRecord, "name" | "type" | "startTime" | "notes"> & {
+  condition: "" | EventRecord["condition"];
+  ambientTemperature: string;
+  trackTemperature: string;
+};
+
+/**
+ * A Session's fields as stored. Anything left as "same as the Event" is written as absent rather
+ * than as "", so that clearing a field on edit genuinely reverts the Session to inheriting.
+ */
+function sessionFields({ condition, ambientTemperature, trackTemperature, ...rest }: SessionFormData) {
+  return {
+    ...rest,
+    condition: condition || undefined,
+    ambientTemperature: ambientTemperature.trim() || undefined,
+    trackTemperature: trackTemperature.trim() || undefined,
+  };
+}
 /** A Run with the Event and Session it belongs to, so it can be named away from its own screen.
  *  The ids group the comparison pickers; two Events can share a name, so the names cannot. */
 type HistoricalRun = { run: RunRecord; eventId: string; sessionId: string; eventName: string; sessionName: string };
@@ -506,7 +525,7 @@ export default function HomePage() {
   function createSession(input: SessionFormData) {
     if (!selectedEvent) return;
     const session: SessionRecord = {
-      ...input,
+      ...sessionFields(input),
       id: crypto.randomUUID(),
       runs: [],
       createdAt: new Date().toISOString(),
@@ -542,7 +561,7 @@ export default function HomePage() {
       return;
     }
 
-    updateSession(editingSessionId, (session) => ({ ...session, ...input }));
+    updateSession(editingSessionId, (session) => ({ ...session, ...sessionFields(input) }));
     closeSessionForm();
     flash(t("Session updated"));
   }
@@ -820,13 +839,19 @@ export default function HomePage() {
             <div className="section-heading"><h2>{t("Sessions")}</h2><span className="muted">{selectedEvent.sessions.length}</span></div>
             {selectedEvent.sessions.length ? (
               <div className="item-list">
-                {selectedEvent.sessions.map((session) => (
-                  <button className="list-item" key={session.id} onClick={() => openSession(session.id)}>
-                    <span className="list-icon">{session.type === "Final" ? <Trophy /> : <Timer />}</span>
-                    <span className="list-copy"><strong>{session.name}</strong><span>{session.runs.length} runs · Best {bestLap(session)}</span></span>
-                    <ChevronRight />
-                  </button>
-                ))}
+                {selectedEvent.sessions.map((session) => {
+                  // A Session's own condition is shown only where it was set for that Session,
+                  // which is what makes a wet Heat 2 visible in a dry day's list.
+                  const resolved = sessionConditions(selectedEvent, session);
+                  const ownCondition = resolved.inherited.condition ? "" : ` · ${t(resolved.condition)}`;
+                  return (
+                    <button className="list-item" key={session.id} onClick={() => openSession(session.id)}>
+                      <span className="list-icon">{session.type === "Final" ? <Trophy /> : <Timer />}</span>
+                      <span className="list-copy"><strong>{session.name}</strong><span>{session.runs.length} runs · Best {bestLap(session)}{ownCondition}</span></span>
+                      <ChevronRight />
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState icon={<Timer />} title={t("No sessions yet")} text={t("Add the first practice, qualifying, heat or final session.")} />
@@ -858,6 +883,7 @@ export default function HomePage() {
               <Stat label={t("Laps")} value={String(totalLaps(selectedSession))} />
               <Stat label={t("Start")} value={selectedSession.startTime || "—"} />
             </div>
+            <SessionConditionsLine event={selectedEvent} session={selectedSession} />
           </article>
           <div className="action-stack">
             <button className="button button-soft button-block" onClick={() => setScreen("session-track-notes")}><MapPinned /> {t("Track notes")}</button>
@@ -1036,6 +1062,23 @@ export default function HomePage() {
   );
 }
 
+/**
+ * The conditions a Session ran in, and whether they were set for it or taken from its Event.
+ * Saying which matters: a line reading "Dry" is ambiguous between "it was dry" and "nobody said".
+ */
+function SessionConditionsLine({ event, session }: { event: EventRecord; session: SessionRecord }) {
+  const { t } = useTranslation();
+  const resolved = sessionConditions(event, session);
+  const own = !resolved.inherited.condition || !resolved.inherited.ambientTemperature || !resolved.inherited.trackTemperature;
+  const parts = [
+    t(resolved.condition),
+    resolved.trackTemperature && t("track {value} °C", { value: resolved.trackTemperature }),
+    resolved.ambientTemperature && t("ambient {value} °C", { value: resolved.ambientTemperature }),
+    own ? t("set for this Session") : t("from the Event"),
+  ].filter(Boolean);
+  return <p className="muted session-conditions">{parts.join(" · ")}</p>;
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return <div className="stat"><span>{label}</span><strong>{value}</strong></div>;
 }
@@ -1212,7 +1255,10 @@ function SessionModal({ event, session, onClose, onSave }: { event: EventRecord;
     type: session.type,
     startTime: session.startTime,
     notes: session.notes,
-  } : { name: `Practice ${nextPractice}`, type: "Practice", startTime: "", notes: "" });
+    condition: session.condition ?? "",
+    ambientTemperature: session.ambientTemperature ?? "",
+    trackTemperature: session.trackTemperature ?? "",
+  } : { name: `Practice ${nextPractice}`, type: "Practice", startTime: "", notes: "", condition: "", ambientTemperature: "", trackTemperature: "" });
   function submit(submitEvent: FormEvent) {
     submitEvent.preventDefault();
     if (!form.name.trim()) return;
@@ -1226,6 +1272,18 @@ function SessionModal({ event, session, onClose, onSave }: { event: EventRecord;
           <Field label={t("Session name")} className="field-full"><TextInput required autoFocus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label={t("Type")}><select className="select" value={form.type} onChange={(event) => { const type = event.target.value as SessionRecord["type"]; setForm({ ...form, type, name: isEditing ? form.name : type === "Practice" ? `Practice ${nextPractice}` : type }); }}>{sessionTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}</select></Field>
           <Field label={t("Start time")}><TextInput type="time" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></Field>
+          {/* Conditions default to the Event's and are only recorded here when this Session
+              differed. The Event's values show as placeholders, so it is plain what a blank
+              field will mean. */}
+          <Field label={t("Track condition")} className="field-full">
+            <select className="select" value={form.condition} onChange={(event) => setForm({ ...form, condition: event.target.value as SessionFormData["condition"] })}>
+              <option value="">{t("Same as the Event ({condition})", { condition: t(event.condition) })}</option>
+              {conditions.map((condition) => <option key={condition} value={condition}>{t(condition)}</option>)}
+            </select>
+          </Field>
+          <Field label={t("Ambient temperature")}><NumberInput unit="°C" placeholder={event.ambientTemperature || "—"} value={form.ambientTemperature} onChange={(change) => setForm({ ...form, ambientTemperature: change.target.value })} /></Field>
+          <Field label={t("Track temperature")}><NumberInput unit="°C" placeholder={event.trackTemperature || "—"} value={form.trackTemperature} onChange={(change) => setForm({ ...form, trackTemperature: change.target.value })} /></Field>
+          <p className="help-text field-full">{t("Leave these blank where they match the Event's.")}</p>
           <Field label={t("Notes")} className="field-full"><textarea className="textarea" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field>
         </div>
         <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? t("Save changes") : t("Add session")}</button>
