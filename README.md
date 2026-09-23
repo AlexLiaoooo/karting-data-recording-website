@@ -37,6 +37,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - A marker placed on a corner stores the corner rather than a copy of its label, so renumbering a circuit renames every marker on it. A name typed by hand takes precedence and is never overwritten.
 - Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
 - Each circuit Layout lists the gearing run there before, assembled from past Runs rather than typed again: every sprocket pair with its ratio, the Runs on it, the best lap and highest RPM seen, the conditions, and when it was last used. Matched on the Event's saved Layout only, never its track name, so a Run is never attributed to a Layout it was not run on.
+- Each circuit Layout also shows what its tyre pressures have done: each axle's cold-to-hot gain as a range and a mean, grouped by the condition the Session actually ran in, with every Run listed by track temperature. It describes what happened and says on screen that it does not recommend a pressure.
 - Full JSON backup/restore includes Track Maps, markers, Session observations and embedded map images.
 - Built-in circuits added from a picker in the Track Library: PF International, Whilton Mill International, Kart Silverstone Grand Prix, Buckmore Park and Clay Pigeon Raceway. Each map is a generated schematic based on OpenStreetMap raceway geometry with ODbL attribution in the UI. The start/finish line and the direction arrow are each drawn only where that detail is actually known: Kart Silverstone's lap is a reconstruction with an owner-supplied anti-clockwise direction and no start line recorded anywhere, so it shows the direction, omits the start, and says so in the track note.
 - Installable iPhone/PWA shell with Apple touch icons, in-app instructions and offline caching in production.
@@ -91,6 +92,7 @@ data rather than looking wrong:
 - **Lap times** (`lib/lap-time.test.ts`) — both notations read and written back, a seconds part of sixty or more refused as a mistyped clock reading, and a round trip through parse and format.
 - **New Runs** (`lib/types.test.ts`) — a duplicated Run carries the cold tyre readings and leaves every hot field blank, copies rather than shares them, and inherits no lap time, RPM or feedback.
 - **Session conditions** (`lib/conditions.test.ts`) — a Session with nothing of its own inherits everything from its Event, its own condition and each temperature override independently, and a blank or whitespace-only temperature counts as not recorded rather than as an empty reading.
+- **Pressure gain** (`lib/pressure.test.ts`) — gain per corner and per axle, a zero pressure refused but a negative gain kept, dry and wet Runs kept apart, Runs ordered by track temperature, and a mean that is genuinely on the half rounded upwards despite binary arithmetic, reproduced from the same subtraction the app does.
 - **Counted nouns** (`lib/format.test.ts`) — "1 layout" rather than "1 layouts", including zero,
   multi-word nouns and nouns that do not simply take an s.
 - **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string
