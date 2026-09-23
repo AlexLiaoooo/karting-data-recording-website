@@ -79,6 +79,21 @@ export function pressureGain(tyre: TyreReading): number | null {
   return hot - cold;
 }
 
+/**
+ * A pressure gain to one decimal, signed: "+2.4", "-0.5", "0.0".
+ *
+ * Rounds half away from zero, with a small allowance for binary arithmetic. Without it, 12.7 minus
+ * 12.0 comes out as 0.69999…, so an axle whose corners read +0.7 and +0.6 averages to 0.6499… and
+ * displays as +0.6 right beside the two figures a reader would average to +0.7 themselves. The
+ * allowance is far below any gauge's resolution, so it only ever settles a case that was genuinely
+ * on the half.
+ */
+export function formatGain(value: number): string {
+  const rounded = (Math.sign(value) * Math.round(Math.abs(value) * 10 + 1e-9)) / 10;
+  if (rounded === 0) return "0.0";
+  return `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}`;
+}
+
 const mean = (values: number[]) => values.reduce((total, value) => total + value, 0) / values.length;
 
 function axle(gains: Record<TyreCorner, number | null>, corners: [TyreCorner, TyreCorner]): number | null {

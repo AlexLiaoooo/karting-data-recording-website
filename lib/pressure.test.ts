@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pressureGain, summarisePressure, type PressureRun } from "./pressure";
+import { formatGain, pressureGain, summarisePressure, type PressureRun } from "./pressure";
 import type { TyreReading } from "./types";
 
 const tyre = (cold: string, hot: string): TyreReading => ({ coldPressure: cold, hotPressure: hot, coldTemperature: "", hotTemperature: "" });
@@ -35,6 +35,36 @@ describe("pressureGain", () => {
   /** Odd, but a real reading the driver should see, not have quietly dropped. */
   it("reports a negative gain rather than hiding it", () => {
     expect(pressureGain(tyre("12.0", "11.5"))).toBeCloseTo(-0.5, 6);
+  });
+});
+
+describe("formatGain", () => {
+  it("signs a gain and gives it one decimal", () => {
+    expect(formatGain(2.4)).toBe("+2.4");
+    expect(formatGain(-0.5)).toBe("-0.5");
+  });
+
+  it("writes no gain as 0.0, never as -0.0", () => {
+    expect(formatGain(0)).toBe("0.0");
+    expect(formatGain(-0.01)).toBe("0.0");
+  });
+
+  /**
+   * Found in the browser: FL +0.7 and FR +0.6 averaged to a displayed +0.6, because binary
+   * arithmetic makes the mean 0.6499… instead of 0.65. Built from the same subtraction the app
+   * does, not from a literal, since the literal 0.65 would not reproduce it.
+   */
+  it("rounds a mean that is genuinely on the half upwards, despite binary arithmetic", () => {
+    const front = ((12.7 - 12.0) + (12.6 - 12.0)) / 2;
+    expect(front).toBeLessThan(0.65);
+    expect(formatGain(front)).toBe("+0.7");
+
+    const rear = ((13.2 - 11.0) + (13.1 - 11.0)) / 2;
+    expect(formatGain(rear)).toBe("+2.2");
+  });
+
+  it("rounds a negative half away from zero, as a positive one is", () => {
+    expect(formatGain(-0.65)).toBe("-0.7");
   });
 });
 

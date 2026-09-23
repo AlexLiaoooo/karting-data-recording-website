@@ -1652,3 +1652,31 @@ h2 {
   font-size: 0.84rem;
   margin: 12px 0 0;
 }
+
+/* Pressure gain on a circuit's Layout page. Rows reuse the gearing row layout, with the track
+   temperature in the leading column where the gearing rows put the teeth. */
+.pressure-history .item-list {
+  gap: 6px;
+}
+
+.pressure-group + .pressure-group {
+  margin-top: 16px;
+}
+
+.pressure-group-head {
+  font-size: 0.84rem;
+  margin: 10px 0 2px;
+}
+
+.pressure-axles {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.pressure-corners {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}

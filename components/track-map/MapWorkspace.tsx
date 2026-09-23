@@ -20,6 +20,7 @@ import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
 import { ConfirmDeleteDialog, EmptyMapState, now, RunHistory, SessionContext, TrackMapChange } from "./shared";
 import { summariseGearing } from "@/lib/gearing";
+import { formatGain, summarisePressure, type AxleSummary } from "@/lib/pressure";
 import { useTranslation } from "@/lib/i18n";
 
 type MapWorkspaceProps = {
@@ -78,6 +79,89 @@ function GearingHistorySection({ history, layout, track }: { history?: RunHistor
       {unlinked > 0 && (
         <p className="help-text">{t("Gearing recorded at {events} is not counted here, because no saved Layout was chosen there. Choose this Layout on the Event to include it.", { events: counted(unlinked, "Event") })}</p>
       )}
+    </section>
+  );
+}
+
+/** A single figure where the Runs agree or there is only one; a range and a mean otherwise. */
+function axleFigures(summary: AxleSummary) {
+  return {
+    single: summary.runs === 1 || summary.min === summary.max,
+    value: formatGain(summary.mean),
+    min: formatGain(summary.min),
+    max: formatGain(summary.max),
+    mean: formatGain(summary.mean),
+  };
+}
+
+/**
+ * What tyre pressures have done at this circuit, read out of past Runs.
+ *
+ * Describes and does not prescribe, and says so on screen: there is no target pressure here, only
+ * what happened, grouped by the conditions it happened in, with the number of Runs behind every
+ * figure. Shown in Session mode as well, because "what did the pressures do here last time" is
+ * asked in the paddock while the cold pressures are being set.
+ *
+ * Every t() call below is written out literally. The translation test only finds keys it can read
+ * in the source, so a key passed through a variable would go untranslated without failing it.
+ */
+function PressureHistorySection({ history, layout }: { history?: RunHistory; layout: TrackLayout }) {
+  const { t } = useTranslation();
+  if (!history) return null;
+  const groups = summarisePressure(history.byLayout.filter((entry) => entry.layoutId === layout.id));
+  if (!groups.length) return null;
+
+  const range = ({ min, max }: { min: number; max: number }) => (min === max ? String(min) : `${min}–${max}`);
+
+  return (
+    <section className="settings-section pressure-history">
+      <h2>{t("Pressure gain here")}</h2>
+      <p className="help-text">{t("Cold-to-hot pressure gain from past Runs here. It describes what happened; it does not recommend a pressure.")}</p>
+      {groups.map((group) => {
+        const front = group.front && axleFigures(group.front);
+        const rear = group.rear && axleFigures(group.rear);
+        return (
+          <div className="pressure-group" key={group.condition}>
+            <p className="pressure-group-head">
+              <strong>{t(group.condition)}</strong>
+              {" · "}{counted(group.rows.length, "run")}
+              {group.trackTemperature && <>{" · "}{t("track {value} °C", { value: range(group.trackTemperature) })}</>}
+            </p>
+            <p className="pressure-axles">
+              {front && (front.single
+                ? t("front {value} psi", { value: front.value })
+                : t("front {min} to {max} psi · mean {mean}", { min: front.min, max: front.max, mean: front.mean }))}
+              {front && rear && <br />}
+              {rear && (rear.single
+                ? t("rear {value} psi", { value: rear.value })
+                : t("rear {min} to {max} psi · mean {mean}", { min: rear.min, max: rear.max, mean: rear.mean }))}
+            </p>
+            <div className="item-list">
+              {group.rows.map((row, index) => (
+                <div className="gearing-row pressure-row" key={`${row.date}-${row.eventName}-${row.sessionName}-${row.runNumber}-${index}`}>
+                  <span className="gearing-teeth">
+                    <strong>{row.trackTemperature === null ? "—" : `${row.trackTemperature} °C`}</strong>
+                    <span>{row.ambientTemperature === null ? "" : t("ambient {value} °C", { value: String(row.ambientTemperature) })}</span>
+                  </span>
+                  <span className="gearing-detail">
+                    <span>{t("front {front} · rear {rear}", {
+                      front: row.front === null ? "—" : formatGain(row.front),
+                      rear: row.rear === null ? "—" : formatGain(row.rear),
+                    })}</span>
+                    <span className="muted">{row.eventName} · {row.sessionName} · Run {String(row.runNumber).padStart(2, "0")}</span>
+                    <span className="muted pressure-corners">
+                      {(["fl", "fr", "rl", "rr"] as const).map((corner) => {
+                        const gain = row.gains[corner];
+                        return `${corner.toUpperCase()} ${gain === null ? "—" : formatGain(gain)}`;
+                      }).join(" · ")}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -319,6 +403,7 @@ export function MapWorkspace({ data, layout, track, session, history, onChange, 
       )}
 
       <GearingHistorySection history={history} layout={layout} track={track} />
+      <PressureHistorySection history={history} layout={layout} />
 
       {!session && (
         <section className="settings-section layout-notes">
