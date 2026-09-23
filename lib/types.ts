@@ -63,6 +63,15 @@ export type SessionRecord = {
   type: "Practice" | "Qualifying" | "Heat" | "Pre-final" | "Final" | "Other";
   startTime: string;
   notes: string;
+  /**
+   * Set only when this Session ran in something other than the Event's conditions. Absent means
+   * it inherits them, which is also exactly what every Session recorded before these fields
+   * existed should mean, so no migration is needed. Read through sessionConditions, never
+   * directly: a blank here is not "unknown", it is "same as the Event".
+   */
+  condition?: EventRecord["condition"];
+  ambientTemperature?: string;
+  trackTemperature?: string;
   runs: RunRecord[];
   createdAt: string;
 };
