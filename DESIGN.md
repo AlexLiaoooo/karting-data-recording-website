@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.18
-**Last updated:** 2026-09-23
+**Document status:** Implemented prototype v1.19
+**Last updated:** 2026-09-24
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -289,10 +289,10 @@ The form may use collapsible sections, but frequently entered tyre values should
 ### Track Map Notebook
 
 - Reusable Tracks and multiple Layouts.
-- Built-in circuits, added from a picker in the Track Library: PF International (Full Layout)
-  and Whilton Mill (International). Each ships a generated OpenStreetMap-based schematic with
-  lap-ordered corner labels; any other Layout can use a user-supplied, locally optimised map
-  image.
+- Built-in circuits, added from a picker in the Track Library: PF International (Full Layout),
+  Whilton Mill (International), Kart Silverstone (Grand Prix), Buckmore Park and Clay Pigeon
+  Raceway (Full Circuit). Each ships a generated OpenStreetMap-based schematic with lap-ordered
+  corner labels; any other Layout can use a user-supplied, locally optimised map image.
 - A built-in circuit already in the library is listed as added and cannot be added twice.
 - Built-in Layouts are stamped with a key and an artwork version. Records without a map are
   backfilled on app startup and out-of-date artwork is replaced; a map the user uploaded is
@@ -306,6 +306,13 @@ The form may use collapsible sections, but frequently entered tyre values should
 - Permanent general/dry/wet reference notes, and general notes for the Layout as a whole.
 - Optional saved Layout on each Event.
 - Session-specific observations that never overwrite permanent notes.
+- Gearing used at the Layout: each sprocket pair with its ratio, the Runs on it, best lap, highest
+  RPM, conditions and when last used, assembled from past Runs.
+- Pressure gain at the Layout: each axle's cold-to-hot gain as a range and a mean, grouped by the
+  condition the Session ran in, with every Run listed by track temperature. It describes what
+  happened and does not recommend a pressure.
+- Both histories count only Events that chose this Layout; Events naming the track without one are
+  counted and explained rather than attributed to a Layout they may not have run on.
 
 ## 8. Interaction and visual principles
 
@@ -448,6 +455,30 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.19 — 2026-09-24
+
+- **Pressure gain at a circuit.** A section beneath the gearing history on each Layout answers
+  "what did the pressures do here last time" from Runs already recorded. Each axle's cold-to-hot
+  gain is given as a range and a mean with the number of Runs behind it, and every Run is listed
+  with its four corners.
+- **Describes, does not prescribe.** The idea backlog's rule for this tool is to show patterns and
+  comparable Runs and not to claim a correct pressure until there is enough of the driver's own
+  data. There is no target, no fitted line and no recommendation, and the section says so on
+  screen, because a figure without that sentence would read as advice.
+- **Grouped by condition, ordered by track temperature.** A wet Run gains far less than a dry one,
+  so a pooled average describes neither. This is where v1.18 pays off: a wet Session inside a dry
+  Event lands in the wet group, where before it would have pulled the dry front mean from +2.6 psi
+  to about +1.4. Within a group, rising temperature and rising gain line up where a pattern exists.
+- **A rounding fault caught before release.** Corners reading +0.7 and +0.6 displayed an axle mean
+  of +0.6, because 12.7 − 12.0 is 0.69999… in binary arithmetic and the mean lands at 0.6499….
+  `formatGain` rounds half away from zero with a small allowance for that, and its test reproduces
+  the fault from the same subtraction rather than from a literal that would not.
+- **`RunHistory` replaces `GearingHistory`.** One array of past Runs per Layout now carries what
+  both histories need and each reads its own part, rather than two parallel arrays built by the same
+  loop. A name describing one consumer would have misled the moment there were two.
+- Section 7 caught up: its circuit list had stopped at PF International and Whilton Mill, and
+  neither the gearing nor the pressure history was described there.
 
 ### Implemented prototype v1.18 — 2026-09-23
 
