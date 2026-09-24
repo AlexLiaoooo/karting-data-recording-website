@@ -1680,3 +1680,11 @@ h2 {
   font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* Beside the lap delta when the two Runs ran in different conditions. The summary's small text is
+   muted by default, which would bury exactly the line that changes how the number reads. */
+.compare-summary small.compare-warning {
+  color: var(--amber);
+  font-weight: 600;
+  margin-top: 2px;
+}

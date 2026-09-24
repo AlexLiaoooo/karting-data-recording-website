@@ -258,6 +258,8 @@ const zh: Record<string, string> = {
   "First run": "第一个 Run",
   "Second run": "第二个 Run",
   "Fastest-lap change": "最快圈变化",
+  Conditions: "赛道状况",
+  "Not like for like: {first} against {second}": "条件不同：{first} 对比 {second}",
   "Second run compared with first": "第二个 Run 与第一个相比",
   "Not chosen": "未选择",
   "Gearing change": "齿比变化",

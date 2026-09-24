@@ -42,7 +42,7 @@ import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
-import { sessionConditions } from "@/lib/conditions";
+import { sessionConditions, type ResolvedConditions } from "@/lib/conditions";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -71,7 +71,15 @@ function sessionFields({ condition, ambientTemperature, trackTemperature, ...res
 }
 /** A Run with the Event and Session it belongs to, so it can be named away from its own screen.
  *  The ids group the comparison pickers; two Events can share a name, so the names cannot. */
-type HistoricalRun = { run: RunRecord; eventId: string; sessionId: string; eventName: string; sessionName: string };
+type HistoricalRun = {
+  run: RunRecord;
+  eventId: string;
+  sessionId: string;
+  eventName: string;
+  sessionName: string;
+  /** What the Run's Session actually ran in, resolved once here where the Event and Session are to hand. */
+  conditions: ResolvedConditions;
+};
 type WeatherState = "idle" | "loading" | "success" | "error";
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
@@ -389,9 +397,12 @@ export default function HomePage() {
   );
   const activeEvent = data.events.find((event) => event.id === data.lastEventId) ?? data.events[0];
   const historicalRuns = useMemo<HistoricalRun[]>(() => data.events.flatMap((event) =>
-    event.sessions.flatMap((session) => session.runs.map((run) => ({
-      run, eventId: event.id, sessionId: session.id, eventName: event.name, sessionName: session.name,
-    }))),
+    event.sessions.flatMap((session) => {
+      const conditions = sessionConditions(event, session);
+      return session.runs.map((run) => ({
+        run, eventId: event.id, sessionId: session.id, eventName: event.name, sessionName: session.name, conditions,
+      }));
+    }),
   ), [data.events]);
 
   /**
@@ -1536,8 +1547,21 @@ function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids
   const entryB = runs.find((item) => item.run.id === ids[1]);
   const runA = entryA?.run;
   const runB = entryB?.run;
-  const sections = runA && runB ? comparisonSections(runA, runB, t) : [];
+  // Conditions lead the table: once a comparison can reach another Event, "was it wet" is the
+  // first thing that decides whether any figure below it is comparable at all.
+  const conditionSection = entryA && entryB ? {
+    title: t("Conditions"),
+    values: [
+      { label: t("Track condition"), a: t(entryA.conditions.condition), b: t(entryB.conditions.condition) },
+      { label: t("Track temperature"), a: unit(entryA.conditions.trackTemperature, "°C"), b: unit(entryB.conditions.trackTemperature, "°C") },
+      { label: t("Ambient temperature"), a: unit(entryA.conditions.ambientTemperature, "°C"), b: unit(entryB.conditions.ambientTemperature, "°C") },
+    ],
+  } : null;
+  const sections = runA && runB && conditionSection ? [conditionSection, ...comparisonSections(runA, runB, t)] : [];
   const fastestDelta = lapDelta(runA?.fastestLap, runB?.fastestLap, t);
+  // Only the condition itself is flagged. A temperature gap is visible in the table, but where it
+  // stops being comparable is a judgement; dry against wet is not.
+  const differentConditions = entryA && entryB && entryA.conditions.condition !== entryB.conditions.condition;
   const gearing = runA && runB
     ? ratioChange(
       { front: runA.setup.frontSprocket, rear: runA.setup.rearSprocket },
@@ -1555,7 +1579,12 @@ function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids
         <div className="compare-summary">
           {/* The columns below carry which Run is which, so this only has to say the direction.
               Naming them here would repeat two Event names in a line this narrow. */}
-          <div><span>{t("Fastest-lap change")}</span><strong>{fastestDelta}</strong><small>{t("Second run compared with first")}</small></div>
+          <div>
+            <span>{t("Fastest-lap change")}</span><strong>{fastestDelta}</strong><small>{t("Second run compared with first")}</small>
+            {/* A lap delta between a dry Run and a wet one says little about the setup, and the
+                number alone gives no hint of that. */}
+            {differentConditions && <small className="compare-warning">{t("Not like for like: {first} against {second}", { first: t(entryA!.conditions.condition), second: t(entryB!.conditions.condition) })}</small>}
+          </div>
           {/* A change is one figure, not two columns, so it belongs here beside the lap delta
               rather than in the table. Shown only when both Runs have usable sprockets. */}
           {gearing && <div><span>{t("Gearing change")}</span><strong>{gearingSummary(gearing, t)}</strong><small>{formatRatio(runA!.setup.frontSprocket, runA!.setup.rearSprocket)} → {formatRatio(runB!.setup.frontSprocket, runB!.setup.rearSprocket)}</small></div>}
