@@ -1,6 +1,6 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.19
+**Document status:** Implemented prototype v1.20
 **Last updated:** 2026-09-24
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
@@ -260,7 +260,8 @@ The user should be able to:
 
 ### Run editor
 
-- Tyres.
+- Tyres, headed by what pressures have done at this circuit in the Session's condition: each axle's
+  past gain and the one Run nearest today's track temperature. Marked as not a recommendation.
 - Chassis setup.
 - Performance.
 - Driver feedback.
@@ -271,10 +272,11 @@ The form may use collapsible sections, but frequently entered tyre values should
 
 ### Compare view
 
-- Select two Runs.
-- Show tyre measurements side by side.
-- Highlight changed setup values.
-- Show lap-time and feedback differences.
+- Select any two Runs on record, from any Session or Event, grouped by Event and Session.
+- Show what each ran in first: track condition, track temperature and ambient temperature.
+- Show tyre measurements, setup and feedback side by side, highlighting what changed.
+- Show the lap-time change and the gearing change as single figures, and flag a comparison between
+  a dry Run and a wet one as not like for like.
 
 ### Data and settings
 
@@ -455,6 +457,30 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.20 — 2026-09-24
+
+- **The comparison shows what each Run ran in.** Since v1.17 it could reach other Events and since
+  v1.18 each Session knows its conditions, but the comparison showed neither, so two Runs could be
+  compared with nothing saying one was wet. A Conditions group now leads the table, highlighted
+  where the two differ, because it decides whether anything below it is comparable.
+- **A dry-against-wet comparison says so.** Beside the lap delta it reads "Not like for like: Wet
+  against Dry". In the test data that sits under a −10.700 s delta, which would otherwise read as a
+  large gain from a setup change. Only the condition is flagged; where a temperature gap stops being
+  comparable is a judgement, and dry against wet is not.
+- **Past pressure gain where cold pressures are set.** The Run editor's Tyres section opens with each
+  axle's gain at this circuit in today's condition and the single past Run nearest today's track
+  temperature, named to its Run number. It says "not a recommendation", this being the screen where
+  a figure is likeliest to be taken as one.
+- **Nearest by temperature, kept literal.** `closestByTemperature` returns one real Run, not a
+  weighted blend or a prediction; a tie goes to the more recent. The Run being edited is excluded,
+  or it would become its own comparison once its hot pressures were in; other Runs from the same
+  Session stay, since Run 1 is the best guide to Run 2.
+- **One axle summary for both screens.** `PressureAxles` is shared by the Layout page and the Run
+  editor so the same Runs cannot read differently on each. It now judges whether a range is worth
+  showing on the figures as displayed: gains of 0.55 and 0.60 had produced "+0.6 to +0.6 psi".
+- Section 7's Compare view entry still described a single-Session comparison of tyres and setup,
+  and is rewritten.
 
 ### Implemented prototype v1.19 — 2026-09-24
 
