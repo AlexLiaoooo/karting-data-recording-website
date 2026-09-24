@@ -108,6 +108,30 @@ function summarise(values: Array<number | null>): AxleSummary | null {
 }
 
 /**
+ * The Run whose track temperature is closest to the one given, or null when there is nothing to
+ * measure against.
+ *
+ * This is the backlog's "similar historical conditions", kept deliberately literal: the nearest
+ * temperature, not a weighted blend of several Runs and not a prediction. A tie goes to the more
+ * recent Run, since a circuit's surface changes over a season. A Run with no track temperature is
+ * neither near nor far from anything, so it is never the answer.
+ */
+export function closestByTemperature(rows: PressureRow[], trackTemperature: number | null): PressureRow | null {
+  if (trackTemperature === null) return null;
+  let best: PressureRow | null = null;
+  let bestGap = Infinity;
+  for (const row of rows) {
+    if (row.trackTemperature === null) continue;
+    const gap = Math.abs(row.trackTemperature - trackTemperature);
+    if (gap < bestGap || (gap === bestGap && best !== null && row.date > best.date)) {
+      best = row;
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
+/**
  * Groups Runs by the condition they ran in and summarises each axle's gain.
  *
  * A Run counts only if at least one corner has both a cold and a hot pressure, since a Run with no

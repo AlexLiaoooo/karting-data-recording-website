@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatGain, pressureGain, summarisePressure, type PressureRun } from "./pressure";
+import { closestByTemperature, formatGain, pressureGain, summarisePressure, type PressureRun } from "./pressure";
 import type { TyreReading } from "./types";
 
 const tyre = (cold: string, hot: string): TyreReading => ({ coldPressure: cold, hotPressure: hot, coldTemperature: "", hotTemperature: "" });
@@ -35,6 +35,42 @@ describe("pressureGain", () => {
   /** Odd, but a real reading the driver should see, not have quietly dropped. */
   it("reports a negative gain rather than hiding it", () => {
     expect(pressureGain(tyre("12.0", "11.5"))).toBeCloseTo(-0.5, 6);
+  });
+});
+
+describe("closestByTemperature", () => {
+  const rows = () => summarisePressure([
+    run({ trackTemperature: "18", runNumber: 1 }),
+    run({ trackTemperature: "24", runNumber: 2 }),
+    run({ trackTemperature: "31", runNumber: 3 }),
+  ])[0].rows;
+
+  it("picks the Run nearest the given track temperature", () => {
+    expect(closestByTemperature(rows(), 23)?.runNumber).toBe(2);
+    expect(closestByTemperature(rows(), 29)?.runNumber).toBe(3);
+    expect(closestByTemperature(rows(), 5)?.runNumber).toBe(1);
+  });
+
+  /** A circuit's surface changes over a season, so an equally close newer Run is the better guide. */
+  it("prefers the more recent of two equally close Runs", () => {
+    const tied = summarisePressure([
+      run({ trackTemperature: "20", date: "2026-05-01", runNumber: 1 }),
+      run({ trackTemperature: "26", date: "2026-08-01", runNumber: 2 }),
+    ])[0].rows;
+
+    expect(closestByTemperature(tied, 23)?.runNumber).toBe(2);
+  });
+
+  it("never picks a Run that has no track temperature", () => {
+    const partial = summarisePressure([run({ trackTemperature: "", runNumber: 1 }), run({ trackTemperature: "30", runNumber: 2 })])[0].rows;
+
+    expect(closestByTemperature(partial, 12)?.runNumber).toBe(2);
+  });
+
+  it("has no answer without a temperature to measure against, or with nothing to choose from", () => {
+    expect(closestByTemperature(rows(), null)).toBeNull();
+    expect(closestByTemperature([], 20)).toBeNull();
+    expect(closestByTemperature(summarisePressure([run({ trackTemperature: "" })])[0].rows, 20)).toBeNull();
   });
 });
 
