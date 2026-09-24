@@ -20,7 +20,8 @@ import { MapCanvas } from "./MapCanvas";
 import { MarkerSheet } from "./MarkerSheet";
 import { ConfirmDeleteDialog, EmptyMapState, now, RunHistory, SessionContext, TrackMapChange } from "./shared";
 import { summariseGearing } from "@/lib/gearing";
-import { formatGain, summarisePressure, type AxleSummary } from "@/lib/pressure";
+import { formatGain, summarisePressure } from "@/lib/pressure";
+import { PressureAxles } from "./pressure-summary";
 import { useTranslation } from "@/lib/i18n";
 
 type MapWorkspaceProps = {
@@ -83,17 +84,6 @@ function GearingHistorySection({ history, layout, track }: { history?: RunHistor
   );
 }
 
-/** A single figure where the Runs agree or there is only one; a range and a mean otherwise. */
-function axleFigures(summary: AxleSummary) {
-  return {
-    single: summary.runs === 1 || summary.min === summary.max,
-    value: formatGain(summary.mean),
-    min: formatGain(summary.min),
-    max: formatGain(summary.max),
-    mean: formatGain(summary.mean),
-  };
-}
-
 /**
  * What tyre pressures have done at this circuit, read out of past Runs.
  *
@@ -102,8 +92,8 @@ function axleFigures(summary: AxleSummary) {
  * figure. Shown in Session mode as well, because "what did the pressures do here last time" is
  * asked in the paddock while the cold pressures are being set.
  *
- * Every t() call below is written out literally. The translation test only finds keys it can read
- * in the source, so a key passed through a variable would go untranslated without failing it.
+ * The axle summary comes from PressureAxles, which the Run editor shares, so the two screens cannot
+ * describe the same Runs differently.
  */
 function PressureHistorySection({ history, layout }: { history?: RunHistory; layout: TrackLayout }) {
   const { t } = useTranslation();
@@ -118,8 +108,6 @@ function PressureHistorySection({ history, layout }: { history?: RunHistory; lay
       <h2>{t("Pressure gain here")}</h2>
       <p className="help-text">{t("Cold-to-hot pressure gain from past Runs here. It describes what happened; it does not recommend a pressure.")}</p>
       {groups.map((group) => {
-        const front = group.front && axleFigures(group.front);
-        const rear = group.rear && axleFigures(group.rear);
         return (
           <div className="pressure-group" key={group.condition}>
             <p className="pressure-group-head">
@@ -127,15 +115,7 @@ function PressureHistorySection({ history, layout }: { history?: RunHistory; lay
               {" · "}{counted(group.rows.length, "run")}
               {group.trackTemperature && <>{" · "}{t("track {value} °C", { value: range(group.trackTemperature) })}</>}
             </p>
-            <p className="pressure-axles">
-              {front && (front.single
-                ? t("front {value} psi", { value: front.value })
-                : t("front {min} to {max} psi · mean {mean}", { min: front.min, max: front.max, mean: front.mean }))}
-              {front && rear && <br />}
-              {rear && (rear.single
-                ? t("rear {value} psi", { value: rear.value })
-                : t("rear {min} to {max} psi · mean {mean}", { min: rear.min, max: rear.max, mean: rear.mean }))}
-            </p>
+            <PressureAxles front={group.front} rear={group.rear} />
             <div className="item-list">
               {group.rows.map((row, index) => (
                 <div className="gearing-row pressure-row" key={`${row.date}-${row.eventName}-${row.sessionName}-${row.runNumber}-${index}`}>
