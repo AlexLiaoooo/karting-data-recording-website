@@ -43,6 +43,8 @@ import { counted } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
 import { sessionConditions, type ResolvedConditions } from "@/lib/conditions";
+import { closestByTemperature, formatGain, summarisePressure, type ConditionGroup, type PressureRow } from "@/lib/pressure";
+import { PressureAxles } from "@/components/track-map/pressure-summary";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
@@ -81,6 +83,8 @@ type HistoricalRun = {
   conditions: ResolvedConditions;
 };
 type WeatherState = "idle" | "loading" | "success" | "error";
+/** Past pressure gain at this circuit in today's condition, shown where the cold pressures are set. */
+type PressureHint = { condition: string; group: ConditionGroup; closest: PressureRow | null };
 
 const sessionTypes: SessionRecord["type"][] = ["Practice", "Qualifying", "Heat", "Pre-final", "Final", "Other"];
 const eventTypes: EventRecord["type"][] = ["Practice", "Test", "Race", "Other"];
@@ -441,6 +445,7 @@ export default function HomePage() {
             eventName: event.name,
             sessionName: session.name,
             runNumber: run.number,
+            runId: run.id,
           });
         }
       }
@@ -448,6 +453,27 @@ export default function HomePage() {
 
     return { byLayout, unlinkedTrackNames };
   }, [data.events]);
+
+  /**
+   * What pressures have done at this circuit before, for the Run being edited.
+   *
+   * Only past Runs in the condition this Session is actually running in: a dry figure beside a wet
+   * Run would mislead worse than nothing. The Run being edited is left out, or once its own hot
+   * pressures were entered it would be offered as its own comparison. Other Runs from today's
+   * Session stay in, since Run 1 is the best guide there is to Run 2.
+   */
+  const pressureHint = useMemo<PressureHint | null>(() => {
+    if (!selectedEvent?.trackLayoutId || !selectedSession || !selectedRun) return null;
+    const here = sessionConditions(selectedEvent, selectedSession);
+    const group = summarisePressure(runHistory.byLayout.filter((entry) =>
+      entry.layoutId === selectedEvent.trackLayoutId && entry.runId !== selectedRun.id,
+    )).find((candidate) => candidate.condition === here.condition);
+    if (!group) return null;
+
+    const typed = here.trackTemperature.trim() === "" ? null : Number(here.trackTemperature);
+    const today = typed !== null && Number.isFinite(typed) ? typed : null;
+    return { condition: here.condition, group, closest: closestByTemperature(group.rows, today) };
+  }, [runHistory, selectedEvent, selectedSession, selectedRun]);
 
   function flash(message: string) {
     setToast(message);
@@ -949,6 +975,7 @@ export default function HomePage() {
           flash(`Run ${String(selectedRun.number).padStart(2, "0")} completed`);
         }}
         templates={data.setupTemplates}
+        pressureHint={pressureHint}
         onSaveTemplate={() => setShowSaveTemplateForm(true)}
         onApplyTemplate={() => setShowApplyTemplateForm(true)}
       />
@@ -1416,7 +1443,37 @@ function DeleteModal({ target, onCancel, onConfirm }: { target: DeleteTarget; on
   );
 }
 
-function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
+/**
+ * What pressures did at this circuit before, in the condition this Session is running in, shown
+ * above the tyres where the cold pressures are being set.
+ *
+ * Says in so many words that it is not a recommendation. This is the screen where a figure is
+ * most likely to be taken as one, and the idea backlog is clear the app has no business claiming
+ * a correct pressure from a handful of Runs.
+ */
+function PressureHintPanel({ hint }: { hint: PressureHint }) {
+  const { t } = useTranslation();
+  const { group, closest } = hint;
+  return (
+    <div className="pressure-hint">
+      <p className="pressure-hint-head">{t("Past gain here in the {condition} · {runs}", { condition: t(hint.condition), runs: counted(group.rows.length, "run") })}</p>
+      <PressureAxles front={group.front} rear={group.rear} />
+      {closest && closest.trackTemperature !== null && (
+        // The Run number matters most when the nearest Run is from this same Session, which is
+        // often the case: without it "Spring test · Practice 1" does not say which Run it means.
+        <p className="pressure-hint-closest">{t("Nearest in track temperature: {temperature} °C at {where}, front {front}, rear {rear}", {
+          temperature: String(closest.trackTemperature),
+          where: `${closest.eventName} · ${closest.sessionName} · Run ${String(closest.runNumber).padStart(2, "0")}`,
+          front: closest.front === null ? "—" : formatGain(closest.front),
+          rear: closest.rear === null ? "—" : formatGain(closest.rear),
+        })}</p>
+      )}
+      <p className="pressure-hint-note">{t("From past Runs here; not a recommendation.")}</p>
+    </div>
+  );
+}
+
+function RunEditor({ run, session, saveState, templates, pressureHint, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; pressureHint: PressureHint | null; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
   const { t } = useTranslation();
   function setTyre(corner: TyreCorner, field: keyof RunRecord["tyres"][TyreCorner], value: string) {
     onUpdate((current) => ({ ...current, tyres: { ...current.tyres, [corner]: { ...current.tyres[corner], [field]: value } } }));
@@ -1443,6 +1500,7 @@ function RunEditor({ run, session, saveState, templates, onBack, onUpdate, onDel
         <div className="editor-stack">
           <details className="editor-section" open>
             <summary><span><CircleGauge /> {t("Tyres")} <small>{t("Cold / hot")}</small></span><ChevronRight /></summary>
+            {pressureHint && <PressureHintPanel hint={pressureHint} />}
             <div className="editor-body tyre-grid">
               {tyreCorners.map(({ key, label, code }, index) => (
                 <div className={`tyre-card ${index === 2 ? "rear-start" : ""}`} key={key}>

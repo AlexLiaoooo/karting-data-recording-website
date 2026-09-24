@@ -28,7 +28,8 @@ export type TrackMapChange = (updater: (current: TrackMapData) => TrackMapData) 
  * unlinked names are carried so a Layout with an empty list can say why.
  */
 export type RunHistory = {
-  byLayout: Array<GearingRun & PressureRun & { layoutId: string }>;
+  /** runId lets a screen leave out the Run it is showing, which would otherwise compare against itself. */
+  byLayout: Array<GearingRun & PressureRun & { layoutId: string; runId: string }>;
   unlinkedTrackNames: string[];
 };
 

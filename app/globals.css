@@ -1688,3 +1688,35 @@ h2 {
   font-weight: 600;
   margin-top: 2px;
 }
+
+/* Past pressure gain above the tyre grid in the Run editor. Set apart from the inputs by a soft
+   background so it reads as reference, not as something to fill in. */
+.pressure-hint {
+  background: var(--surface-soft);
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 12px 14px;
+}
+
+.pressure-hint p {
+  margin: 0;
+}
+
+.pressure-hint .pressure-axles {
+  margin: 2px 0 4px;
+}
+
+.pressure-hint-head {
+  font-weight: 600;
+}
+
+.pressure-hint-closest {
+  font-variant-numeric: tabular-nums;
+}
+
+.pressure-hint-note {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin-top: 4px !important;
+}
