@@ -43,7 +43,7 @@ import { counted } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
 import { sessionConditions, type ResolvedConditions } from "@/lib/conditions";
-import { closestByTemperature, formatGain, summarisePressure, type ConditionGroup, type PressureRow } from "@/lib/pressure";
+import { closestByTemperature, formatGain, pressureGain, summarisePressure, temperatureGain, type ConditionGroup, type PressureRow } from "@/lib/pressure";
 import { PressureAxles } from "@/components/track-map/pressure-summary";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
@@ -1724,10 +1724,10 @@ function comparisonSections(runA: RunRecord, runB: RunRecord, t: Translate): Arr
     values: [
       value(t("Cold pressure"), unit(runA.tyres[key].coldPressure, "PSI"), unit(runB.tyres[key].coldPressure, "PSI")),
       value(t("Hot pressure"), unit(runA.tyres[key].hotPressure, "PSI"), unit(runB.tyres[key].hotPressure, "PSI")),
-      value(t("Pressure gain"), measurementGain(runA.tyres[key].coldPressure, runA.tyres[key].hotPressure, "PSI"), measurementGain(runB.tyres[key].coldPressure, runB.tyres[key].hotPressure, "PSI")),
+      value(t("Pressure gain"), gainText(pressureGain(runA.tyres[key]), "PSI"), gainText(pressureGain(runB.tyres[key]), "PSI")),
       value(t("Cold temperature"), unit(runA.tyres[key].coldTemperature, "°C"), unit(runB.tyres[key].coldTemperature, "°C")),
       value(t("Hot temperature"), unit(runA.tyres[key].hotTemperature, "°C"), unit(runB.tyres[key].hotTemperature, "°C")),
-      value(t("Temperature gain"), measurementGain(runA.tyres[key].coldTemperature, runA.tyres[key].hotTemperature, "°C"), measurementGain(runB.tyres[key].coldTemperature, runB.tyres[key].hotTemperature, "°C")),
+      value(t("Temperature gain"), gainText(temperatureGain(runA.tyres[key]), "°C"), gainText(temperatureGain(runB.tyres[key]), "°C")),
     ],
   }));
 
@@ -1796,10 +1796,13 @@ function gearingSummary(change: NonNullable<ReturnType<typeof ratioChange>>, t: 
   return `${change.percent > 0 ? "+" : ""}${change.percent.toFixed(1)}% ${change.direction === "shorter" ? t("shorter") : t("longer")}`;
 }
 
-function measurementGain(cold: string, hot: string, suffix: string) {
-  if (!cold || !hot) return "—";
-  const delta = Number(hot) - Number(cold);
-  return Number.isFinite(delta) ? `${delta >= 0 ? "+" : ""}${delta.toFixed(2)} ${suffix}` : "—";
+/**
+ * A corner's gain written as the Layout page and the Run editor write it, so the same Run does not
+ * read +2.50 here and +2.5 there. The readings themselves sit in the rows above, as typed, so
+ * nothing finer than a tenth is lost from the table.
+ */
+function gainText(gain: number | null, suffix: string) {
+  return gain === null ? "—" : `${formatGain(gain)} ${suffix}`;
 }
 
 /**
