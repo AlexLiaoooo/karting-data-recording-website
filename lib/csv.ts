@@ -3,6 +3,7 @@ import { markerLabel, type TrackMapData } from "./track-map/types";
 import { gearRatio } from "./gearing";
 import { parseLapTime } from "./lap-time";
 import { sessionConditions } from "./conditions";
+import { pressureGain, temperatureGain } from "./pressure";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -97,12 +98,13 @@ const feedbackHeaders = [
   "General comments",
 ];
 
-function numericDelta(hot: string, cold: string) {
-  const hotNumber = Number(hot);
-  const coldNumber = Number(cold);
-  return hot && cold && Number.isFinite(hotNumber) && Number.isFinite(coldNumber)
-    ? (hotNumber - coldNumber).toFixed(2)
-    : "";
+/**
+ * A gain as the app computes it everywhere else, so the spreadsheet and the screens cannot
+ * disagree about which readings count. Two decimals and unsigned, which a spreadsheet reads as a
+ * number; the screens' signed one-decimal form is for reading, not for formulas.
+ */
+function csvGain(gain: number | null) {
+  return gain === null ? "" : gain.toFixed(2);
 }
 
 function runValues(run?: RunRecord) {
@@ -126,10 +128,10 @@ function runValues(run?: RunRecord) {
       return [
         tyre.coldPressure,
         tyre.hotPressure,
-        numericDelta(tyre.hotPressure, tyre.coldPressure),
+        csvGain(pressureGain(tyre)),
         tyre.coldTemperature,
         tyre.hotTemperature,
-        numericDelta(tyre.hotTemperature, tyre.coldTemperature),
+        csvGain(temperatureGain(tyre)),
       ];
     }),
     ...setupFields.map(([field]) => run.setup[field]),

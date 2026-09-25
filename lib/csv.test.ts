@@ -35,6 +35,28 @@ describe("buildCsv", () => {
   });
 
   /**
+   * The export used its own subtraction, which turned a mistyped 0 cold pressure into a gain of
+   * 12.50 that no screen in the app would show. It now counts the readings the screens count.
+   */
+  it("leaves a gain blank where the app shows none, and keeps a real winter temperature", () => {
+    const run = makeRun({
+      tyres: {
+        fl: { coldPressure: "0", hotPressure: "12.5", coldTemperature: "-2", hotTemperature: "33" },
+        fr: { coldPressure: "10.0", hotPressure: " ", coldTemperature: "18", hotTemperature: "" },
+        rl: { coldPressure: "", hotPressure: "", coldTemperature: "", hotTemperature: "" },
+        rr: { coldPressure: "", hotPressure: "", coldTemperature: "", hotTemperature: "" },
+      },
+    });
+    const data = makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
+    const [runs] = tables(buildCsv(data, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+
+    expect(row["FL pressure gain (PSI)"]).toBe("");
+    expect(row["FR pressure gain (PSI)"]).toBe("");
+    expect(row["FL temperature gain (C)"]).toBe("35.00");
+  });
+
+  /**
    * The ratio is derived, so it has a header but no field in setupFields. That asymmetry is what
    * the blank-run padding has to account for, and the column-count test below is what catches it.
    */
