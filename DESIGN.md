@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.20
-**Last updated:** 2026-09-24
+**Document status:** Implemented prototype v1.21
+**Last updated:** 2026-09-25
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -457,6 +457,20 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.21 — 2026-09-25
+
+- **One gain calculation.** A tyre's cold-to-hot gain was computed three ways: in `lib/pressure.ts`
+  for the Layout page and the Run editor, and separately in the CSV export and in the comparison.
+  The two copies counted readings the library refuses, so a mistyped 0 cold pressure exported and
+  compared as a gain of 12.50 while every other screen ignored it, and a hot pressure of only a
+  space was read as zero. Both now call `pressureGain`, and a new `temperatureGain` beside it,
+  which keeps its positivity check off because a tyre can be at or below 0 °C on a winter morning.
+- **The comparison writes a gain as the other screens do.** It used two decimals, so one Run's
+  front-left read +2.50 PSI there and +2.5 on the Layout page. It now uses `formatGain`, signed to
+  one decimal. Nothing finer is lost: the cold and hot readings sit in the rows above, as typed.
+- **The CSV keeps its format.** Two decimals and unsigned, which a spreadsheet reads as a number;
+  only which readings count has changed.
 
 ### Implemented prototype v1.20 — 2026-09-24
 

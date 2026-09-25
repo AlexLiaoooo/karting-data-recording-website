@@ -68,8 +68,9 @@ data rather than looking wrong:
   and visits restore unchanged, map image bytes survive exactly, backups predating Track
   Maps still restore, and malformed files are rejected instead of partially applied.
 - **CSV export** (`lib/csv.test.ts`) — the three tables, correct column counts, computed
-  pressure/temperature gains, the UTF-8 BOM, and escaping of quotes, commas and line breaks
-  in free-text notes.
+  pressure/temperature gains left blank wherever the app's screens show none (a mistyped 0
+  pressure included), the UTF-8 BOM, and escaping of quotes, commas and line breaks in
+  free-text notes.
 - **Storage** (`lib/database.test.ts`) — the version 1 to 2 schema upgrade preserves existing
   records while adding the Track Map stores, deletions do not reappear on reload, and app
   data stays separate from Track Map data.
@@ -93,7 +94,7 @@ data rather than looking wrong:
 - **Lap times** (`lib/lap-time.test.ts`) — both notations read and written back, a seconds part of sixty or more refused as a mistyped clock reading, and a round trip through parse and format.
 - **New Runs** (`lib/types.test.ts`) — a duplicated Run carries the cold tyre readings and leaves every hot field blank, copies rather than shares them, and inherits no lap time, RPM or feedback.
 - **Session conditions** (`lib/conditions.test.ts`) — a Session with nothing of its own inherits everything from its Event, its own condition and each temperature override independently, and a blank or whitespace-only temperature counts as not recorded rather than as an empty reading.
-- **Pressure gain** (`lib/pressure.test.ts`) — gain per corner and per axle, a zero pressure refused but a negative gain kept, dry and wet Runs kept apart, Runs ordered by track temperature, and a mean that is genuinely on the half rounded upwards despite binary arithmetic, reproduced from the same subtraction the app does.
+- **Pressure gain** (`lib/pressure.test.ts`) — gain per corner and per axle, a zero pressure refused but a negative gain kept, a tyre temperature at or below zero accepted, dry and wet Runs kept apart, Runs ordered by track temperature, and a mean that is genuinely on the half rounded upwards despite binary arithmetic, reproduced from the same subtraction the app does.
 - **Counted nouns** (`lib/format.test.ts`) — "1 layout" rather than "1 layouts", including zero,
   multi-word nouns and nouns that do not simply take an s.
 - **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string
