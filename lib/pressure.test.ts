@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closestByTemperature, formatGain, pressureGain, summarisePressure, type PressureRun } from "./pressure";
+import { closestByTemperature, formatGain, pressureGain, summarisePressure, temperatureGain, type PressureRun } from "./pressure";
 import type { TyreReading } from "./types";
 
 const tyre = (cold: string, hot: string): TyreReading => ({ coldPressure: cold, hotPressure: hot, coldTemperature: "", hotTemperature: "" });
@@ -35,6 +35,26 @@ describe("pressureGain", () => {
   /** Odd, but a real reading the driver should see, not have quietly dropped. */
   it("reports a negative gain rather than hiding it", () => {
     expect(pressureGain(tyre("12.0", "11.5"))).toBeCloseTo(-0.5, 6);
+  });
+});
+
+describe("temperatureGain", () => {
+  const temperatures = (cold: string, hot: string): TyreReading => ({ coldPressure: "", hotPressure: "", coldTemperature: cold, hotTemperature: hot });
+
+  it("is hot minus cold", () => {
+    expect(temperatureGain(temperatures("18", "48"))).toBe(30);
+  });
+
+  it("is null when either reading is missing or not a number", () => {
+    expect(temperatureGain(temperatures("", "48"))).toBeNull();
+    expect(temperatureGain(temperatures("18", "  "))).toBeNull();
+    expect(temperatureGain(temperatures("18", "warm"))).toBeNull();
+  });
+
+  /** Unlike a pressure, a temperature of zero or below is a real reading on a winter morning. */
+  it("accepts a cold temperature at or below zero", () => {
+    expect(temperatureGain(temperatures("0", "35"))).toBe(35);
+    expect(temperatureGain(temperatures("-3", "35"))).toBe(38);
   });
 });
 

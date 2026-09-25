@@ -80,7 +80,20 @@ export function pressureGain(tyre: TyreReading): number | null {
 }
 
 /**
- * A pressure gain to one decimal, signed: "+2.4", "-0.5", "0.0".
+ * Hot minus cold tyre temperature, or null when either is missing.
+ *
+ * The same subtraction as pressureGain without its positivity check: a pressure of zero is a
+ * mistyped field, but a tyre can genuinely be at or below 0 °C before a winter session.
+ */
+export function temperatureGain(tyre: TyreReading): number | null {
+  const cold = reading(tyre.coldTemperature);
+  const hot = reading(tyre.hotTemperature);
+  return cold === null || hot === null ? null : hot - cold;
+}
+
+/**
+ * A gain to one decimal, signed: "+2.4", "-0.5", "0.0". Every screen writes a pressure or
+ * temperature gain through this, so one Run's gain reads the same wherever it appears.
  *
  * Rounds half away from zero, with a small allowance for binary arithmetic. Without it, 12.7 minus
  * 12.0 comes out as 0.69999…, so an axle whose corners read +0.7 and +0.6 averages to 0.6499… and
