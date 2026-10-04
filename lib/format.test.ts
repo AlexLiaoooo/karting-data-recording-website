@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { counted } from "./format";
+import { counted, localDate } from "./format";
+
+describe("localDate", () => {
+  it("uses the device calendar at either end of the day", () => {
+    expect(localDate(new Date(2026, 9, 4, 0, 15))).toBe("2026-10-04");
+    expect(localDate(new Date(2026, 9, 4, 23, 45))).toBe("2026-10-04");
+    expect(localDate(new Date(2026, 0, 2))).toBe("2026-01-02");
+  });
+});
 
 describe("counted", () => {
   it("keeps the noun singular for one, which is what read wrong before", () => {

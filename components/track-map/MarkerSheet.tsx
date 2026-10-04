@@ -50,8 +50,8 @@ export function MarkerSheet({
         <div className="marker-session-content">
           {marker.shortInstruction && <p className="marker-instruction">{marker.shortInstruction}</p>}
           {marker.generalNote && <div className="reference-note"><strong>{t("General reference")}</strong><p>{marker.generalNote}</p></div>}
-          {conditionNote && <div className="reference-note"><strong>{session.condition} reference</strong><p>{conditionNote}</p></div>}
-          <label className="field"><span>What happened in {session.sessionName}?</span><textarea className="textarea" placeholder={t("Grip, line, braking point, what to try next…")} value={observation?.note ?? ""} onChange={(event) => onUpdateObservation({ note: event.target.value })} /></label>
+          {conditionNote && <div className="reference-note"><strong>{t("{condition} reference", { condition: t(session.condition) })}</strong><p>{conditionNote}</p></div>}
+          <label className="field"><span>{t("What happened in {session}?", { session: session.sessionName })}</span><textarea className="textarea" placeholder={t("Grip, line, braking point, what to try next…")} value={observation?.note ?? ""} onChange={(event) => onUpdateObservation({ note: event.target.value })} /></label>
           <label className="field"><span>{t("Result")}</span><select className="select" value={observation?.result ?? ""} onChange={(event) => onUpdateObservation({ result: event.target.value as MarkerObservation["result"] })}><option value="">{t("Not rated")}</option><option value="Better">{t("Better")}</option><option value="Same">{t("Same")}</option><option value="Worse">{t("Worse")}</option></select></label>
           <p className="auto-save-note"><Check /> {t("Session observation saves automatically")}</p>
         </div>

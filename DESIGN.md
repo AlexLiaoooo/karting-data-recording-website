@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.21
-**Last updated:** 2026-09-25
+**Document status:** Implemented prototype v1.22 (local, pending release)
+**Last updated:** 2026-10-04
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -457,6 +457,19 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.22 — 2026-10-04 (local, pending release)
+
+- Fixed local Event dates/export filenames, Run numbering after deletion, and lap-time
+  rounding at minute boundaries.
+- Kept decimal tyre readings visible on mobile by moving their units below the inputs.
+- Used existing Chinese translations for Session marker prompts, bounded weather fetches,
+  and delayed download Blob cleanup until the browser can start the download.
+- Limited service-worker cleanup to Kart Data caches, waited for cache writes/activation,
+  and kept the saved app available during server errors as well as offline.
+- Repaired the dependency lockfile and patched Next/eslint-config-next to 16.3.8. Declared
+  Sharp 0.35.4 explicitly for icon generation. Added regression tests for these correctness
+  and caching fixes. The full review and verification limits are in `PROJECT_REVIEW.md`.
 
 ### Implemented prototype v1.21 — 2026-09-25
 

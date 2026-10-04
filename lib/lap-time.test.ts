@@ -41,6 +41,12 @@ describe("parseLapTime", () => {
 });
 
 describe("formatLapTime", () => {
+  it("carries rounded milliseconds into the next minute", () => {
+    expect(formatLapTime(59.9996)).toBe("1:00.000");
+    expect(formatLapTime(119.9996)).toBe("2:00.000");
+    expect(formatLapTime(69.9996)).toBe("1:10.000");
+    expect(parseLapTime(formatLapTime(119.9996))).toBe(120);
+  });
   it("writes a sub-minute lap as plain seconds", () => {
     expect(formatLapTime(52.4)).toBe("52.400");
     expect(formatLapTime(59.999)).toBe("59.999");

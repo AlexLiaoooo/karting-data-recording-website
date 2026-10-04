@@ -33,13 +33,13 @@ import {
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
-import { AppData, createRun, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
+import { AppData, createRun, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
-import { counted } from "@/lib/format";
+import { counted, localDate } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
 import { sessionConditions, type ResolvedConditions } from "@/lib/conditions";
@@ -96,10 +96,6 @@ const tyreCorners: Array<{ key: TyreCorner; label: string; code: string }> = [
   { key: "rl", label: "Rear left", code: "RL" },
   { key: "rr", label: "Rear right", code: "RR" },
 ];
-
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatDate(value: string, t: Translate, locale: string) {
   if (!value) return t("No date");
@@ -614,7 +610,7 @@ export default function HomePage() {
 
   function addRun(source?: RunRecord) {
     if (!selectedSession) return;
-    const run = createRun(selectedSession.runs.length + 1, source);
+    const run = createRun(nextRunNumber(selectedSession.runs), source);
     updateSession(selectedSession.id, (session) => ({ ...session, runs: [...session.runs, run] }));
     setRunId(run.id);
     setScreen("run");
@@ -718,7 +714,7 @@ export default function HomePage() {
   async function exportJson() {
     try {
       const backup = await buildFullBackup(data, trackMapData);
-      downloadFile(`kart-data-backup-${todayDate()}.json`, backup, "application/json");
+      downloadFile(`kart-data-backup-${localDate()}.json`, backup, "application/json");
       flash(t("Full backup exported, including Track Maps"));
     } catch {
       flash(t("Backup could not be created"));
@@ -726,7 +722,7 @@ export default function HomePage() {
   }
 
   function exportCsv() {
-    downloadFile(`kart-data-${todayDate()}.csv`, buildCsv(data, trackMapData), "text/csv;charset=utf-8");
+    downloadFile(`kart-data-${localDate()}.csv`, buildCsv(data, trackMapData), "text/csv;charset=utf-8");
     flash(t("Excel-ready CSV exported"));
   }
 
@@ -1191,7 +1187,7 @@ function EventModal({ event, trackMapData, onClose, onSave }: { event?: EventRec
     name: "",
     track: "",
     trackLayoutId: undefined,
-    startDate: todayDate(),
+    startDate: localDate(),
     endDate: "",
     type: "Practice",
     weather: "",
@@ -1231,7 +1227,9 @@ function EventModal({ event, trackMapData, onClose, onSave }: { event?: EventRec
         current: "temperature_2m",
         temperature_unit: "celsius",
       });
-      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query.toString()}`);
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query.toString()}`, {
+        signal: AbortSignal.timeout(12_000),
+      });
       if (!response.ok) throw new Error(`Weather request failed with ${response.status}`);
 
       const result: unknown = await response.json();
@@ -1828,6 +1826,9 @@ function downloadFile(name: string, content: string, type: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = name;
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  // Give the browser time to start reading the Blob before releasing it.
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

@@ -11,6 +11,7 @@ A mobile-first, local-first web application for recording competition karting ty
 ## Design notes
 
 - [`DESIGN.md`](DESIGN.md) is the living design document for the whole app, with a change log.
+- [`PROJECT_REVIEW.md`](PROJECT_REVIEW.md) records the 4 October 2026 review, local fixes, remaining findings and verification limits.
 - [karting-tools-notes](https://github.com/AlexLiaoooo/karting-tools-notes) holds the design history: the original Track Map Notebook architecture note, the wider karting tools idea backlog, and dated UI screenshots. Where it and `DESIGN.md` disagree, `DESIGN.md` is current.
 
 ## Current features
@@ -47,7 +48,7 @@ A mobile-first, local-first web application for recording competition karting ty
 ## Local development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -100,6 +101,9 @@ data rather than looking wrong:
 - **Translations** (`lib/i18n.test.ts`) — reads the components and asserts that every string
   passed to `t()` has a Chinese translation, that placeholders survive translation, and that
   values written into records (`Full Layout`, `PF International`) are never translated.
+- **Offline workers** (`lib/service-worker.test.ts`) — both the fallback and generated
+  production worker preserve unrelated caches, use the saved shell on network/server failure,
+  avoid caching error pages, and finish cache writes before their event ends.
 
 Image bytes are asserted through the backup path rather than the IndexedDB path: the
 `fake-indexeddb` test double cannot round-trip a Blob, so blob persistence in the database

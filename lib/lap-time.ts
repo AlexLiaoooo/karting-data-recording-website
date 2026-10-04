@@ -36,9 +36,10 @@ export function parseLapTime(value: string): number | null {
  */
 export function formatLapTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return "";
-  if (seconds < 60) return seconds.toFixed(3);
+  const milliseconds = Math.round(seconds * 1000);
+  if (milliseconds < 60_000) return (milliseconds / 1000).toFixed(3);
 
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds - minutes * 60;
+  const minutes = Math.floor(milliseconds / 60_000);
+  const rest = (milliseconds % 60_000) / 1000;
   return `${minutes}:${rest < 10 ? "0" : ""}${rest.toFixed(3)}`;
 }

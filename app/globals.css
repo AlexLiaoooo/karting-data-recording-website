@@ -754,6 +754,19 @@ h2 {
   transform: translateY(-50%);
 }
 
+/* Four readings share each tyre card; an overlaid unit hid decimal digits on phones. */
+.tyre-card .input-with-unit .input {
+  padding-right: 9px;
+}
+
+.tyre-card .input-with-unit > span {
+  display: block;
+  margin-top: 3px;
+  position: static;
+  text-align: right;
+  transform: none;
+}
+
 .weather-fetch {
   align-items: flex-start;
   display: flex;

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { createRun } from "./types";
+import { createRun, nextRunNumber } from "./types";
 import { makeRun } from "./test-fixtures";
+
+describe("nextRunNumber", () => {
+  it("starts at one and follows the highest surviving Run after deletion", () => {
+    expect(nextRunNumber([])).toBe(1);
+    expect(nextRunNumber([makeRun({ number: 1 }), makeRun({ number: 3 })])).toBe(4);
+    expect(nextRunNumber([makeRun({ number: 5 }), makeRun({ number: 2 })])).toBe(6);
+  });
+});
 
 describe("createRun", () => {
   it("starts a Run with every tyre field blank when there is nothing to copy", () => {

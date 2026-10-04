@@ -145,6 +145,11 @@ function carryColdTyres(tyres: RunRecord["tyres"]): RunRecord["tyres"] {
   return { fl: carry(tyres.fl), fr: carry(tyres.fr), rl: carry(tyres.rl), rr: carry(tyres.rr) };
 }
 
+/** Deleting an earlier Run must not make the next Run reuse a surviving number. */
+export function nextRunNumber(runs: RunRecord[]): number {
+  return runs.reduce((highest, run) => Math.max(highest, run.number), 0) + 1;
+}
+
 export const createRun = (number: number, previous?: RunRecord): RunRecord => {
   const now = new Date().toISOString();
   return {
