@@ -38,6 +38,7 @@ import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
 import { SaveQueue, type SaveKind, type SaveStatus } from "@/lib/save-queue";
+import { backupIsDue, type BackupHistory, ONE_DAY, readBackupHistory, writeBackupHistory } from "@/lib/backup-reminder";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted, localDate } from "@/lib/format";
@@ -246,6 +247,9 @@ export default function HomePage() {
   const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreFailed, setRestoreFailed] = useState(false);
+  const [backupHistory, setBackupHistory] = useState<BackupHistory>({ lastExportAt: null, dismissedUntil: 0 });
+  const [reminderNow, setReminderNow] = useState(() => Date.now());
+  const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -253,6 +257,7 @@ export default function HomePage() {
   const importRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
   const restoreInProgress = useRef(false);
+  const exportInProgress = useRef(false);
   /** The debounced writes waiting to run, so they can be flushed if the app is put away first. */
   const pendingSaves = useRef<{ app?: () => Promise<void>; trackMap?: () => Promise<void> }>({});
 
@@ -274,6 +279,8 @@ export default function HomePage() {
         if (cancelled) return;
         setData(stored);
         setTrackMapData(nextTrackMaps);
+        setBackupHistory(readBackupHistory());
+        setReminderNow(Date.now());
         hydrated.current = true;
         setReady(true);
       } catch {
@@ -339,6 +346,22 @@ export default function HomePage() {
       window.removeEventListener("pagehide", flush);
     };
   }, [beginSave]);
+
+  useEffect(() => {
+    const refreshReminder = () => {
+      if (document.visibilityState === "hidden") return;
+      setBackupHistory(readBackupHistory());
+      setReminderNow(Date.now());
+    };
+    window.addEventListener("focus", refreshReminder);
+    window.addEventListener("storage", refreshReminder);
+    document.addEventListener("visibilitychange", refreshReminder);
+    return () => {
+      window.removeEventListener("focus", refreshReminder);
+      window.removeEventListener("storage", refreshReminder);
+      document.removeEventListener("visibilitychange", refreshReminder);
+    };
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -705,13 +728,31 @@ export default function HomePage() {
   }
 
   async function exportJson() {
+    if (exportInProgress.current) return;
+    exportInProgress.current = true;
+    setExporting(true);
     try {
       const backup = await buildFullBackup(data, trackMapData);
       downloadFile(`kart-data-backup-${localDate()}.json`, backup, "application/json");
+      const history = { lastExportAt: Date.now(), dismissedUntil: 0 };
+      writeBackupHistory(history);
+      setBackupHistory(history);
+      setReminderNow(history.lastExportAt);
       flash(t("Full backup exported, including Track Maps"));
     } catch {
       flash(t("Backup could not be created"));
+    } finally {
+      exportInProgress.current = false;
+      setExporting(false);
     }
+  }
+
+  function dismissBackupReminder() {
+    const now = Date.now();
+    const history = { ...backupHistory, dismissedUntil: now + ONE_DAY };
+    writeBackupHistory(history);
+    setBackupHistory(history);
+    setReminderNow(now);
   }
 
   function exportCsv() {
@@ -789,6 +830,19 @@ export default function HomePage() {
   }
 
   let content: ReactNode;
+  const hasRecords = data.events.length > 0 || data.setupTemplates.length > 0
+    || trackMapData.tracks.length > 0 || trackMapData.layouts.length > 0
+    || trackMapData.visits.length > 0 || trackMapData.assets.length > 0;
+  const backupReminder = backupIsDue(hasRecords, backupHistory, reminderNow) ? (
+    <section className="backup-reminder" aria-labelledby="backup-reminder-title">
+      <h2 id="backup-reminder-title">{t("Keep a backup of your track days")}</h2>
+      <p>{t("Export a full backup now, then weekly while you are recording. It includes your setups, track notes and map images.")}</p>
+      <div className="storage-actions">
+        <button className="button button-primary" disabled={exporting} onClick={exportJson}><Download />{exporting ? t("Exporting backup…") : t("Export full backup")}</button>
+        <button className="button button-secondary" onClick={dismissBackupReminder}>{t("Remind me tomorrow")}</button>
+      </div>
+    </section>
+  ) : null;
 
   if (screen === "home") {
     content = (
@@ -803,6 +857,7 @@ export default function HomePage() {
           }
         />
         <div className="page-content">
+          {backupReminder}
           <p className="eyebrow">{new Intl.DateTimeFormat(dateLocale, { weekday: "long", day: "numeric", month: "long" }).format(new Date())}</p>
           <h1>{activeEvent ? t("Ready for the next run?") : t("Start your first event")}</h1>
           <p className="lead">{activeEvent ? t("Resume the active event or start a new one.") : t("Create an event, add a session, then record each run.")}</p>
@@ -1012,8 +1067,12 @@ export default function HomePage() {
         <div className="page-content">
           <section className="settings-section">
             <div className="settings-heading"><span className="list-icon"><Database /></span><div><h1>{t("Backup your data")}</h1><p>{t("Without an account, this device is the only copy until you export a backup.")}</p></div></div>
+            <p className="backup-history">{backupHistory.lastExportAt ? t("Last full backup export: {date}", {
+              date: new Intl.DateTimeFormat(dateLocale, { dateStyle: "medium", timeStyle: "short" }).format(backupHistory.lastExportAt),
+            }) : t("No full backup exported on this device yet.")}</p>
+            <p className="backup-history">{t("Save the downloaded JSON file somewhere safe outside this browser.")}</p>
             <div className="action-stack">
-              <button className="button button-primary button-block" onClick={exportJson}><Download /> {t("Export full backup")}</button>
+              <button className="button button-primary button-block" disabled={exporting} onClick={exportJson}><Download /> {exporting ? t("Exporting backup…") : t("Export full backup")}</button>
               <button className="button button-secondary button-block" onClick={exportCsv}><Download /> {t("Export Excel-ready CSV")}</button>
               <button className="button button-secondary button-block" onClick={() => importRef.current?.click()}><Upload /> {t("Restore JSON backup")}</button>
               <input className="visually-hidden" ref={importRef} type="file" accept="application/json,.json" onChange={importBackup} />
@@ -1115,7 +1174,7 @@ export default function HomePage() {
             <p>{t("Keep this app open. Retry saving or export a full backup to protect the records currently on screen.")}</p>
             <div className="storage-actions">
               <button className="button button-primary" onClick={retrySaving}>{t("Retry saving")}</button>
-              <button className="button button-secondary" onClick={exportJson}><Download />{t("Export full backup")}</button>
+              <button className="button button-secondary" disabled={exporting} onClick={exportJson}><Download />{exporting ? t("Exporting backup…") : t("Export full backup")}</button>
             </div>
           </section>
         )}

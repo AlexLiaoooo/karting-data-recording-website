@@ -7,6 +7,7 @@ import { emptyAppData, loadData, saveData } from "./database";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "./track-map/database";
 import { buildFullBackup } from "./track-map/backup";
 import { makeAppData } from "./test-fixtures";
+import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
 
 vi.mock("./database", async (original) => ({ ...await original<typeof import("./database")>(), loadData: vi.fn(), saveData: vi.fn() }));
@@ -20,6 +21,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("URL", Object.assign(class extends URL {}, {
+    createObjectURL: vi.fn(() => "blob:backup-test"), revokeObjectURL: vi.fn(),
+  }));
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   localStorage.clear();
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -35,6 +40,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 async function render() {
@@ -111,5 +117,40 @@ describe("save and restore recovery", () => {
     await act(async () => button("Cancel").click());
     await act(async () => button("Retry saving").click());
     expect(saveData).toHaveBeenLastCalledWith(emptyAppData());
+  });
+});
+
+describe("backup reminder controls", () => {
+  it("offers a backup after records exist and stores a one-day dismissal", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    await render();
+    expect(container.textContent).toContain("Keep a backup of your track days");
+    const before = Date.now();
+    await act(async () => button("Remind me tomorrow").click());
+    expect(container.textContent).not.toContain("Keep a backup of your track days");
+    const stored = JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY)!);
+    expect(stored.dismissedUntil).toBeGreaterThanOrEqual(before + ONE_DAY);
+    expect(stored.lastExportAt).toBeNull();
+  });
+
+  it("records a full export, hides the reminder, and shows export history in settings", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    await render();
+    await act(async () => button("Export full backup").click());
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(container.textContent).not.toContain("Keep a backup of your track days");
+    expect(JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY)!).lastExportAt).toBeGreaterThan(0);
+    await act(async () => button("Data and settings").click());
+    expect(container.textContent).toContain("Last full backup export:");
+  });
+
+  it("leaves the reminder active and does not record an export when download preparation fails", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    vi.mocked(URL.createObjectURL).mockImplementationOnce(() => { throw new Error("Cannot create download"); });
+    await render();
+    await act(async () => button("Export full backup").click());
+    expect(container.textContent).toContain("Backup could not be created");
+    expect(container.textContent).toContain("Keep a backup of your track days");
+    expect(localStorage.getItem(BACKUP_HISTORY_KEY)).toBeNull();
   });
 });

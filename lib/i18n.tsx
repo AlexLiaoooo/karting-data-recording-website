@@ -17,6 +17,13 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Keep a backup of your track days": "为赛道日记录保留备份",
+  "Export a full backup now, then weekly while you are recording. It includes your setups, track notes and map images.": "现在导出完整备份，持续记录时每周备份一次。备份包含 Setup、赛道笔记和地图图片。",
+  "Exporting backup…": "正在导出备份…",
+  "Remind me tomorrow": "明天再提醒",
+  "Last full backup export: {date}": "上次完整备份导出时间：{date}",
+  "No full backup exported on this device yet.": "本设备尚未导出过完整备份。",
+  "Save the downloaded JSON file somewhere safe outside this browser.": "请将下载的 JSON 文件保存到浏览器之外的安全位置。",
   "Changes could not be saved": "无法保存更改",
   "Keep this app open. Retry saving or export a full backup to protect the records currently on screen.": "请保持应用打开。重试保存或导出完整备份，以保护当前屏幕上的记录。",
   "Retry saving": "重试保存",
