@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.22 (local, pending release)
-**Last updated:** 2026-10-04
+**Document status:** Implemented prototype v1.23 (committed and pushed to GitHub)
+**Last updated:** 2026-10-06
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -358,6 +358,18 @@ Because there is no cloud account, backup is a first-version requirement rather 
 - JSON import will restore a compatible backup.
 - CSV export will provide human-readable tables for spreadsheets and analysis.
 - Import must validate the file before replacing or merging data.
+- Validate nested records, unique IDs, field values, map coordinates and owning map references,
+  retaining supported legacy fields and historical observations of deleted Events/Sessions.
+- Block editing and autosaving after a failed or invalid startup read. Offer retry and a
+  validated backup restore without clearing the database.
+- Restore Events, templates, Tracks, Layouts, visits and map images in one IndexedDB transaction.
+  Wait for active saves first and cancel older debounce callbacks. Show success after commit;
+  failure must preserve the previous stored data and current in-memory records.
+- Serialize saves within the page. Keep collection-specific failures visible on every screen
+  until retry succeeds, and allow exporting the current in-memory records even after a save fails.
+- Remind users with records to export a full backup initially and seven days after the last
+  export, with a 24-hour dismissal. Keep export history in optional localStorage preferences.
+- Multi-tab editing still needs a separate coordination or conflict policy.
 
 ### Offline use
 
@@ -458,7 +470,20 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
 
-### Implemented prototype v1.22 — 2026-10-04 (local, pending release)
+### Implemented prototype v1.23 — 2026-10-06
+
+- Implemented the approved data-protection package: nested backup validation, blocked startup
+  recovery, atomic restore, visible save failures with retry/export, and weekly backup reminders.
+- Retained support for version 1/2 app backups, missing legacy RPM/templates fields, old marker
+  types, and historical notes whose Event or Session has since been deleted.
+- Added storage failure, abort/rollback, save ordering, reminder and UI recovery tests. All
+  298 tests across 17 files, lint and the static production build pass. Isolated mobile browser
+  checks verified failed writes, successful retry/reload, blocked startup, backup recovery,
+  unchanged image bytes and export history. Physical iOS and real disk exhaustion remain untested.
+- Recorded the owner's standing preference in `AGENTS.md`: check, commit and push each small,
+  coherent change. Broader proposed features still need approval.
+
+### Implemented prototype v1.22 — 2026-10-04
 
 - Fixed local Event dates/export filenames, Run numbering after deletion, and lap-time
   rounding at minute boundaries.

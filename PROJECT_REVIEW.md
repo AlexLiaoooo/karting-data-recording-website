@@ -9,8 +9,8 @@ resolved to the parent `karting-tools-notes` repository. The app now has its own
 The app has a sound foundation for a personal trackside tool: a static,
 account-free deployment; a clear Event → Session → Run model; shared pressure,
 gearing and lap calculations; IndexedDB persistence; portable backups; and
-substantial regression coverage. The most important remaining work concerns
-failure recovery and competing writers, rather than adding features.
+substantial regression coverage. The review prioritised failure recovery and competing
+writers. The failure-recovery package has since been applied; multi-tab coordination remains open.
 
 Review scope: application shell and forms, recording/comparison workflows,
 data types and migrations, IndexedDB reads/writes, backup/restore, CSV,
@@ -18,6 +18,32 @@ Track Library and marker interactions, map generation and assets, translations,
 PWA installation and caching, dependencies, build setup, tests and documentation.
 This was a source review plus local automated and browser checks, not a
 physical iPhone test or a review of the live Vercel configuration.
+
+## Follow-up — 6 October 2026
+
+The owner approved option 1, the data-protection package, and authorized committing and
+pushing each small tested change. This preference is now recorded in `AGENTS.md`.
+
+| Original finding | Status |
+| --- | --- |
+| Nested backup validation | Resolved: checks records, IDs, field shapes/values, map coordinates, image encodings/metadata and owning map relationships. Supported old schemas/types migrate; historical deleted-Event notes remain intact. |
+| Failed startup reads enabling empty replacement writes | Resolved: edits and autosave stay paused; retry or restore a validated backup from the recovery screen. Corrupt saved data is not treated as a fresh install. |
+| Split restore and premature success | Resolved: one transaction across all five stores; drain active saves, disarm old debounces, update memory and report success after commit. Failures roll back the old database. |
+| Hidden save errors | Resolved: persistent notice on every screen, retry both latest snapshots, export unsaved in-memory records. An unrelated successful save cannot hide a failed collection. |
+| Backup reminders | Added: first-record reminder, seven days after full export, 24-hour dismissal, settings export history. Preference-storage failures do not block backup downloads. |
+
+Verification: **298 tests across 17 files, lint and production build passed**. New tests
+inject unavailable reads, corrupt records/images, clone errors, transaction aborts and failed
+saves; check rollback, save ordering, restore timing, legacy compatibility and reminders.
+Isolated real-browser checks at 390px verified a forced save failure and retry/reload, a
+late image-write failure preserving the previous database, successful restore with byte-exact
+image contents and Session notes, blocked startup preserving unreadable records, direct backup
+recovery, and persistent export history. No application runtime errors were reported.
+
+Physical iOS file saving, real disk exhaustion, competing tabs and a live two-build rollout
+remain unverified. Multi-tab protection, shared dialog accessibility, update handoff, development
+dependency advisories and the maintenance follow-ups below remain separate proposals.
+Approved changes are committed and pushed to GitHub; a live deployment was not inspected.
 
 ## Small improvements applied
 
@@ -36,7 +62,10 @@ physical iPhone test or a review of the live Vercel configuration.
 Regression coverage was added for local dates, numbering gaps, lap rounding,
 and both the fallback and generated production service workers.
 
-## Remaining findings, in priority order
+## Original findings, in priority order
+
+The three P1 findings below are retained as review history and were resolved on 6 October.
+The P2 and maintenance findings remain open.
 
 ### P1 — Validate nested backups before offering replacement
 
@@ -157,10 +186,10 @@ do not establish that the deployed site was exploitable.
 - **Mobile:** 390px and 320px Run views did not overflow horizontally. The
   final 390px tyre inputs show the full decimal values without internal clipping.
 
-The browser tests used isolated local sessions and temporary records. No live
-site records were modified. Weather-provider responses, physical iOS download
-behavior, storage quota failure, concurrent tabs and a deployed two-build update
-remain unverified. All changes are local and uncommitted; nothing was pushed or
-deployed as part of this review.
+These 4 October checks used isolated local sessions and temporary records. No live
+site records were modified. At that point storage failures were not injected; the
+6 October follow-up above adds that coverage. Weather-provider responses, physical iOS
+downloads, actual disk exhaustion, concurrent tabs and a deployed two-build update remain
+unverified. The fixes have since been committed and pushed to GitHub.
 
 Final mobile screenshot: [tyre readings at 390px](docs/images/review/2026-10-04-tyres-mobile.png).

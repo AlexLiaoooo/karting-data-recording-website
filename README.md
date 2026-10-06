@@ -28,6 +28,10 @@ A mobile-first, local-first web application for recording competition karting ty
 - The Run editor's Tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
 - Versioned JSON backup/restore with confirmation, and an Excel-ready CSV export containing three tables: Events/Sessions/Runs, Track reference markers, and Session track observations.
+- Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
+- Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
+- Save failures remain visible on every screen, with retry and full export of the current in-memory records. Pending saves cannot overwrite a newer restore.
+- Full-backup reminders after the first records and every seven days after export, with a 24-hour dismissal and export history in settings.
 - Reusable chassis setup templates.
 - Explicit confirmation for cascading Event, Session and Run deletion.
 - Editable Event and Session details. A Session can record its own track condition and temperatures where it ran in something different from the rest of the Event, such as a wet heat on a dry day; left blank, it inherits the Event's. The Session's condition decides which reference note a map marker shows trackside, and it is what the CSV exports for that Session.
@@ -62,7 +66,7 @@ npm test
 npm run build
 ```
 
-`npm test` runs Vitest against the data layer — the parts where a silent bug costs recorded
+`npm test` runs Vitest against the data layer and recovery controls — the parts where a silent bug costs recorded
 data rather than looking wrong:
 
 - **Backup round-trip** (`lib/track-map/backup.test.ts`) — events, tracks, layouts, markers
@@ -74,7 +78,14 @@ data rather than looking wrong:
   free-text notes.
 - **Storage** (`lib/database.test.ts`) — the version 1 to 2 schema upgrade preserves existing
   records while adding the Track Map stores, deletions do not reappear on reload, and app
-  data stays separate from Track Map data.
+  data stays separate from Track Map data. Corrupt reads fail safely, and forced clone errors
+  or transaction aborts roll back all five stores during restore.
+- **Save ordering** (`lib/save-queue.test.ts`) — serialized writes, errors that persist until
+  the failed collection is saved successfully, and no premature Saved status during debounces.
+- **Recovery controls** (`lib/storage-ui.test.ts`) — blocked startup, retry, save-error notices,
+  atomic restore timing, recovery from blocked startup, and backup export/reminder controls.
+- **Backup reminders** (`lib/backup-reminder.test.ts`) — weekly timing, one-day dismissal,
+  corrupt preferences and unavailable preference storage.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that
@@ -105,13 +116,23 @@ data rather than looking wrong:
   production worker preserve unrelated caches, use the saved shell on network/server failure,
   avoid caching error pages, and finish cache writes before their event ends.
 
-Image bytes are asserted through the backup path rather than the IndexedDB path: the
-`fake-indexeddb` test double cannot round-trip a Blob, so blob persistence in the database
-itself has to be checked in a real browser.
+The database tests use Node's cloneable Blob because jsdom's Blob does not survive
+`fake-indexeddb` cloning. Backup tests use browser FileReader; real-browser checks verify
+IndexedDB image bytes, late restore failure rollback, and startup/save recovery.
 
 ## Data ownership
 
 Records are stored in IndexedDB in the current browser. There is no account or cloud synchronization in the first version. Export a JSON backup regularly, because clearing site data or losing the device/browser can remove the only copy.
+
+Keep the downloaded JSON file outside the browser. The last-export timestamp records that
+a download was started; the app cannot verify where you retained the file. Use one editing
+tab at a time: coordination between competing tabs remains a separate planned improvement.
+
+## Project workflow
+
+The owner has authorized committing and pushing each small, self-contained change after its
+relevant checks pass. This standing project preference is recorded in `AGENTS.md`. New features
+outside an approved task still require approval.
 
 ## Deployment
 
