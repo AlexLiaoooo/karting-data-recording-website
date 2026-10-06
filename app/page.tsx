@@ -787,6 +787,11 @@ export default function HomePage() {
       await restoreFullData(pendingImport.appData, pendingImport.trackMapData);
       setData(pendingImport.appData);
       setTrackMapData(pendingImport.trackMapData);
+      setBackupHistory(readBackupHistory());
+      setReminderNow(Date.now());
+      hydrated.current = true;
+      setLoadFailed(false);
+      setReady(true);
       saveQueue.reset();
       setPendingImport(null);
       setEventId(null);
@@ -816,15 +821,20 @@ export default function HomePage() {
       <main className="loading-screen">
         <span className="brand-mark"><Gauge /></span>
         {loadFailed ? (
-          <section className="storage-recovery" role="alert">
+          <section className="storage-recovery" role="alert" inert={pendingImport !== null}>
             <h1>{t("Your records could not be loaded")}</h1>
             <p>{t("Editing is paused to protect your saved data. Check that this browser allows device storage, then try again. Do not clear browser data.")}</p>
             <button className="button button-primary" onClick={() => {
               setLoadFailed(false);
               setLoadAttempt((attempt) => attempt + 1);
             }}>{t("Retry loading")}</button>
+            <p className="recovery-backup-copy">{t("If you have a valid JSON backup, you can restore it here to replace the unreadable records.")}</p>
+            <button className="button button-secondary" onClick={() => importRef.current?.click()}>{t("Restore JSON backup")}</button>
+            <input className="visually-hidden" ref={importRef} type="file" accept="application/json,.json" onChange={importBackup} />
           </section>
         ) : <p>{t("Loading Kart Data…")}</p>}
+        {pendingImport && <ImportConfirmModal data={pendingImport} busy={restoring} failed={restoreFailed} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
+        {toast && <div className="toast" role="status">{toast}</div>}
       </main>
     );
   }

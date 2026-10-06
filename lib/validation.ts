@@ -80,7 +80,11 @@ function validTrackMap(value: unknown, portable: boolean): boolean {
   const observationIds = new Set<string>();
   if (!records(value.tracks, (record) => strings(record, ["name", "location", "notes", "createdAt", "updatedAt"]), trackIds)
     || !records(value.assets, (record) => strings(record, ["mimeType", "updatedAt"])
-      && (portable ? typeof record.dataUrl === "string" : Object.prototype.toString.call(record.blob) === "[object Blob]")
+      && (portable ? typeof record.dataUrl === "string" : (
+        Object.prototype.toString.call(record.blob) === "[object Blob]"
+        && (record.blob as Blob).size > 0 && (record.blob as Blob).size === record.size
+        && (record.blob as Blob).type === (record.mimeType as string).toLowerCase()
+      ))
       && positiveInteger(record.width) && positiveInteger(record.height)
       && typeof record.size === "number" && Number.isSafeInteger(record.size) && record.size >= 0, assetIds)) return false;
   if (!records(value.layouts, (record) => strings(record, ["trackId", "name", "createdAt", "updatedAt"])

@@ -170,8 +170,12 @@ h2 {
 }
 
 .storage-alert strong,
-.restore-error {
+.confirm-dialog .restore-error {
   color: var(--red);
+}
+
+.storage-recovery .recovery-backup-copy {
+  margin-top: 24px;
 }
 
 .backup-reminder {

@@ -73,6 +73,13 @@ describe("safe startup reads", () => {
     database.close();
     await expect(loadTrackMapData()).rejects.toThrow("could not be read safely");
   });
+
+  it("rejects saved image metadata that disagrees with its Blob", async () => {
+    const maps = storedTrackMaps();
+    maps.assets[0].size = 999;
+    await restoreFullData(makeAppData(), maps);
+    await expect(loadTrackMapData()).rejects.toThrow("could not be read safely");
+  });
 });
 
 describe("normalizeAppData", () => {

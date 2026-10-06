@@ -28,9 +28,9 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 function dataUrlToBlob(dataUrl: string): Blob {
-  const [header, encoded] = dataUrl.split(",", 2);
-  const mimeType = header?.match(/^data:(image\/[a-z0-9.+-]+);base64$/i)?.[1];
-  if (!mimeType || !encoded) throw new Error("Invalid map image in backup.");
+  const match = dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/]+={0,2})$/i);
+  if (!match) throw new Error("Invalid map image in backup.");
+  const [, mimeType, encoded] = match;
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);

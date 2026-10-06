@@ -70,6 +70,10 @@ function button(label: string) {
 
 async function loadBackup() {
   await act(async () => button("Data and settings").click());
+  await selectBackup();
+}
+
+async function selectBackup() {
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
   const text = await buildFullBackup(makeAppData(), emptyTrackMapData());
   Object.defineProperty(input, "files", { configurable: true, value: [{ text: async () => text }] });
@@ -77,6 +81,19 @@ async function loadBackup() {
 }
 
 describe("save and restore recovery", () => {
+  it("can restore a validated backup directly from a failed startup without enabling edits early", async () => {
+    vi.mocked(loadData).mockRejectedValueOnce(new Error("Damaged saved records"));
+    await render();
+    expect(container.textContent).toContain("Your records could not be loaded");
+    await selectBackup();
+    expect(container.textContent).toContain("Replace current data?");
+    expect(saveData).not.toHaveBeenCalled();
+    await act(async () => button("Restore backup").click());
+    expect(restoreFullData).toHaveBeenCalledWith(makeAppData(), emptyTrackMapData());
+    expect(container.textContent).toContain("Backup restored");
+    expect(container.textContent).not.toContain("Your records could not be loaded");
+  });
+
   it("shows a failed save on the home and settings screens, and retries both current snapshots", async () => {
     vi.mocked(saveData).mockRejectedValueOnce(new Error("Quota exceeded"));
     await render();

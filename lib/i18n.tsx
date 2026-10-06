@@ -17,6 +17,7 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "If you have a valid JSON backup, you can restore it here to replace the unreadable records.": "如果您有有效的 JSON 备份，可在此恢复，以替换无法读取的记录。",
   "Keep a backup of your track days": "为赛道日记录保留备份",
   "Export a full backup now, then weekly while you are recording. It includes your setups, track notes and map images.": "现在导出完整备份，持续记录时每周备份一次。备份包含 Setup、赛道笔记和地图图片。",
   "Exporting backup…": "正在导出备份…",

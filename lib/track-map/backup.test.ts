@@ -75,6 +75,9 @@ describe("parseFullBackup", () => {
     ["a zero image width", ["trackMap", "assets", 0, "width"], 0],
     ["a fractional image height", ["trackMap", "assets", 0, "height"], 1.5],
     ["a mismatched image type", ["trackMap", "assets", 0, "mimeType"], "image/png"],
+    ["a trailing image payload", ["trackMap", "assets", 0, "dataUrl"], "data:image/webp;base64,AQID,ignored"],
+    ["a non-image payload", ["trackMap", "assets", 0, "dataUrl"], "data:text/plain;base64,AQID"],
+    ["invalid image encoding", ["trackMap", "assets", 0, "dataUrl"], "data:image/webp;base64,not-base64"],
   ];
 
   it.each(invalidFields)("rejects %s before restoring any records", async (_label, path, value) => {
