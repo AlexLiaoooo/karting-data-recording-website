@@ -1,7 +1,9 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
+import { Blob as NodeBlob } from "node:buffer";
+import { vi } from "vitest";
 import { emptyAppData, loadData, normalizeAppData, openKartDatabase, saveData, validateImport } from "./database";
 import { loadTrackMapData, migrateMarkerTypes, saveTrackMapData } from "./track-map/database";
-import { makeLayout, makeMarker } from "./test-fixtures";
+import { makeLayout, makeMarker, makeMapAsset } from "./test-fixtures";
 import type { TrackMarker } from "./track-map/types";
 import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData } from "./test-fixtures";
 
@@ -32,7 +34,46 @@ function seedVersion1Database(payload: unknown) {
   });
 }
 
-beforeEach(deleteDatabase);
+beforeEach(async () => {
+  await deleteDatabase();
+});
+
+// Node's Blob survives fake-indexeddb's structured clone; jsdom's Blob does not.
+function storedTrackMaps() {
+  const blob = new NodeBlob([new Uint8Array([1, 2, 3, 4, 250, 251, 252, 253])], { type: "image/webp" });
+  return makeTrackMapData({ assets: [{ ...makeMapAsset(), blob: blob as unknown as Blob }] });
+}
+
+describe("safe startup reads", () => {
+  it.each([null, { version: 2, events: [null] }, { version: 9, events: [] }])("rejects damaged saved records instead of presenting an empty database", async (stored) => {
+    await seedVersion1Database(stored);
+    await expect(loadData()).rejects.toThrow("could not be read safely");
+    const database = await openKartDatabase();
+    const request = database.transaction("app").objectStore("app").get("primary");
+    const value = await new Promise((resolve) => { request.onsuccess = () => resolve(request.result); });
+    database.close();
+    expect(value).toEqual(stored);
+  });
+
+  it("rejects unavailable storage rather than treating it as a fresh install", async () => {
+    vi.stubGlobal("indexedDB", undefined);
+    try {
+      await expect(loadData()).rejects.toThrow("unavailable");
+      await expect(loadTrackMapData()).rejects.toThrow("unavailable");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects damaged Track Map records before attempting their migration", async () => {
+    const database = await openKartDatabase();
+    const transaction = database.transaction("trackLayouts", "readwrite");
+    transaction.objectStore("trackLayouts").put({ id: "broken", markers: null });
+    await new Promise((resolve) => { transaction.oncomplete = resolve; });
+    database.close();
+    await expect(loadTrackMapData()).rejects.toThrow("could not be read safely");
+  });
+});
 
 describe("normalizeAppData", () => {
   it("upgrades a version 1 payload without changing records that are already current", () => {
@@ -141,23 +182,22 @@ describe("persistence round-trip", () => {
   });
 
   it("stores and reloads track map records, and the asset box markers are relative to", async () => {
-    const data = makeTrackMapData();
+    await loadTrackMapData();
+    const data = storedTrackMaps();
     await saveTrackMapData(data);
     const reloaded = await loadTrackMapData();
 
     expect(reloaded.tracks).toEqual(data.tracks);
     expect(reloaded.layouts).toEqual(data.layouts);
     expect(reloaded.visits).toEqual(data.visits);
-    // Image bytes are deliberately not asserted here: fake-indexeddb's structured clone
-    // returns a jsdom Blob as a plain {}, so blob persistence cannot be observed in this
-    // environment. Byte-exactness is covered by the backup round-trip test, which uses
-    // FileReader directly, and by a real browser for the IndexedDB layer itself.
+    // The backup tests use browser FileReader; this test uses Node's cloneable Blob.
     expect(reloaded.assets[0]).toMatchObject({ id: "asset-1", width: 760, height: 1000, mimeType: "image/webp" });
   });
 
   it("removes records that were deleted, rather than merging them back", async () => {
-    await saveTrackMapData(makeTrackMapData());
-    await saveTrackMapData({ ...makeTrackMapData(), tracks: [], layouts: [], visits: [] });
+    await loadTrackMapData();
+    await saveTrackMapData(storedTrackMaps());
+    await saveTrackMapData({ ...storedTrackMaps(), tracks: [], layouts: [], visits: [] });
     const reloaded = await loadTrackMapData();
 
     expect(reloaded.tracks).toEqual([]);
@@ -166,8 +206,9 @@ describe("persistence round-trip", () => {
   });
 
   it("keeps app data and track map data in separate stores", async () => {
+    await loadTrackMapData();
     await saveData(makeAppData());
-    await saveTrackMapData(makeTrackMapData());
+    await saveTrackMapData(storedTrackMaps());
 
     expect((await loadData()).events).toHaveLength(1);
     expect((await loadTrackMapData()).tracks).toHaveLength(1);

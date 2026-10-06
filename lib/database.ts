@@ -51,6 +51,10 @@ export function normalizeAppData(value: unknown): AppData | null {
 
 export function openKartDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("Device storage is unavailable"));
+      return;
+    }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const database = request.result;
@@ -62,21 +66,40 @@ export function openKartDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("trackVisits")) database.createObjectStore("trackVisits", { keyPath: "id" });
       if (!database.objectStoreNames.contains("mapAssets")) database.createObjectStore("mapAssets", { keyPath: "id" });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
+    };
     request.onerror = () => reject(request.error);
   });
 }
 
-export async function loadData(): Promise<AppData> {
-  if (typeof indexedDB === "undefined") return emptyAppData();
-  const database = await openKartDatabase();
+export function transactionDone(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction(STORE_NAME, "readonly");
-    const request = transaction.objectStore(STORE_NAME).get(DATA_KEY);
-    request.onsuccess = () => resolve(normalizeAppData(request.result) ?? emptyAppData());
-    request.onerror = () => reject(request.error);
-    transaction.oncomplete = () => database.close();
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("Device storage failed"));
+    transaction.onabort = () => reject(transaction.error ?? new Error("Device storage transaction aborted"));
   });
+}
+
+export async function loadData(): Promise<AppData> {
+  const database = await openKartDatabase();
+  try {
+    const transaction = database.transaction(STORE_NAME, "readonly");
+    const done = transactionDone(transaction);
+    const request = transaction.objectStore(STORE_NAME).get(DATA_KEY);
+    const result = new Promise<unknown>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const [stored] = await Promise.all([result, done]);
+    if (stored === undefined) return emptyAppData();
+    const normalized = normalizeAppData(stored);
+    if (!normalized) throw new Error("Saved records could not be read safely");
+    return normalized;
+  } finally {
+    database.close();
+  }
 }
 
 export async function saveData(data: AppData): Promise<void> {

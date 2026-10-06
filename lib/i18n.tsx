@@ -17,6 +17,9 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Your records could not be loaded": "无法读取已保存的记录",
+  "Editing is paused to protect your saved data. Check that this browser allows device storage, then try again. Do not clear browser data.": "为保护已保存的数据，编辑已暂停。请确认浏览器允许本设备存储数据，然后重试。请勿清除浏览器数据。",
+  "Retry loading": "重新读取",
   // Shell, navigation and top bar
   "Trackside recorder": "赛道现场记录",
   Back: "返回",

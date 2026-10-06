@@ -226,6 +226,8 @@ export default function HomePage() {
   const [data, setData] = useState<AppData>(emptyAppData());
   const [trackMapData, setTrackMapData] = useState<TrackMapData>(emptyTrackMapData());
   const [ready, setReady] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveState, setSaveState] = useState<"Saved" | "Saving…" | "Error">("Saved");
   const [screen, setScreen] = useState<Screen>("home");
   const [eventId, setEventId] = useState<string | null>(null);
@@ -281,20 +283,17 @@ export default function HomePage() {
         if (cancelled) return;
         setData(stored);
         setTrackMapData(nextTrackMaps);
+        hydrated.current = true;
+        setReady(true);
       } catch {
-        if (!cancelled) setSaveState("Error");
-      } finally {
-        if (!cancelled) {
-          hydrated.current = true;
-          setReady(true);
-        }
+        if (!cancelled) setLoadFailed(true);
       }
     }
     void hydrate();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     if (!hydrated.current) return;
@@ -756,7 +755,16 @@ export default function HomePage() {
     return (
       <main className="loading-screen">
         <span className="brand-mark"><Gauge /></span>
-        <p>{t("Loading Kart Data…")}</p>
+        {loadFailed ? (
+          <section className="storage-recovery" role="alert">
+            <h1>{t("Your records could not be loaded")}</h1>
+            <p>{t("Editing is paused to protect your saved data. Check that this browser allows device storage, then try again. Do not clear browser data.")}</p>
+            <button className="button button-primary" onClick={() => {
+              setLoadFailed(false);
+              setLoadAttempt((attempt) => attempt + 1);
+            }}>{t("Retry loading")}</button>
+          </section>
+        ) : <p>{t("Loading Kart Data…")}</p>}
       </main>
     );
   }

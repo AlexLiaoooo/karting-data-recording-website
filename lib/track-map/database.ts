@@ -1,5 +1,6 @@
-import { openKartDatabase } from "@/lib/database";
-import { emptyTrackMapData, legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
+import { openKartDatabase, transactionDone } from "@/lib/database";
+import { validStoredTrackMap } from "../validation";
+import { legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
 
 /**
  * Distance, in normalised map units, within which a marker counts as sitting on a corner.
@@ -91,17 +92,19 @@ export function attachMarkersToCorners(data: TrackMapData): TrackMapData {
 }
 
 export async function loadTrackMapData(): Promise<TrackMapData> {
-  if (typeof indexedDB === "undefined") return emptyTrackMapData();
   const database = await openKartDatabase();
-  const transaction = database.transaction([TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ASSETS_STORE], "readonly");
 
   try {
+    const transaction = database.transaction([TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ASSETS_STORE], "readonly");
     const [tracks, layouts, visits, assets] = await Promise.all([
       readAll<Track>(transaction, TRACKS_STORE),
       readAll<TrackLayout>(transaction, LAYOUTS_STORE),
       readAll<TrackVisit>(transaction, VISITS_STORE),
       readAll<MapAsset>(transaction, ASSETS_STORE),
+      transactionDone(transaction),
     ]);
+    const data = { version: 1, tracks, layouts, visits, assets };
+    if (!validStoredTrackMap(data)) throw new Error("Saved Track Maps could not be read safely");
     lastAssetSignature = assetSignature(assets);
     return { version: 1, tracks, layouts: migrateMarkerTypes(layouts), visits, assets };
   } finally {

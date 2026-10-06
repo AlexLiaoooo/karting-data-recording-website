@@ -133,6 +133,17 @@ h2 {
   min-height: 100vh;
 }
 
+.storage-recovery {
+  width: min(100%, 440px);
+  padding: 24px;
+  text-align: center;
+}
+
+.storage-recovery p {
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
 .topbar {
   align-items: center;
   background: var(--surface);

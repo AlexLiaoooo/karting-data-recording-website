@@ -64,6 +64,14 @@ export function validAppRecords(value: RecordValue): boolean {
 
 /** Structural checks preserve legacy marker types and optional fields for migration. */
 export function validPortableTrackMap(value: unknown): boolean {
+  return validTrackMap(value, true);
+}
+
+export function validStoredTrackMap(value: unknown): boolean {
+  return validTrackMap(value, false);
+}
+
+function validTrackMap(value: unknown, portable: boolean): boolean {
   if (!isRecord(value) || value.version !== 1) return false;
   const trackIds = new Set<string>();
   const assetIds = new Set<string>();
@@ -71,7 +79,8 @@ export function validPortableTrackMap(value: unknown): boolean {
   const layoutIds = new Set<string>();
   const observationIds = new Set<string>();
   if (!records(value.tracks, (record) => strings(record, ["name", "location", "notes", "createdAt", "updatedAt"]), trackIds)
-    || !records(value.assets, (record) => strings(record, ["dataUrl", "mimeType", "updatedAt"])
+    || !records(value.assets, (record) => strings(record, ["mimeType", "updatedAt"])
+      && (portable ? typeof record.dataUrl === "string" : Object.prototype.toString.call(record.blob) === "[object Blob]")
       && positiveInteger(record.width) && positiveInteger(record.height)
       && typeof record.size === "number" && Number.isSafeInteger(record.size) && record.size >= 0, assetIds)) return false;
   if (!records(value.layouts, (record) => strings(record, ["trackId", "name", "createdAt", "updatedAt"])
