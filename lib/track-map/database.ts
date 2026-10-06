@@ -1,4 +1,5 @@
-import { openKartDatabase, transactionDone } from "@/lib/database";
+import { openKartDatabase, transactionDone, writeTransaction } from "@/lib/database";
+import type { AppData } from "../types";
 import { validStoredTrackMap } from "../validation";
 import { legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
 
@@ -113,37 +114,32 @@ export async function loadTrackMapData(): Promise<TrackMapData> {
 }
 
 export async function saveTrackMapData(data: TrackMapData): Promise<void> {
-  const database = await openKartDatabase();
-  return new Promise((resolve, reject) => {
-    const nextAssetSignature = assetSignature(data.assets);
-    const assetsChanged = nextAssetSignature !== lastAssetSignature;
-    const storeNames = [TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ...(assetsChanged ? [ASSETS_STORE] : [])];
-    const transaction = database.transaction(storeNames, "readwrite");
-    const collections: Array<[string, Array<Track | TrackLayout | TrackVisit | MapAsset>]> = [
-      [TRACKS_STORE, data.tracks],
-      [LAYOUTS_STORE, data.layouts],
-      [VISITS_STORE, data.visits],
-      ...(assetsChanged ? [[ASSETS_STORE, data.assets] as [string, MapAsset[]]] : []),
-    ];
+  const nextAssetSignature = assetSignature(data.assets);
+  const assetsChanged = nextAssetSignature !== lastAssetSignature;
+  const storeNames = [TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ...(assetsChanged ? [ASSETS_STORE] : [])];
+  await writeTransaction(storeNames, (transaction) => replaceTrackMaps(transaction, data, assetsChanged));
+  if (assetsChanged) lastAssetSignature = nextAssetSignature;
+}
 
-    for (const [storeName, records] of collections) {
-      const store = transaction.objectStore(storeName);
-      store.clear();
-      records.forEach((record) => store.put(record));
-    }
+function replaceTrackMaps(transaction: IDBTransaction, data: TrackMapData, includeAssets: boolean) {
+  const collections: Array<[string, Array<Track | TrackLayout | TrackVisit | MapAsset>]> = [
+    [TRACKS_STORE, data.tracks],
+    [LAYOUTS_STORE, data.layouts],
+    [VISITS_STORE, data.visits],
+    ...(includeAssets ? [[ASSETS_STORE, data.assets] as [string, MapAsset[]]] : []),
+  ];
+  for (const [storeName, records] of collections) {
+    const store = transaction.objectStore(storeName);
+    store.clear();
+    records.forEach((record) => store.put(record));
+  }
+}
 
-    transaction.oncomplete = () => {
-      if (assetsChanged) lastAssetSignature = nextAssetSignature;
-      database.close();
-      resolve();
-    };
-    transaction.onerror = () => {
-      database.close();
-      reject(transaction.error);
-    };
-    transaction.onabort = () => {
-      database.close();
-      reject(transaction.error);
-    };
+/** All five stores commit together; a failure leaves the entire previous backup intact. */
+export async function restoreFullData(appData: AppData, trackMapData: TrackMapData): Promise<void> {
+  await writeTransaction(["app", TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ASSETS_STORE], (transaction) => {
+    transaction.objectStore("app").put(appData, "primary");
+    replaceTrackMaps(transaction, trackMapData, true);
   });
+  lastAssetSignature = assetSignature(trackMapData.assets);
 }

@@ -103,16 +103,28 @@ export async function loadData(): Promise<AppData> {
 }
 
 export async function saveData(data: AppData): Promise<void> {
-  const database = await openKartDatabase();
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(STORE_NAME, "readwrite");
+  await writeTransaction([STORE_NAME], (transaction) => {
     transaction.objectStore(STORE_NAME).put(data, DATA_KEY);
-    transaction.oncomplete = () => {
-      database.close();
-      resolve();
-    };
-    transaction.onerror = () => reject(transaction.error);
   });
+}
+
+/** Abort queued writes too if preparing any later record throws synchronously. */
+export async function writeTransaction(stores: string[], write: (transaction: IDBTransaction) => void): Promise<void> {
+  const database = await openKartDatabase();
+  try {
+    const transaction = database.transaction(stores, "readwrite");
+    const done = transactionDone(transaction);
+    try {
+      write(transaction);
+    } catch (error) {
+      transaction.abort();
+      await done.catch(() => {});
+      throw error;
+    }
+    await done;
+  } finally {
+    database.close();
+  }
 }
 
 export function validateImport(value: unknown): boolean {

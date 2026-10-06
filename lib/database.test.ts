@@ -2,7 +2,7 @@
 import { Blob as NodeBlob } from "node:buffer";
 import { vi } from "vitest";
 import { emptyAppData, loadData, normalizeAppData, openKartDatabase, saveData, validateImport } from "./database";
-import { loadTrackMapData, migrateMarkerTypes, saveTrackMapData } from "./track-map/database";
+import { loadTrackMapData, migrateMarkerTypes, restoreFullData, saveTrackMapData } from "./track-map/database";
 import { makeLayout, makeMarker, makeMapAsset } from "./test-fixtures";
 import type { TrackMarker } from "./track-map/types";
 import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData } from "./test-fixtures";
@@ -212,5 +212,45 @@ describe("persistence round-trip", () => {
 
     expect((await loadData()).events).toHaveLength(1);
     expect((await loadTrackMapData()).tracks).toHaveLength(1);
+  });
+});
+
+describe("atomic restore", () => {
+  it("commits records and map images together, including clearing maps for legacy backups", async () => {
+    await restoreFullData(makeAppData(), storedTrackMaps());
+    expect(await loadData()).toEqual(makeAppData());
+    const maps = await loadTrackMapData();
+    expect(maps.layouts).toEqual(storedTrackMaps().layouts);
+    expect(await maps.assets[0].blob.arrayBuffer()).toEqual(await storedTrackMaps().assets[0].blob.arrayBuffer());
+    await restoreFullData(emptyAppData(), { version: 1, tracks: [], layouts: [], visits: [], assets: [] });
+    expect(await loadData()).toEqual(emptyAppData());
+    expect((await loadTrackMapData()).assets).toEqual([]);
+  });
+
+  it.each(["throw", "abort"])("rolls back all five stores after a later map write fails with %s", async (failure) => {
+    const original = makeAppData();
+    const maps = storedTrackMaps();
+    await restoreFullData(original, maps);
+    const put = IDBObjectStore.prototype.put;
+    const spy = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (this: IDBObjectStore, value, key) {
+      if (this.name !== "trackLayouts") return put.call(this, value, key);
+      if (failure === "throw") throw new DOMException("Cannot clone record", "DataCloneError");
+      const request = put.call(this, value, key);
+      request.addEventListener("success", () => this.transaction.abort());
+      return request;
+    });
+    try {
+      const replacement = makeAppData({ events: [makeEvent({ name: "Replacement" })] });
+      const replacementMaps = { ...maps, tracks: [{ ...maps.tracks[0], name: "Changed" }] };
+      await expect(restoreFullData(replacement, replacementMaps)).rejects.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await loadData()).toEqual(original);
+    const reloaded = await loadTrackMapData();
+    expect(reloaded.tracks).toEqual(maps.tracks);
+    expect(reloaded.layouts).toEqual(maps.layouts);
+    expect(reloaded.visits).toEqual(maps.visits);
+    expect(await reloaded.assets[0].blob.arrayBuffer()).toEqual(await maps.assets[0].blob.arrayBuffer());
   });
 });

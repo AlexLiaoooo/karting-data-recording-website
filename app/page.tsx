@@ -36,7 +36,8 @@ import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
-import { loadTrackMapData, saveTrackMapData } from "@/lib/track-map/database";
+import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
+import { SaveQueue, type SaveKind, type SaveStatus } from "@/lib/save-queue";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted, localDate } from "@/lib/format";
@@ -228,7 +229,8 @@ export default function HomePage() {
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [saveState, setSaveState] = useState<"Saved" | "Saving…" | "Error">("Saved");
+  const [saveState, setSaveState] = useState<SaveStatus>("Saved");
+  const [saveQueue] = useState(() => new SaveQueue(setSaveState));
   const [screen, setScreen] = useState<Screen>("home");
   const [eventId, setEventId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -242,33 +244,22 @@ export default function HomePage() {
   const [showApplyTemplateForm, setShowApplyTemplateForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreFailed, setRestoreFailed] = useState(false);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
-  const saveTracker = useRef({ pending: 0, failed: false });
+  const restoreInProgress = useRef(false);
   /** The debounced writes waiting to run, so they can be flushed if the app is put away first. */
   const pendingSaves = useRef<{ app?: () => Promise<void>; trackMap?: () => Promise<void> }>({});
 
-  // App data and Track Map data save on separate debounces. "Saved" must only appear
-  // once every in-flight write has settled, otherwise the faster save reports success
-  // while the other is still writing.
-  const beginSave = useCallback((write: () => Promise<void>) => {
-    const tracker = saveTracker.current;
-    tracker.pending += 1;
-    void write()
-      .catch(() => {
-        tracker.failed = true;
-      })
-      .finally(() => {
-        tracker.pending -= 1;
-        if (tracker.pending > 0) return;
-        setSaveState(tracker.failed ? "Error" : "Saved");
-        tracker.failed = false;
-      });
-  }, []);
+  const beginSave = useCallback((kind: SaveKind, write: () => Promise<void>) => {
+    if (restoreInProgress.current) return;
+    void saveQueue.save(kind, write);
+  }, [saveQueue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -297,27 +288,29 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!hydrated.current) return;
-    setSaveState("Saving…");
+    saveQueue.stage("app");
     const write = () => saveData(data);
     pendingSaves.current.app = write;
     const timer = window.setTimeout(() => {
-      if (pendingSaves.current.app === write) pendingSaves.current.app = undefined;
-      beginSave(write);
+      if (pendingSaves.current.app !== write) return;
+      pendingSaves.current.app = undefined;
+      beginSave("app", write);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [data, beginSave]);
+  }, [data, beginSave, saveQueue]);
 
   useEffect(() => {
     if (!hydrated.current) return;
-    setSaveState("Saving…");
+    saveQueue.stage("trackMap");
     const write = () => saveTrackMapData(trackMapData);
     pendingSaves.current.trackMap = write;
     const timer = window.setTimeout(() => {
-      if (pendingSaves.current.trackMap === write) pendingSaves.current.trackMap = undefined;
-      beginSave(write);
+      if (pendingSaves.current.trackMap !== write) return;
+      pendingSaves.current.trackMap = undefined;
+      beginSave("trackMap", write);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [trackMapData, beginSave]);
+  }, [trackMapData, beginSave, saveQueue]);
 
   /**
    * Writes anything still waiting on its debounce timer when the app is put away.
@@ -329,10 +322,11 @@ export default function HomePage() {
    */
   useEffect(() => {
     const flush = () => {
+      if (restoreInProgress.current) return;
       const { app, trackMap } = pendingSaves.current;
       pendingSaves.current = {};
-      if (app) beginSave(app);
-      if (trackMap) beginSave(trackMap);
+      if (app) beginSave("app", app);
+      if (trackMap) beginSave("trackMap", trackMap);
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") flush();
@@ -734,21 +728,46 @@ export default function HomePage() {
       const normalized = parseFullBackup(parsed);
       if (!normalized) throw new Error("Invalid backup");
       setPendingImport(normalized);
+      setRestoreFailed(false);
     } catch {
       flash(t("That file is not a valid Kart Data backup"));
     }
   }
 
-  function confirmImport() {
-    if (!pendingImport) return;
-    setData(pendingImport.appData);
-    setTrackMapData(pendingImport.trackMapData);
-    setPendingImport(null);
-    setEventId(null);
-    setSessionId(null);
-    setRunId(null);
-    setScreen("home");
-    flash(t("Backup restored"));
+  async function confirmImport() {
+    if (!pendingImport || restoreInProgress.current) return;
+    restoreInProgress.current = true;
+    setRestoring(true);
+    setRestoreFailed(false);
+    // Disarm old timers and drain active writes before replacing any stores.
+    pendingSaves.current = {};
+    try {
+      await saveQueue.idle();
+      await restoreFullData(pendingImport.appData, pendingImport.trackMapData);
+      setData(pendingImport.appData);
+      setTrackMapData(pendingImport.trackMapData);
+      saveQueue.reset();
+      setPendingImport(null);
+      setEventId(null);
+      setSessionId(null);
+      setRunId(null);
+      setScreen("home");
+      flash(t("Backup restored"));
+    } catch {
+      saveQueue.markFailed("app");
+      saveQueue.markFailed("trackMap");
+      setRestoreFailed(true);
+    } finally {
+      restoreInProgress.current = false;
+      setRestoring(false);
+    }
+  }
+
+  function retrySaving() {
+    if (restoreInProgress.current) return;
+    pendingSaves.current = {};
+    beginSave("app", () => saveData(data));
+    beginSave("trackMap", () => saveTrackMapData(trackMapData));
   }
 
   if (!ready) {
@@ -1089,7 +1108,19 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <div className="phone-shell">{content}</div>
+      <div className="phone-shell" inert={pendingImport !== null}>
+        {saveState === "Error" && (
+          <section className="storage-alert" role="alert">
+            <strong>{t("Changes could not be saved")}</strong>
+            <p>{t("Keep this app open. Retry saving or export a full backup to protect the records currently on screen.")}</p>
+            <div className="storage-actions">
+              <button className="button button-primary" onClick={retrySaving}>{t("Retry saving")}</button>
+              <button className="button button-secondary" onClick={exportJson}><Download />{t("Export full backup")}</button>
+            </div>
+          </section>
+        )}
+        {content}
+      </div>
       {showEventForm && (
         <EventModal
           event={editingEventId ? data.events.find((event) => event.id === editingEventId) : undefined}
@@ -1109,7 +1140,7 @@ export default function HomePage() {
       {showRunHistoryForm && <RunHistoryModal runs={historicalRuns} onClose={() => setShowRunHistoryForm(false)} onCopy={addRun} />}
       {showSaveTemplateForm && selectedRun && <SaveTemplateModal run={selectedRun} onClose={() => setShowSaveTemplateForm(false)} onSave={saveSetupTemplate} />}
       {showApplyTemplateForm && <ApplyTemplateModal templates={data.setupTemplates} onClose={() => setShowApplyTemplateForm(false)} onApply={applySetupTemplate} />}
-      {pendingImport && <ImportConfirmModal data={pendingImport} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
+      {pendingImport && <ImportConfirmModal data={pendingImport} busy={restoring} failed={restoreFailed} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
       {deleteTarget && <DeleteModal target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check /> {toast}</div>}
     </main>
@@ -1401,7 +1432,7 @@ function ApplyTemplateModal({ templates, onClose, onApply }: { templates: SetupT
   );
 }
 
-function ImportConfirmModal({ data, onCancel, onConfirm }: { data: ParsedBackup; onCancel: () => void; onConfirm: () => void }) {
+function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data: ParsedBackup; busy: boolean; failed: boolean; onCancel: () => void; onConfirm: () => void }) {
   const { t } = useTranslation();
   const sessionCount = data.appData.events.reduce((sum, event) => sum + event.sessions.length, 0);
   const runCount = data.appData.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0);
@@ -1422,9 +1453,10 @@ function ImportConfirmModal({ data, onCancel, onConfirm }: { data: ParsedBackup;
           markers: counted(markerCount, "marker"),
           images: counted(data.trackMapData.assets.length, "map image"),
         })}</p>
-        <div className="action-stack">
-          <button className="button button-primary button-block" onClick={onConfirm}>{t("Restore backup")}</button>
-          <button className="button button-secondary button-block" onClick={onCancel}>{t("Cancel")}</button>
+        {failed && <p className="restore-error" role="alert">{t("Restore failed. Your saved data was not replaced. Check available device storage and try again.")}</p>}
+        <div className="action-stack" aria-busy={busy}>
+          <button className="button button-primary button-block" disabled={busy} onClick={onConfirm}>{busy ? t("Restoring…") : t("Restore backup")}</button>
+          <button className="button button-secondary button-block" disabled={busy} onClick={onCancel}>{t("Cancel")}</button>
         </div>
       </section>
     </div>

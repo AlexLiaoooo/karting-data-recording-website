@@ -17,6 +17,11 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Changes could not be saved": "无法保存更改",
+  "Keep this app open. Retry saving or export a full backup to protect the records currently on screen.": "请保持应用打开。重试保存或导出完整备份，以保护当前屏幕上的记录。",
+  "Retry saving": "重试保存",
+  "Restore failed. Your saved data was not replaced. Check available device storage and try again.": "恢复失败，原有已保存数据未被替换。请检查设备剩余存储空间，然后重试。",
+  "Restoring…": "正在恢复…",
   "Your records could not be loaded": "无法读取已保存的记录",
   "Editing is paused to protect your saved data. Check that this browser allows device storage, then try again. Do not clear browser data.": "为保护已保存的数据，编辑已暂停。请确认浏览器允许本设备存储数据，然后重试。请勿清除浏览器数据。",
   "Retry loading": "重新读取",

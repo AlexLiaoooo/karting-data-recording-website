@@ -121,7 +121,7 @@ h2 {
   margin: 0 auto;
   max-width: 480px;
   min-height: calc(100vh - 48px);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .loading-screen {
@@ -142,6 +142,36 @@ h2 {
 .storage-recovery p {
   line-height: 1.6;
   margin-bottom: 24px;
+}
+
+.storage-alert {
+  background: var(--page);
+  border-bottom: 2px solid var(--red);
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.storage-alert p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 12px;
+}
+
+.storage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.storage-actions .button {
+  flex: 1 1 auto;
+}
+
+.storage-alert strong,
+.restore-error {
+  color: var(--red);
 }
 
 .topbar {
