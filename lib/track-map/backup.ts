@@ -2,6 +2,7 @@ import type { AppData } from "@/lib/types";
 import { normalizeAppData } from "@/lib/database";
 import { migrateMarkerTypes } from "./database";
 import { emptyTrackMapData, MapAsset, TrackMapData } from "./types";
+import { validPortableTrackMap } from "../validation";
 
 type PortableMapAsset = Omit<MapAsset, "blob"> & { dataUrl: string };
 
@@ -28,8 +29,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, encoded] = dataUrl.split(",", 2);
-  if (!header || !encoded || !header.startsWith("data:")) throw new Error("Invalid map image in backup.");
-  const mimeType = header.match(/^data:([^;]+)/)?.[1] ?? "application/octet-stream";
+  const mimeType = header?.match(/^data:(image\/[a-z0-9.+-]+);base64$/i)?.[1];
+  if (!mimeType || !encoded) throw new Error("Invalid map image in backup.");
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
@@ -59,8 +60,7 @@ export function parseFullBackup(value: unknown): ParsedBackup | null {
   if (candidate.kind !== "kart-data-full-backup" || candidate.version !== 3) return null;
   const appData = normalizeAppData(candidate.appData);
   const trackMap = candidate.trackMap;
-  if (!appData || !trackMap || trackMap.version !== 1 || !Array.isArray(trackMap.tracks)
-    || !Array.isArray(trackMap.layouts) || !Array.isArray(trackMap.visits) || !Array.isArray(trackMap.assets)) return null;
+  if (!appData || !trackMap || !validPortableTrackMap(trackMap)) return null;
 
   try {
     const assets = trackMap.assets.map((asset) => {
@@ -68,14 +68,15 @@ export function parseFullBackup(value: unknown): ParsedBackup | null {
         throw new Error("Invalid map asset");
       }
       const blob = dataUrlToBlob(asset.dataUrl);
+      if (blob.type !== asset.mimeType.toLowerCase()) throw new Error("Map image type does not match its metadata");
       return {
         id: asset.id,
         blob,
-        width: Number(asset.width) || 1,
-        height: Number(asset.height) || 1,
-        mimeType: typeof asset.mimeType === "string" ? asset.mimeType : blob.type,
+        width: asset.width,
+        height: asset.height,
+        mimeType: blob.type,
         size: blob.size,
-        updatedAt: typeof asset.updatedAt === "string" ? asset.updatedAt : new Date().toISOString(),
+        updatedAt: asset.updatedAt,
       };
     });
     return {

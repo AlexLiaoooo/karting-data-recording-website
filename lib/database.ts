@@ -1,4 +1,5 @@
 import type { AppData, EventRecord } from "./types";
+import { isRecord, validAppRecords } from "./validation";
 
 const DB_NAME = "kart-data-recorder";
 const DB_VERSION = 2;
@@ -31,7 +32,7 @@ function migrateRuns(events: EventRecord[]): EventRecord[] {
 }
 
 export function normalizeAppData(value: unknown): AppData | null {
-  if (!value || typeof value !== "object") return null;
+  if (!isRecord(value) || !validAppRecords(value)) return null;
   const candidate = value as {
     version?: unknown;
     events?: unknown;
