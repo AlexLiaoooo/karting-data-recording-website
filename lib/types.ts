@@ -35,6 +35,17 @@ export type SetupTemplate = {
 
 export type RunRecordingPhase = "before" | "after";
 
+export type SetupExperiment = {
+  baselineRunId: string | null;
+  change: string;
+  expectation: string;
+  outcome: string;
+};
+
+export const emptyExperiment = (): SetupExperiment => ({
+  baselineRunId: null, change: "", expectation: "", outcome: "",
+});
+
 export type RunRecord = {
   id: string;
   number: number;
@@ -58,6 +69,8 @@ export type RunRecord = {
   completed: boolean;
   /** Last recording view. Absent on older Runs, inferred from their existing readings. */
   recordingPhase?: RunRecordingPhase;
+  /** Optional journal entry. Copied Runs start without the previous experiment's notes. */
+  experiment?: SetupExperiment;
   updatedAt: string;
 };
 

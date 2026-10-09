@@ -39,6 +39,10 @@ export function validAppRecords(value: RecordValue): boolean {
     && optionalStrings(record, ["maxRpm"])
     && positiveInteger(record.number) && typeof record.completed === "boolean"
     && (record.recordingPhase === undefined || choice(record.recordingPhase, ["before", "after"]))
+    && (record.experiment === undefined || (isRecord(record.experiment)
+      && strings(record.experiment, ["change", "expectation", "outcome"])
+      && (record.experiment.baselineRunId === null || (typeof record.experiment.baselineRunId === "string"
+        && record.experiment.baselineRunId.trim() !== "" && record.experiment.baselineRunId !== record.id))))
     && choice(record.balance, ["", "Understeer", "Neutral", "Oversteer"])
     && choice(record.grip, ["", "Low", "Medium", "High"])
     && choice(record.braking, ["", "Poor", "Acceptable", "Good"])

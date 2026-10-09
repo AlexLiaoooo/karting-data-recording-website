@@ -98,6 +98,8 @@ const feedbackHeaders = [
   "General comments",
 ];
 
+const experimentHeaders = ["Run ID", "Baseline Run ID", "Experiment change", "Experiment expectation", "Experiment outcome"];
+
 /**
  * A gain as the app computes it everywhere else, so the spreadsheet and the screens cannot
  * disagree about which readings count. Two decimals and unsigned, which a spreadsheet reads as a
@@ -110,7 +112,7 @@ function csvGain(gain: number | null) {
 function runValues(run?: RunRecord) {
   if (!run) {
     // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
-    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length).fill("");
+    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length).fill("");
   }
 
   return [
@@ -145,6 +147,11 @@ function runValues(run?: RunRecord) {
     run.midCorner,
     run.cornerExit,
     run.comments,
+    run.id,
+    run.experiment?.baselineRunId ?? "",
+    run.experiment?.change ?? "",
+    run.experiment?.expectation ?? "",
+    run.experiment?.outcome ?? "",
   ];
 }
 
@@ -269,7 +276,7 @@ function section(title: string, header: string[], rows: unknown[][]) {
 }
 
 export function buildCsv(data: AppData, trackMap: TrackMapData) {
-  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders];
+  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders];
   const rows: unknown[][] = [];
 
   for (const event of data.events) {
