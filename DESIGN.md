@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.23 (committed and pushed to GitHub)
-**Last updated:** 2026-10-06
+**Document status:** Implemented prototype v1.24 (committed and pushed to GitHub)
+**Last updated:** 2026-10-09
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -253,6 +253,8 @@ The user should be able to:
 
 - Session information.
 - Run list with summary values.
+- Each Run shows Before Run, After Run or Completed. A direct hot-reading action opens the
+  latest unfinished Run in the After Run view, even if it was last left in preparation.
 - Prominent `+ Run` action.
 - Duplicate-last-Run option.
 - Session options menu with a Delete Session action.
@@ -260,15 +262,20 @@ The user should be able to:
 
 ### Run editor
 
-- Tyres, headed by what pressures have done at this circuit in the Session's condition: each axle's
-  past gain and the one Run nearest today's track temperature. Marked as not a recommendation.
-- Chassis setup.
-- Performance.
-- Driver feedback.
-- Notes.
-- Visible auto-save status.
+- Two large controls select Before Run and After Run; the selected view persists with the Run.
+- Before Run contains cold pressures/temperatures and chassis setup, including templates and
+  gearing. Past gains at the circuit appear here, marked as not a recommendation.
+- After Run contains hot pressures/temperatures first, then performance and driver feedback.
+  Each hot input shows its original cold reading and valid cold-to-hot gain.
+- Tyres remain in the physical FL/FR/RL/RR layout, with 48px inputs and separate unit labels.
+- Users can switch back to correct cold readings/setup without erasing hot readings or results.
+- Completion remains separate from the recording view, with every measurement optional.
+- Visible auto-save status and global save-error recovery remain active in both views.
 
-The form may use collapsible sections, but frequently entered tyre values should remain quick to reach.
+An optional `recordingPhase: "before" | "after"` field uses the existing version 2 Run
+schema. Older Runs infer After Run from completion, hot readings or results, and Before Run
+otherwise; no measurements are rewritten. New blank and copied Runs always start Before Run.
+JSON backups preserve the view. CSV measurements/comparisons retain their existing format.
 
 ### Compare view
 
@@ -469,6 +476,20 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.24 — 2026-10-09
+
+- Implemented approved option 2: preparation and return recording views with persistent phase,
+  preserved readings when switching, hot-reading cold references/gains and larger touch targets.
+- Added Session phase labels and a direct return shortcut for the latest unfinished Run. Blank
+  Run labels follow the highest surviving Run number, including after deletion.
+- Kept legacy records/backups compatible, measurement fields optional, completion separate and
+  copied Runs in preparation with no inherited hot readings or results.
+- All 315 tests across 18 files, lint and production build pass. Isolated mobile browser checks
+  verified Event → Session → Run creation, preparation/setup, hot readings/results, reload and
+  reopening, offline feedback/completion/copy, and Chinese controls at 320px without overflow.
+- Updated the user guide with Before/After Run screenshots. Each tested step was committed and
+  pushed using the project's standing workflow preference.
 
 ### Implemented prototype v1.23 — 2026-10-06
 

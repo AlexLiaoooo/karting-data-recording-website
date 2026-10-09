@@ -18,6 +18,11 @@ A mobile-first, local-first web application for recording competition karting ty
 
 - Event → Session → Run record hierarchy.
 - Cold/hot tyre pressure and temperature for all four corners.
+- Before Run shows cold tyres and chassis setup; After Run puts hot tyres first, followed by
+  lap times and driver feedback. The selected view is saved with the Run and survives reopening.
+- The Session list shows each Run's phase and offers a direct hot-reading shortcut for the
+  latest unfinished Run. Switching views preserves both sets of readings; hot inputs show
+  their cold references and calculated gains.
 - Kart-specific chassis setup fields.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
@@ -25,7 +30,7 @@ A mobile-first, local-first web application for recording competition karting ty
 - Runs can be named from the run heading, edited in place, and the name follows the run through the session list, the comparison pickers and saved setup templates.
 - Create a blank Run, duplicate the previous Run, or copy any historical Run's values. Cold tyre readings and chassis setup carry across; hot readings, lap times, RPM and feedback start blank, so nothing is inherited as though it had been measured.
 - Compare any two Runs on record, from different Sessions and different Events, across every performance, tyre, setup and feedback field with differences highlighted. Each column names the Event and Session it came from, because two Runs from different Events are both "Run 01". The table opens with what each Run ran in, and a comparison between a dry Run and a wet one is flagged as not like for like beside the lap delta, since that delta says little about the setup.
-- The Run editor's Tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
+- Before Run's Cold tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
 - Versioned JSON backup/restore with confirmation, and an Excel-ready CSV export containing three tables: Events/Sessions/Runs, Track reference markers, and Session track observations.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
@@ -84,6 +89,10 @@ data rather than looking wrong:
   the failed collection is saved successfully, and no premature Saved status during debounces.
 - **Recovery controls** (`lib/storage-ui.test.ts`) — blocked startup, retry, save-error notices,
   atomic restore timing, recovery from blocked startup, and backup export/reminder controls.
+- **Run recording** (`lib/run-recording.test.ts`, `lib/storage-ui.test.ts`) — old records infer
+  their view without changing measurements; explicit phases survive backup round-trip; switching
+  views preserves tyres, setup and results; Session shortcuts target the latest unfinished Run;
+  completed/copy workflows keep their correct status and blank new results.
 - **Backup reminders** (`lib/backup-reminder.test.ts`) — weekly timing, one-day dismissal,
   corrupt preferences and unavailable preference storage.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
