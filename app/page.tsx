@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BookOpen,
   Check,
   ChevronRight,
   CircleGauge,
@@ -33,7 +34,9 @@ import {
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { buildCsv } from "@/lib/csv";
-import { AppData, createRun, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
+import { AppData, createRun, emptyExperiment, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
+import { recordedRuns, type RecordedRun as HistoricalRun } from "@/lib/experiments";
+import { ExperimentJournal, RunExperiment } from "@/components/experiment-journal";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
@@ -45,14 +48,14 @@ import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
 import { counted, localDate } from "@/lib/format";
 import { formatRatio, gearRatio, ratioChange } from "@/lib/gearing";
 import { formatLapTime, parseLapTime } from "@/lib/lap-time";
-import { sessionConditions, type ResolvedConditions } from "@/lib/conditions";
+import { sessionConditions } from "@/lib/conditions";
 import { closestByTemperature, formatGain, pressureGain, summarisePressure, temperatureGain, type ConditionGroup, type PressureRow } from "@/lib/pressure";
 import { PressureAxles } from "@/components/track-map/pressure-summary";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -74,17 +77,6 @@ function sessionFields({ condition, ambientTemperature, trackTemperature, ...res
     trackTemperature: trackTemperature.trim() || undefined,
   };
 }
-/** A Run with the Event and Session it belongs to, so it can be named away from its own screen.
- *  The ids group the comparison pickers; two Events can share a name, so the names cannot. */
-type HistoricalRun = {
-  run: RunRecord;
-  eventId: string;
-  sessionId: string;
-  eventName: string;
-  sessionName: string;
-  /** What the Run's Session actually ran in, resolved once here where the Event and Session are to hand. */
-  conditions: ResolvedConditions;
-};
 type WeatherState = "idle" | "loading" | "success" | "error";
 /** Past pressure gain at this circuit in today's condition, shown where the cold pressures are set. */
 type PressureHint = { condition: string; group: ConditionGroup; closest: PressureRow | null };
@@ -253,6 +245,8 @@ export default function HomePage() {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
+  const [compareBack, setCompareBack] = useState<"session" | "run" | "journal">("session");
+  const [runBack, setRunBack] = useState<"session" | "journal">("session");
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -413,14 +407,7 @@ export default function HomePage() {
     [selectedSession, runId],
   );
   const activeEvent = data.events.find((event) => event.id === data.lastEventId) ?? data.events[0];
-  const historicalRuns = useMemo<HistoricalRun[]>(() => data.events.flatMap((event) =>
-    event.sessions.flatMap((session) => {
-      const conditions = sessionConditions(event, session);
-      return session.runs.map((run) => ({
-        run, eventId: event.id, sessionId: session.id, eventName: event.name, sessionName: session.name, conditions,
-      }));
-    }),
-  ), [data.events]);
+  const historicalRuns = useMemo(() => recordedRuns(data.events), [data.events]);
 
   /**
    * Every past Run, keyed by the Layout its Event named, for the Track Map pages' gearing and
@@ -507,8 +494,23 @@ export default function HomePage() {
   }
 
   function openRun(id: string) {
+    setRunBack("session");
     setRunId(id);
     setScreen("run");
+  }
+
+  function openJournalRun(entry: HistoricalRun) {
+    setEventId(entry.eventId);
+    setSessionId(entry.sessionId);
+    setRunId(entry.run.id);
+    setRunBack("journal");
+    setScreen("run");
+  }
+
+  function compareExperiment(baselineId: string, testId: string) {
+    setCompareIds([baselineId, testId]);
+    setCompareBack(screen === "journal" ? "journal" : "run");
+    setScreen("compare");
   }
 
   function updateEvent(id: string, updater: (event: EventRecord) => EventRecord) {
@@ -630,6 +632,7 @@ export default function HomePage() {
     const run = createRun(nextRunNumber(selectedSession.runs), source);
     updateSession(selectedSession.id, (session) => ({ ...session, runs: [...session.runs, run] }));
     setRunId(run.id);
+    setRunBack("session");
     setScreen("run");
     setShowRunHistoryForm(false);
     if (source) flash(t("Cold tyres and setup copied from Run {number}", { number: String(source.number).padStart(2, "0") }));
@@ -711,6 +714,7 @@ export default function HomePage() {
    * The older Run goes first, so the summary's "second compared with first" reads as the change.
    */
   function startCompare() {
+    setCompareBack("session");
     if (historicalRuns.length < 2) return;
     const sessionRuns = selectedSession?.runs ?? [];
     const newestFirst = [...historicalRuns].sort((a, b) => b.run.recordedAt.localeCompare(a.run.recordedAt));
@@ -905,6 +909,11 @@ export default function HomePage() {
               <span className="list-copy"><strong>{t("Track Library")}</strong><span>{t("Map corners, braking points and reference notes")}</span></span>
               <ChevronRight />
             </button>
+            <button className="list-item" onClick={() => setScreen("journal")}>
+              <span className="list-icon"><BookOpen /></span>
+              <span className="list-copy"><strong>{t("Setup experiment journal")}</strong><span>{t("Changes, expectations and outcomes across your Runs")}</span></span>
+              <ChevronRight />
+            </button>
           </section>
 
           {data.events.length > 0 && (
@@ -1060,7 +1069,7 @@ export default function HomePage() {
         run={selectedRun}
         session={selectedSession}
         saveState={saveState}
-        onBack={() => setScreen("session")}
+        onBack={() => setScreen(runBack)}
         onUpdate={(updater) => updateRun(selectedRun.id, updater)}
         onDelete={() => requestDelete({ kind: "run", id: selectedRun.id, name: `Run ${String(selectedRun.number).padStart(2, "0")}` })}
         onComplete={() => {
@@ -1070,12 +1079,17 @@ export default function HomePage() {
         }}
         templates={data.setupTemplates}
         pressureHint={pressureHint}
+        entry={historicalRuns.find(item => item.run.id === selectedRun.id)!}
+        historicalRuns={historicalRuns}
+        onCompare={compareExperiment}
         onSaveTemplate={() => setShowSaveTemplateForm(true)}
         onApplyTemplate={() => setShowApplyTemplateForm(true)}
       />
     );
-  } else if (screen === "compare" && selectedSession) {
-    content = <CompareRuns runs={historicalRuns} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen("session")} />;
+  } else if (screen === "compare") {
+    content = <CompareRuns runs={historicalRuns} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
+  } else if (screen === "journal") {
+    content = <><TopBar title={t("Setup experiment journal")} onBack={() => setScreen("home")} /><ExperimentJournal runs={historicalRuns} onOpen={openJournalRun} onCompare={compareExperiment} /></>;
   } else if (screen === "settings") {
     content = (
       <>
@@ -1596,7 +1610,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, pressureHint, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; pressureHint: PressureHint | null; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
+function RunEditor({ run, session, saveState, templates, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1730,6 +1744,8 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
               <Field label={t("General comments")} className="field-full"><textarea className="textarea" value={run.comments} onChange={(event) => setField("comments", event.target.value)} /></Field>
             </div>
           </details>}
+          <RunExperiment entry={entry} runs={historicalRuns} phase={phase} onCompare={onCompare}
+            onChange={updater => onUpdate(current => ({ ...current, experiment: updater(current.experiment ?? emptyExperiment()) }))} />
         </div>
         {phase === "before" ? (
           <button className="button button-primary button-block complete-button" onClick={() => choosePhase("after")}>{t("Record after Run")}<ChevronRight /></button>

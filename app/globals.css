@@ -646,6 +646,72 @@ h2 {
   gap: 11px;
 }
 
+.experiment-editor,
+.experiment-result,
+.experiment-journal {
+  display: grid;
+  gap: 14px;
+}
+
+.experiment-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.experiment-card .card-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.experiment-card h2,
+.experiment-context h3,
+.experiment-notes h3 {
+  margin: 0;
+}
+
+.experiment-card h2 { font-size: 1.12rem; }
+.experiment-context h3,
+.experiment-notes h3 { font-size: 0.88rem; }
+
+.experiment-context {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.experiment-context p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 6px 0;
+}
+
+.experiment-context dl { margin: 12px 0 0; }
+.experiment-context dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 0.8rem;
+}
+.experiment-context dt { color: var(--muted); }
+.experiment-context dd { margin: 0; font-weight: 600; }
+.experiment-notes p { margin: 5px 0 14px; white-space: pre-wrap; }
+.experiment-notes p:last-child { margin-bottom: 0; }
+.experiment-lap-result > strong { font-size: 1rem; }
+.experiment-editor .help-text { margin: 0; }
+.experiment-editor .textarea { min-height: 90px; }
+.experiment-editor .select { min-height: 48px; }
+.experiment-card,
+.experiment-context,
+.experiment-editor { min-width: 0; overflow-wrap: anywhere; }
+
 .run-phase-switch {
   background: var(--surface-soft);
   border: 1px solid var(--line);

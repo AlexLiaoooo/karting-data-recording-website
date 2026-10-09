@@ -294,3 +294,104 @@ describe("before/after Run recording", () => {
     expect(container.textContent).toContain("COMPLETED RUN");
   });
 });
+
+async function chooseBaseline(value: string) {
+  const select = [...container.querySelectorAll<HTMLSelectElement>("select")]
+    .find(element => element.closest("label")?.querySelector("span")?.textContent === "Baseline Run")!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+const experimentNotes = { baselineRunId: "baseline", change: "Rear width +5mm", expectation: "Less understeer", outcome: "Better exit, more mid-corner sliding" };
+function journalRecords() {
+  return makeAppData({ events: [
+    makeEvent({ name: "Baseline day", sessions: [makeSession({ runs: [makeRun({ id: "baseline", fastestLap: "49.00" })] })] }),
+    makeEvent({ id: "test-event", name: "Test day", track: "Whilton Mill", sessions: [makeSession({
+      id: "test-session", condition: "Wet", trackTemperature: "14", runs: [makeRun({ id: "test", fastestLap: "48.21", experiment: experimentNotes })],
+    })] }),
+  ] });
+}
+
+describe("setup experiment journal", () => {
+  it("shows an empty journal without inventing experiments on existing Runs", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    await render();
+    await act(async () => button("Setup experiment journalChanges, expectations and outcomes across your Runs").click());
+    expect(container.textContent).toContain("No setup experiments yet");
+  });
+
+  it("preserves baseline and preparation notes across phases, saves the outcome, and excludes self from baseline choices", async () => {
+    const test = { ...createRun(1), id: "test" };
+    const data = recordWith(test);
+    data.events.push(makeEvent({ id: "other-event", name: "Baseline day", sessions: [makeSession({ id: "other-session", runs: [makeRun({ id: "baseline", fastestLap: "49.00" })] })] }));
+    await openRecordedRun(data);
+    expect(container.querySelector('select option[value="test"]')).toBeNull();
+    await chooseBaseline("baseline");
+    await editInput("What I changed", experimentNotes.change);
+    await editInput("What I expected", experimentNotes.expectation);
+    expect(container.textContent).not.toContain("What happened");
+    await act(async () => button("After Run").click());
+    expect(inputNamed("What I changed").value).toBe(experimentNotes.change);
+    await editInput("What happened", experimentNotes.outcome);
+    await editInput("Fastest lap", "48.21");
+    expect(container.textContent).toContain("0.790 s faster than baseline");
+    await act(async () => button("Compare linked Runs").click());
+    expect(container.querySelectorAll(".compare-head small")[0]?.textContent).toContain("Baseline day");
+    await act(async () => button("Back").click());
+    expect(inputNamed("What happened").value).toBe(experimentNotes.outcome);
+    await act(async () => button("Before Run").click());
+    expect(inputNamed("What I expected").value).toBe(experimentNotes.expectation);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 600)); });
+    const saved = vi.mocked(saveData).mock.calls.at(-1)![0].events[0].sessions[0].runs[0];
+    expect(saved.experiment).toEqual(experimentNotes);
+    expect(saved.completed).toBe(false);
+    await chooseBaseline("");
+    expect(inputNamed("What I changed").value).toBe(experimentNotes.change);
+    expect(container.textContent).not.toContain("Compare linked Runs");
+  });
+
+  it("shows cross-Event conditions, searches notes, opens both Runs, and returns comparison to the journal", async () => {
+    vi.mocked(loadData).mockResolvedValue(journalRecords());
+    await render();
+    await act(async () => button("Setup experiment journalChanges, expectations and outcomes across your Runs").click());
+    expect(container.textContent).toContain("0.790 s faster than baseline");
+    expect(container.textContent).toContain("Not like for like: Dry against Wet");
+    expect(container.textContent).toContain("Different circuits or layouts");
+    expect(container.textContent).toContain("14 °C");
+    await editInput("Search experiments", "no matching notes");
+    expect(container.textContent).toContain("No experiments match your search");
+    await editInput("Search experiments", "mid-corner");
+    expect(container.textContent).toContain(experimentNotes.outcome);
+    await act(async () => button("Compare linked Runs").click());
+    expect(container.querySelector('[role="table"][aria-label="Run comparison"]')).not.toBeNull();
+    await act(async () => button("Back").click());
+    expect(container.querySelector(".experiment-journal")).not.toBeNull();
+    await act(async () => button("Open baseline Run").click());
+    expect(container.querySelector('[aria-label="Test Run"]')?.textContent).toContain("Baseline day");
+    expect(inputNamed("Fastest lap").value).toBe("49.00");
+    await act(async () => button("Back").click());
+    await act(async () => button("Open test Run").click());
+    expect(inputNamed("What happened").value).toBe(experimentNotes.outcome);
+    await editInput("What happened", "Updated result");
+    await act(async () => button("Back").click());
+    expect(container.textContent).toContain("Updated result");
+  });
+
+  it("retains orphaned notes, permits a replacement baseline, and keeps completed Runs editable", async () => {
+    const records = journalRecords();
+    records.events[1].sessions[0].runs[0].experiment!.baselineRunId = "deleted-run";
+    vi.mocked(loadData).mockResolvedValue(records);
+    await render();
+    await act(async () => button("Setup experiment journalChanges, expectations and outcomes across your Runs").click());
+    expect(container.textContent).toContain("Baseline Run is unavailable");
+    expect(container.textContent).toContain(experimentNotes.outcome);
+    expect(container.textContent).not.toContain("Compare linked Runs");
+    await act(async () => button("Open test Run").click());
+    await chooseBaseline("baseline");
+    expect(container.textContent).toContain("Compare linked Runs");
+    expect(inputNamed("What happened").value).toBe(experimentNotes.outcome);
+    expect(container.textContent).toContain("COMPLETED RUN");
+  });
+});

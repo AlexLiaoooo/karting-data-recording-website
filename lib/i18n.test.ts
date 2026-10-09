@@ -6,6 +6,7 @@ import { zhDictionary } from "./i18n";
 const ROOT = join(__dirname, "..");
 const SOURCES = [
   "app/page.tsx",
+  "components/experiment-journal.tsx",
   ...readdirSync(join(ROOT, "components/track-map"))
     .filter((file) => file.endsWith(".tsx"))
     .map((file) => `components/track-map/${file}`),
