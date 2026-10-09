@@ -1,6 +1,6 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.24 (committed and pushed to GitHub)
+**Document status:** Implemented prototype v1.25 (committed and pushed to GitHub)
 **Last updated:** 2026-10-09
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
@@ -277,6 +277,27 @@ schema. Older Runs infer After Run from completion, hot readings or results, and
 otherwise; no measurements are rewritten. New blank and copied Runs always start Before Run.
 JSON backups preserve the view. CSV measurements/comparisons retain their existing format.
 
+### Setup experiment journal
+
+- Home's Track tools includes a searchable journal of Runs with a baseline link or experiment
+  notes, ordered by Run recording time, newest first. Empty entries do not create journal cards.
+- A collapsible Setup experiment section is available in both Run views. Before Run records
+  the baseline, what changed and what was expected; After Run adds what happened. Both views
+  allow corrections to the preparation notes and preserve the outcome through switches.
+- A baseline can come from any other Run, across Sessions and Events. Pickers identify the
+  Event, Session, date, Run label, condition and circuit. A Run cannot link to itself.
+- The journal shows baseline/test circuit, date, Session-resolved condition/temperatures and
+  fastest lap. Its direction describes the recorded lap difference; it does not infer
+  that a setup change caused it. Missing or invalid laps produce no numerical delta.
+- Different conditions, circuits/layouts, or missing circuit names are flagged beside the
+  result. Users can open either linked Run or enter the existing full comparison with the
+  baseline first and test second. Back returns to the originating editor or journal.
+- The optional version 2 Run field `experiment` contains `baselineRunId: string | null` and
+  string fields `change`, `expectation`, `outcome`. Legacy Runs require no migration. A deleted
+  baseline leaves the test's notes intact; a replacement can be selected or the link cleared.
+- JSON backups preserve notes and links. CSV appends Run ID, Baseline Run ID and the three
+  notes after existing measurement columns. New and copied Runs have no inherited experiment.
+
 ### Compare view
 
 - Select any two Runs on record, from any Session or Event, grouped by Event and Session.
@@ -450,7 +471,7 @@ The following decisions remain open and should be resolved before or during the 
 
 Resolved:
 
-- CSV export uses a single file containing three labelled tables — Events/Sessions/Runs, Track reference markers, and Session track observations — separated by a blank row. The Run table keeps its original shape so existing spreadsheets continue to work.
+- CSV export uses a single file containing three labelled tables — Events/Sessions/Runs, Track reference markers, and Session track observations — separated by a blank row. Experiment IDs and notes append to the Run table without moving existing measurement columns.
 
 ## 14. Future expansion candidates
 
@@ -476,6 +497,21 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.25 — 2026-10-09
+
+- Implemented approved option 3: setup experiment journal with optional baseline links,
+  preparation/expectation/outcome notes, search and direct linked Run navigation/comparison.
+- Showed Session-resolved conditions, circuit/date context and recorded fastest-lap change,
+  with explicit notices when the Runs are not like for like. Blank laps remain unknown.
+- Preserved older records and deleted-baseline notes; copied Runs start fresh. Full JSON
+  backups preserve journal entries and CSV appends linkable IDs and notes.
+- All 332 tests across 19 files, lint and production build pass. Isolated browser checks
+  verified baseline creation → copied test → preparation notes → outcome → completion →
+  reload → journal, then offline editing/comparison/reload/search. Chinese controls at 320px
+  and English at 390px fit without horizontal overflow; browser runtime errors were empty.
+- Updated the guide and captured the checked journal view. Each completed step was committed
+  and pushed under the project's standing workflow preference.
 
 ### Implemented prototype v1.24 — 2026-10-09
 

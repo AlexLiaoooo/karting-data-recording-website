@@ -23,6 +23,11 @@ A mobile-first, local-first web application for recording competition karting ty
 - The Session list shows each Run's phase and offers a direct hot-reading shortcut for the
   latest unfinished Run. Switching views preserves both sets of readings; hot inputs show
   their cold references and calculated gains.
+- Setup experiment journal: link a baseline Run, record what changed and what you expected
+  before going out, then add the outcome on return. Search past experiments from Home,
+  reopen either Run, or compare the linked pair with both sets of conditions beside the result.
+- JSON backups retain experiment notes and baseline links. CSV appends Run IDs, baseline IDs
+  and all three notes to the existing Run table. Copies start with no inherited experiment.
 - Kart-specific chassis setup fields.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
@@ -95,6 +100,9 @@ data rather than looking wrong:
   completed/copy workflows keep their correct status and blank new results.
 - **Backup reminders** (`lib/backup-reminder.test.ts`) — weekly timing, one-day dismissal,
   corrupt preferences and unavailable preference storage.
+- **Setup experiments** (`lib/experiments.test.ts`, `lib/storage-ui.test.ts`) — validated notes
+  and baseline links, backup/CSV preservation, Session condition overrides, missing baselines,
+  phase switching, journal search, linked comparisons and cross-Event navigation.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that
