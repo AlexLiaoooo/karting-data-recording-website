@@ -33,6 +33,8 @@ export type SetupTemplate = {
   updatedAt: string;
 };
 
+export type RunRecordingPhase = "before" | "after";
+
 export type RunRecord = {
   id: string;
   number: number;
@@ -54,6 +56,8 @@ export type RunRecord = {
   cornerExit: string;
   comments: string;
   completed: boolean;
+  /** Last recording view. Absent on older Runs, inferred from their existing readings. */
+  recordingPhase?: RunRecordingPhase;
   updatedAt: string;
 };
 
@@ -174,6 +178,7 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     cornerExit: "",
     comments: "",
     completed: false,
+    recordingPhase: "before",
     updatedAt: now,
   };
 };

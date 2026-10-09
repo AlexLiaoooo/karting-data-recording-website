@@ -38,6 +38,7 @@ export function validAppRecords(value: RecordValue): boolean {
   const run = (record: RecordValue) => strings(record, ["label", "recordedAt", "laps", "fastestLap", "averageLap", "position", "cornerEntry", "midCorner", "cornerExit", "comments", "updatedAt"])
     && optionalStrings(record, ["maxRpm"])
     && positiveInteger(record.number) && typeof record.completed === "boolean"
+    && (record.recordingPhase === undefined || choice(record.recordingPhase, ["before", "after"]))
     && choice(record.balance, ["", "Understeer", "Neutral", "Oversteer"])
     && choice(record.grip, ["", "Low", "Medium", "High"])
     && choice(record.braking, ["", "Poor", "Acceptable", "Good"])
