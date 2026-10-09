@@ -997,6 +997,7 @@ export default function HomePage() {
       </>
     );
   } else if (screen === "session" && selectedEvent && selectedSession) {
+    const unfinishedRun = [...selectedSession.runs].reverse().find((run) => !run.completed);
     content = (
       <>
         <TopBar
@@ -1023,7 +1024,11 @@ export default function HomePage() {
           <div className="action-stack">
             <button className="button button-soft button-block" onClick={() => setScreen("session-track-notes")}><MapPinned /> {t("Track notes")}</button>
             {!selectedEvent.trackLayoutId && <p className="help-text session-track-help">{t("Edit this Event and choose a saved Track Layout before adding Session Track notes.")}</p>}
-            <button className="button button-primary button-block" onClick={() => addRun()}><Plus /> {t("Add blank Run {number}", { number: String(selectedSession.runs.length + 1).padStart(2, "0") })}</button>
+            {unfinishedRun && <button className="button button-primary button-block" onClick={() => {
+              updateRun(unfinishedRun.id, (run) => ({ ...run, recordingPhase: "after" }));
+              openRun(unfinishedRun.id);
+            }}><Timer /> {t("Record hot readings · Run {number}", { number: String(unfinishedRun.number).padStart(2, "0") })}</button>}
+            <button className={`button ${unfinishedRun ? "button-secondary" : "button-primary"} button-block`} onClick={() => addRun()}><Plus /> {t("Add blank Run {number}", { number: String(nextRunNumber(selectedSession.runs)).padStart(2, "0") })}</button>
             {selectedSession.runs.length > 0 && <button className="button button-soft button-block" onClick={() => addRun(selectedSession.runs.at(-1))}><Copy /> {t("Duplicate last run")}</button>}
             {historicalRuns.length > 0 && <button className="button button-secondary button-block" onClick={() => setShowRunHistoryForm(true)}><History /> {t("Copy a historical run")}</button>}
             {/* Two Runs anywhere, not two in this Session: the first Run of a day used to have
@@ -1037,7 +1042,7 @@ export default function HomePage() {
                 {[...selectedSession.runs].reverse().map((run) => (
                   <button className="list-item" key={run.id} onClick={() => openRun(run.id)}>
                     <span className="list-icon"><Route /></span>
-                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.laps || 0} laps · {run.balance || "No feedback"}</span></span>
+                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.completed ? t("Completed") : runRecordingPhase(run) === "before" ? t("Before Run") : t("After Run")} · {t("{count} laps", { count: run.laps || "0" })} · {run.balance ? t(run.balance) : t("No feedback")}</span></span>
                     <span className="run-result"><strong>{run.fastestLap || "—"}</strong><span>{t("best lap")}</span></span>
                   </button>
                 ))}
@@ -1061,7 +1066,7 @@ export default function HomePage() {
         onComplete={() => {
           updateRun(selectedRun.id, (run) => ({ ...run, completed: true, recordingPhase: "after" }));
           setScreen("session");
-          flash(`Run ${String(selectedRun.number).padStart(2, "0")} completed`);
+          flash(t("Run {number} completed", { number: String(selectedRun.number).padStart(2, "0") }));
         }}
         templates={data.setupTemplates}
         pressureHint={pressureHint}

@@ -17,6 +17,10 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Record hot readings · Run {number}": "记录热胎读数 · Run {number}",
+  "Run {number} completed": "Run {number} 已完成",
+  "{count} laps": "{count} 圈",
+  "No feedback": "暂无反馈",
   "Run recording phase": "Run 记录阶段",
   "Before Run": "出场前",
   "After Run": "回场后",

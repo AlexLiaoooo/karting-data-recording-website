@@ -204,6 +204,42 @@ async function openRecordedRun(data: AppData) {
 }
 
 describe("before/after Run recording", () => {
+  it("offers a direct return shortcut for the latest unfinished Run while displaying each Run's phase", async () => {
+    const before = createRun(2);
+    const after = { ...createRun(3), recordingPhase: "after" as const };
+    const completed = { ...createRun(4), completed: true };
+    vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [before, after, completed] })] })] }));
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => container.querySelector<HTMLButtonElement>("button.list-item")!.click());
+    const rows = [...container.querySelectorAll("button.list-item")].map((element) => element.textContent);
+    expect(rows[0]).toContain("Completed");
+    expect(rows[1]).toContain("After Run");
+    expect(rows[2]).toContain("Before Run");
+    await act(async () => button("Record hot readings · Run 03").click());
+    expect(button("After Run").getAttribute("aria-pressed")).toBe("true");
+    expect(container.textContent).toContain("Run 03");
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });
+    const runs = vi.mocked(saveData).mock.calls.at(-1)![0].events[0].sessions[0].runs;
+    expect(runs[0].recordingPhase).toBe("before");
+    expect(runs[1].recordingPhase).toBe("after");
+    expect(runs[1].completed).toBe(false);
+  });
+
+  it("can return directly from preparation, and copying a finished Run starts a fresh preparation", async () => {
+    await openRecordedRun(recordWith(createRun(1)));
+    await act(async () => button("Back").click());
+    await act(async () => button("Record hot readings · Run 01").click());
+    expect(button("After Run").getAttribute("aria-pressed")).toBe("true");
+    await editInput("Front left Hot pressure", "12.5");
+    await act(async () => button("Complete Run 01").click());
+    expect(container.textContent).not.toContain("Record hot readings");
+    await act(async () => button("Duplicate last run").click());
+    expect(button("Before Run").getAttribute("aria-pressed")).toBe("true");
+    await act(async () => button("After Run").click());
+    expect(inputNamed("Front left Hot pressure").value).toBe("");
+  });
+
   it("keeps preparation and results separate, preserves edits through switches, and saves the return phase", async () => {
     await openRecordedRun(recordWith(createRun(1)));
     expect(button("Before Run").getAttribute("aria-pressed")).toBe("true");
