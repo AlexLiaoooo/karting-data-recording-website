@@ -6,7 +6,8 @@ import { LanguageProvider } from "./i18n";
 import { emptyAppData, loadData, saveData } from "./database";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "./track-map/database";
 import { buildFullBackup } from "./track-map/backup";
-import { makeAppData } from "./test-fixtures";
+import { makeAppData, makeEvent, makeRun, makeSession } from "./test-fixtures";
+import { createRun, type AppData, type RunRecord } from "./types";
 import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
 
@@ -63,7 +64,7 @@ describe("startup recovery", () => {
 });
 
 function button(label: string) {
-  const match = [...container.querySelectorAll<HTMLButtonElement>("button")].find((element) => element.textContent === label || element.getAttribute("aria-label") === label);
+  const match = [...container.querySelectorAll<HTMLButtonElement>("button")].find((element) => element.textContent?.trim() === label || element.getAttribute("aria-label") === label);
   if (!match) throw new Error(`Missing button: ${label}`);
   return match;
 }
@@ -169,5 +170,91 @@ describe("backup reminder controls", () => {
     expect(container.textContent).toContain("Backup could not be created");
     expect(container.textContent).toContain("Keep a backup of your track days");
     expect(localStorage.getItem(BACKUP_HISTORY_KEY)).toBeNull();
+  });
+});
+
+function recordWith(run: RunRecord) {
+  return makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
+}
+
+function inputNamed(name: string) {
+  const element = [...container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")]
+    .find((input) => input.getAttribute("aria-label") === name || input.closest("label")?.querySelector("span")?.textContent === name);
+  if (!element) throw new Error(`Missing input: ${name}`);
+  return element;
+}
+
+async function editInput(name: string, value: string) {
+  const element = inputNamed(name);
+  const prototype = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+async function openRecordedRun(data: AppData) {
+  vi.mocked(loadData).mockResolvedValue(data);
+  await render();
+  await act(async () => button("Resume recording").click());
+  const session = [...container.querySelectorAll<HTMLButtonElement>("button.list-item")].find((element) => element.textContent?.includes("Practice 1"))!;
+  await act(async () => session.click());
+  const run = [...container.querySelectorAll<HTMLButtonElement>("button.list-item")].find((element) => element.textContent?.includes("Run 01"))!;
+  await act(async () => run.click());
+}
+
+describe("before/after Run recording", () => {
+  it("keeps preparation and results separate, preserves edits through switches, and saves the return phase", async () => {
+    await openRecordedRun(recordWith(createRun(1)));
+    expect(button("Before Run").getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector('input[aria-label="Front left Hot pressure"]')).toBeNull();
+    expect(container.textContent).not.toContain("Driver feedback");
+    await editInput("Front left Cold pressure", "10.5");
+    await editInput("Front left Cold temp", "18");
+    await editInput("Rear sprocket", "82");
+    await act(async () => button("Record after Run").click());
+    expect(document.activeElement).toBe(button("After Run"));
+    expect(button("After Run").getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector('input[aria-label="Front left Cold pressure"]')).toBeNull();
+    expect(container.textContent).toContain("Cold: 10.5 PSI");
+    expect(container.textContent).not.toContain("Chassis setup");
+    await editInput("Front left Hot pressure", "12.5");
+    await editInput("Front left Hot temp", "48");
+    await editInput("Fastest lap", "48.21");
+    await editInput("General comments", "Better corner exit");
+    expect(container.textContent).toContain("Gain: +2.0 PSI");
+    await act(async () => button("Before Run").click());
+    expect(inputNamed("Front left Cold pressure").value).toBe("10.5");
+    expect(inputNamed("Rear sprocket").value).toBe("82");
+    await act(async () => button("After Run").click());
+    expect(inputNamed("Front left Hot pressure").value).toBe("12.5");
+    expect(inputNamed("Fastest lap").value).toBe("48.21");
+    expect(inputNamed("General comments").value).toBe("Better corner exit");
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });
+    const run = vi.mocked(saveData).mock.calls.at(-1)![0].events[0].sessions[0].runs[0];
+    expect(run.recordingPhase).toBe("after");
+    expect(run.completed).toBe(false);
+    expect(run.tyres.fl).toEqual({ coldPressure: "10.5", coldTemperature: "18", hotPressure: "12.5", hotTemperature: "48" });
+  });
+
+  it("reopens a saved return phase with blank results and permits completion without mandatory measurements", async () => {
+    await openRecordedRun(recordWith({ ...createRun(1), recordingPhase: "after" }));
+    expect(button("After Run").getAttribute("aria-pressed")).toBe("true");
+    await act(async () => button("Complete Run 01").click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 600)); });
+    const run = vi.mocked(saveData).mock.calls.at(-1)![0].events[0].sessions[0].runs[0];
+    expect(run.completed).toBe(true);
+    expect(run.recordingPhase).toBe("after");
+    expect(run.tyres.fl.hotPressure).toBe("");
+  });
+
+  it("opens a completed legacy Run in results and can review its original cold/setup values", async () => {
+    await openRecordedRun(recordWith(makeRun()));
+    expect(button("After Run").getAttribute("aria-pressed")).toBe("true");
+    expect(inputNamed("Front left Hot pressure").value).toBe("12.5");
+    await act(async () => button("Review cold tyres & setup").click());
+    expect(inputNamed("Front left Cold pressure").value).toBe("10.0");
+    expect(inputNamed("Rear sprocket").value).toBe("82");
+    expect(container.textContent).toContain("COMPLETED RUN");
   });
 });

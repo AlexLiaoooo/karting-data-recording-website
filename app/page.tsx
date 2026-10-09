@@ -38,6 +38,7 @@ import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
 import { SaveQueue, type SaveKind, type SaveStatus } from "@/lib/save-queue";
+import { runRecordingPhase } from "@/lib/run-recording";
 import { backupIsDue, type BackupHistory, ONE_DAY, readBackupHistory, writeBackupHistory } from "@/lib/backup-reminder";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
@@ -1058,7 +1059,7 @@ export default function HomePage() {
         onUpdate={(updater) => updateRun(selectedRun.id, updater)}
         onDelete={() => requestDelete({ kind: "run", id: selectedRun.id, name: `Run ${String(selectedRun.number).padStart(2, "0")}` })}
         onComplete={() => {
-          updateRun(selectedRun.id, (run) => ({ ...run, completed: true }));
+          updateRun(selectedRun.id, (run) => ({ ...run, completed: true, recordingPhase: "after" }));
           setScreen("session");
           flash(`Run ${String(selectedRun.number).padStart(2, "0")} completed`);
         }}
@@ -1580,8 +1581,21 @@ function PressureHintPanel({ hint }: { hint: PressureHint }) {
   );
 }
 
+function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null; unit: string }) {
+  const { t } = useTranslation();
+  return (
+    <span className="tyre-reference">
+      <span>{t("Cold: {value}", { value: cold.trim() ? `${cold} ${unit}` : "—" })}</span>
+      {gain !== null && <span>{t("Gain: {value}", { value: `${formatGain(gain)} ${unit}` })}</span>}
+    </span>
+  );
+}
+
 function RunEditor({ run, session, saveState, templates, pressureHint, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; pressureHint: PressureHint | null; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
   const { t } = useTranslation();
+  const phase = runRecordingPhase(run);
+  const beforeButton = useRef<HTMLButtonElement>(null);
+  const afterButton = useRef<HTMLButtonElement>(null);
   function setTyre(corner: TyreCorner, field: keyof RunRecord["tyres"][TyreCorner], value: string) {
     onUpdate((current) => ({ ...current, tyres: { ...current.tyres, [corner]: { ...current.tyres[corner], [field]: value } } }));
   }
@@ -1590,6 +1604,10 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
   }
   function setField<K extends keyof RunRecord>(field: K, value: RunRecord[K]) {
     onUpdate((current) => ({ ...current, [field]: value }));
+  }
+  function choosePhase(next: "before" | "after") {
+    if (next !== phase) setField("recordingPhase", next);
+    (next === "before" ? beforeButton : afterButton).current?.focus();
   }
   return (
     <>
@@ -1600,30 +1618,47 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
         action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{t(saveState)}</span>}
       />
       <div className="page-content run-page">
-        {/* The heading is the run's name and is edited in place. The same value has a field in
-            the Performance section, which is where it used to live and where nobody looked for it:
-            a run's name is not a performance figure and that section is collapsed by default. */}
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
-        <div className="editor-stack">
+        <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
+          <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>
+          <button type="button" ref={afterButton} aria-pressed={phase === "after"} aria-controls="run-recording-fields" onClick={() => choosePhase("after")}>{t("After Run")}</button>
+        </div>
+        <p className="run-phase-help" aria-live="polite">{phase === "before"
+          ? t("Set cold tyres and chassis setup before going on track.")
+          : t("Record hot tyres first, then lap times and driver feedback.")}</p>
+        <div className="editor-stack" id="run-recording-fields" key={`${run.id}:${phase}`}>
           <details className="editor-section" open>
-            <summary><span><CircleGauge /> {t("Tyres")} <small>{t("Cold / hot")}</small></span><ChevronRight /></summary>
-            {pressureHint && <PressureHintPanel hint={pressureHint} />}
-            <div className="editor-body tyre-grid">
+            <summary><span><CircleGauge /> {phase === "before" ? t("Cold tyres") : t("Hot tyres")}</span><ChevronRight /></summary>
+            {phase === "before" && pressureHint && <PressureHintPanel hint={pressureHint} />}
+            <div className="editor-body tyre-grid phase-tyres">
               {tyreCorners.map(({ key, label, code }, index) => (
                 <div className={`tyre-card ${index === 2 ? "rear-start" : ""}`} key={key}>
                   <div className="tyre-head"><strong>{t(label)}</strong><span>{code}</span></div>
                   <div className="mini-grid">
-                    <Field label={t("Cold pressure")}><NumberInput unit="PSI" aria-label={`${t(label)} ${t("Cold pressure")}`} value={run.tyres[key].coldPressure} onChange={(event) => setTyre(key, "coldPressure", event.target.value)} /></Field>
-                    <Field label={t("Hot pressure")}><NumberInput unit="PSI" aria-label={`${t(label)} ${t("Hot pressure")}`} value={run.tyres[key].hotPressure} onChange={(event) => setTyre(key, "hotPressure", event.target.value)} /></Field>
-                    <Field label={t("Cold temp")}><NumberInput unit="°C" aria-label={`${t(label)} ${t("Cold temp")}`} value={run.tyres[key].coldTemperature} onChange={(event) => setTyre(key, "coldTemperature", event.target.value)} /></Field>
-                    <Field label={t("Hot temp")}><NumberInput unit="°C" aria-label={`${t(label)} ${t("Hot temp")}`} value={run.tyres[key].hotTemperature} onChange={(event) => setTyre(key, "hotTemperature", event.target.value)} /></Field>
+                    {phase === "before" ? (
+                      <>
+                        <Field label={t("Cold pressure")}><NumberInput unit="PSI" aria-label={`${t(label)} ${t("Cold pressure")}`} value={run.tyres[key].coldPressure} onChange={(event) => setTyre(key, "coldPressure", event.target.value)} /></Field>
+                        <Field label={t("Cold temp")}><NumberInput unit="°C" aria-label={`${t(label)} ${t("Cold temp")}`} value={run.tyres[key].coldTemperature} onChange={(event) => setTyre(key, "coldTemperature", event.target.value)} /></Field>
+                      </>
+                    ) : (
+                      <>
+                        <Field label={t("Hot pressure")}>
+                          <NumberInput unit="PSI" aria-label={`${t(label)} ${t("Hot pressure")}`} value={run.tyres[key].hotPressure} onChange={(event) => setTyre(key, "hotPressure", event.target.value)} />
+                          <TyreReference cold={run.tyres[key].coldPressure} gain={pressureGain(run.tyres[key])} unit="PSI" />
+                        </Field>
+                        <Field label={t("Hot temp")}>
+                          <NumberInput unit="°C" aria-label={`${t(label)} ${t("Hot temp")}`} value={run.tyres[key].hotTemperature} onChange={(event) => setTyre(key, "hotTemperature", event.target.value)} />
+                          <TyreReference cold={run.tyres[key].coldTemperature} gain={temperatureGain(run.tyres[key])} unit="°C" />
+                        </Field>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </details>
 
-          <details className="editor-section">
+          {phase === "before" && <details className="editor-section">
             <summary><span><Wrench /> {t("Chassis setup")}</span><ChevronRight /></summary>
             <div className="editor-body form-grid">
               <div className="template-actions field-full">
@@ -1656,9 +1691,9 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
               </p>
               <Field label={t("Setup notes")} className="field-full"><textarea className="textarea" value={run.setup.notes} onChange={(event) => setSetup("notes", event.target.value)} /></Field>
             </div>
-          </details>
+          </details>}
 
-          <details className="editor-section">
+          {phase === "after" && <details className="editor-section" open>
             <summary><span><Timer /> {t("Performance")}</span><ChevronRight /></summary>
             <div className="editor-body form-grid">
               <Field label={t("Run label")}><TextInput placeholder={t("Optional")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></Field>
@@ -1676,9 +1711,9 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
               <Field label={t("Max RPM")}><TextInput inputMode="numeric" placeholder={t("From the data logger")} value={run.maxRpm} onChange={(event) => setField("maxRpm", event.target.value)} /></Field>
               <Field label={t("Position")}><TextInput inputMode="numeric" value={run.position} onChange={(event) => setField("position", event.target.value)} /></Field>
             </div>
-          </details>
+          </details>}
 
-          <details className="editor-section">
+          {phase === "after" && <details className="editor-section">
             <summary><span><MessageSquareText /> {t("Driver feedback")}</span><ChevronRight /></summary>
             <div className="editor-body form-grid">
               <Field label={t("Balance")}><select className="select" value={run.balance} onChange={(event) => setField("balance", event.target.value as RunRecord["balance"])}><option value="">{t("Not recorded")}</option><option value="Understeer">{t("Understeer")}</option><option value="Neutral">{t("Neutral")}</option><option value="Oversteer">{t("Oversteer")}</option></select></Field>
@@ -1689,9 +1724,16 @@ function RunEditor({ run, session, saveState, templates, pressureHint, onBack, o
               <Field label={t("Corner exit / traction")} className="field-full"><textarea className="textarea" value={run.cornerExit} onChange={(event) => setField("cornerExit", event.target.value)} /></Field>
               <Field label={t("General comments")} className="field-full"><textarea className="textarea" value={run.comments} onChange={(event) => setField("comments", event.target.value)} /></Field>
             </div>
-          </details>
+          </details>}
         </div>
-        <button className="button button-primary button-block complete-button" onClick={onComplete}><Check /> {run.completed ? t("Done") : t("Complete Run {number}", { number: String(run.number).padStart(2, "0") })}</button>
+        {phase === "before" ? (
+          <button className="button button-primary button-block complete-button" onClick={() => choosePhase("after")}>{t("Record after Run")}<ChevronRight /></button>
+        ) : (
+          <div className="action-stack run-phase-actions">
+            <button className="button button-primary button-block" onClick={onComplete}><Check /> {run.completed ? t("Done") : t("Complete Run {number}", { number: String(run.number).padStart(2, "0") })}</button>
+            <button className="button button-secondary button-block" onClick={() => choosePhase("before")}>{t("Review cold tyres & setup")}</button>
+          </div>
+        )}
       </div>
     </>
   );

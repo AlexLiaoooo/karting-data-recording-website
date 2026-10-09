@@ -646,6 +646,70 @@ h2 {
   gap: 11px;
 }
 
+.run-phase-switch {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.run-phase-switch button {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 650;
+  min-height: 48px;
+  padding: 8px;
+}
+
+.run-phase-switch button[aria-pressed="true"] {
+  background: var(--blue-dark);
+  color: #fff;
+}
+
+.run-phase-switch button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.run-phase-help {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 12px 0 16px;
+}
+
+.phase-tyres .mini-grid {
+  grid-template-columns: 1fr;
+}
+
+.phase-tyres .input {
+  font-size: 1rem;
+  min-height: 48px;
+}
+
+.tyre-reference {
+  color: var(--muted);
+  display: grid;
+  font-size: 11px;
+  gap: 3px;
+  line-height: 1.4;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.tyre-reference > span:last-child:not(:first-child) {
+  color: var(--text);
+}
+
+.run-phase-actions {
+  margin-top: 18px;
+}
+
 .editor-section {
   background: var(--surface);
   border: 1px solid var(--line);
