@@ -6,7 +6,7 @@ import { LanguageProvider } from "./i18n";
 import { emptyAppData, loadData, saveData } from "./database";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "./track-map/database";
 import { buildFullBackup } from "./track-map/backup";
-import { makeAppData, makeEvent, makeRun, makeSession } from "./test-fixtures";
+import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData, makeLayout, makeMarker, makeVisit } from "./test-fixtures";
 import { createRun, type AppData, type RunRecord } from "./types";
 import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
@@ -405,6 +405,108 @@ async function openTimeline(data: AppData) {
   await act(async () => session.click());
   await act(async () => button("Session timeline & charts").click());
 }
+
+function briefingRecords() {
+  const wetRun = makeRun({ id: "wet-run", number: 2, completed: false, recordingPhase: "after", comments: "Wet setup comments" });
+  wetRun.setup.rearSprocket = "84";
+  wetRun.setup.axleType = "Soft";
+  wetRun.tyres.fl.hotPressure = "11.0";
+  const past = makeEvent({ id: "past", name: "Previous test", trackLayoutId: "layout-1", notes: "Previous Event notes", sessions: [
+    makeSession({ id: "dry-session", notes: "Dry Session notes" }),
+    makeSession({ id: "wet-session", name: "Wet practice", condition: "Wet", trackTemperature: "14", runs: [wetRun, createRun(3)] }),
+  ] });
+  const current = makeEvent({ id: "current", name: "Return visit", trackLayoutId: "layout-1", startDate: "2026-10-11", sessions: [makeSession({ condition: "Wet", trackTemperature: "15" })] });
+  const maps = makeTrackMapData({ layouts: [makeLayout({ markers: [makeMarker({ label: "", cornerNumber: 1, dryNote: "Dry apex note", wetNote: "Wet outside line" })], corners: [{ number: 1, label: "Hairpin", x: 0.4, y: 0.6 }] })], visits: [makeVisit({ eventId: "past", sessionId: "wet-session", condition: "Wet", summary: "Previous wet visit summary" })] });
+  return { data: makeAppData({ events: [current, past], lastEventId: "current" }), maps };
+}
+
+describe("returning-to-track briefing screens", () => {
+  it("opens from an Event, separates condition histories and resolves current corner labels without changing records", async () => {
+    const { data, maps } = briefingRecords();
+    const snapshot = JSON.stringify({ data, maps });
+    vi.mocked(loadData).mockResolvedValue(data);
+    vi.mocked(loadTrackMapData).mockResolvedValue(maps);
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => button("Returning-to-track briefing").click());
+    const lastVisit = container.querySelector('[aria-labelledby="briefing-last-visit"]')!;
+    expect(lastVisit.textContent).toContain("Previous test");
+    expect(lastVisit.textContent).toContain("Run 02");
+    expect(lastVisit.textContent).toContain("After Run");
+    expect(lastVisit.textContent).toContain("Soft");
+    expect(lastVisit.textContent).toContain("Previous wet visit summary");
+    expect(lastVisit.textContent).toContain("Previous Event notes");
+    const reference = container.querySelector('[aria-labelledby="briefing-reference-notes"]')!;
+    expect(reference.textContent).toContain("Hairpin");
+    expect(reference.textContent).toContain("Dry apex note");
+    expect(reference.textContent).not.toContain("Wet outside line");
+    const gearing = container.querySelector('[aria-labelledby="briefing-gearing"]')!;
+    const pressure = container.querySelector('[aria-labelledby="briefing-pressure"]')!;
+    expect(gearing.textContent).toContain("11/82");
+    expect(gearing.textContent).not.toContain("11/84");
+    expect(pressure.textContent).toContain("front +2.5 psi");
+    await act(async () => button("Wet").click());
+    expect(gearing.textContent).toContain("11/84");
+    expect(gearing.textContent).not.toContain("11/82");
+    expect(pressure.textContent).toContain("front +1.0 psi");
+    expect(reference.textContent).toContain("Wet outside line");
+    expect(reference.textContent).not.toContain("Dry apex note");
+    await act(async () => button("Damp").click());
+    expect(reference.textContent).toContain("Dry apex note");
+    expect(reference.textContent).toContain("Wet outside line");
+    expect(gearing.querySelector("table")).toBeNull();
+    expect(pressure.querySelector("table")).toBeNull();
+    expect(JSON.stringify({ data, maps })).toBe(snapshot);
+    await act(async () => button("Back").click());
+    expect(container.textContent).toContain("EVENT CONDITIONS");
+  });
+
+  it("starts with a Session override and returns to that Session", async () => {
+    const { data, maps } = briefingRecords();
+    vi.mocked(loadData).mockResolvedValue(data);
+    vi.mocked(loadTrackMapData).mockResolvedValue(maps);
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => container.querySelector<HTMLButtonElement>("button.list-item")!.click());
+    await act(async () => button("Returning-to-track briefing").click());
+    expect(button("Wet").getAttribute("aria-pressed")).toBe("true");
+    expect(container.textContent).toContain("Closest recorded track temperature: 14 °C");
+    await act(async () => button("Back").click());
+    expect(container.textContent).toContain("SESSION SUMMARY");
+    await act(async () => button("Back").click());
+    await act(async () => button("Returning-to-track briefing").click());
+    expect(button("Dry").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("explains unlinked Events and allows return to edit the Event", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => button("Returning-to-track briefing").click());
+    expect(container.textContent).toContain("Edit this Event and choose a saved Track Layout");
+    await act(async () => button("Back").click());
+    expect(button("Edit event").disabled).toBe(false);
+  });
+
+  it("shows reference notes on a first visit and handles an unavailable saved Layout", async () => {
+    const { data, maps } = briefingRecords();
+    data.events = [data.events[0]];
+    vi.mocked(loadData).mockResolvedValue(data);
+    vi.mocked(loadTrackMapData).mockResolvedValue(maps);
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => button("Returning-to-track briefing").click());
+    expect(container.textContent).toContain("No earlier visit recorded for this Layout yet");
+    expect(container.textContent).toContain("Dry apex note");
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    vi.mocked(loadTrackMapData).mockResolvedValue(emptyTrackMapData());
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => button("Returning-to-track briefing").click());
+    expect(container.textContent).toContain("This Event's saved Layout is unavailable");
+  });
+});
 
 function timelineRecords() {
   const baseline = makeRun({ number: 1, fastestLap: "1:02.500", averageLap: "63.0" });

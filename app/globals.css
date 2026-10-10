@@ -648,6 +648,29 @@ h2 {
 
 .timeline-page { display: grid; gap: 14px; }
 .timeline-page > h1,
+.track-briefing { display: grid; gap: 16px; }
+.track-briefing .summary-card { min-width: 0; overflow-wrap: anywhere; }
+.track-briefing h1 { font-size: 1.3rem; }
+.track-briefing h2 { font-size: 1.1rem; margin: 0 0 12px; }
+.track-briefing h3 { font-size: 0.95rem; margin: 16px 0 8px; }
+.track-briefing p { line-height: 1.6; }
+.briefing-conditions { display: grid; gap: 6px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 16px 0; }
+.briefing-conditions button { background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font: inherit; min-height: 48px; padding: 8px 4px; }
+.briefing-conditions button[aria-pressed="true"] { background: var(--blue-dark); border-color: var(--blue-dark); color: white; }
+.briefing-conditions button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.briefing-setup { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 16px 0; }
+.briefing-setup dt { color: var(--muted); font-size: 0.8rem; }
+.briefing-setup dd { margin: 4px 0 0; white-space: pre-wrap; }
+.briefing-note { border-top: 1px solid var(--line); padding-top: 12px; white-space: pre-wrap; }
+.briefing-note p { margin: 8px 0; }
+.briefing-note h3 { margin-top: 0; }
+.briefing-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.briefing-table-scroll table { border-collapse: collapse; font-size: 0.8rem; min-width: 100%; }
+.briefing-table-scroll caption { color: var(--muted); padding: 8px 0; text-align: left; }
+.briefing-table-scroll th, .briefing-table-scroll td { border-bottom: 1px solid var(--line); padding: 10px 7px; text-align: left; vertical-align: top; }
+.briefing-table-scroll tbody th { min-width: 110px; }
+.briefing-table-scroll tbody td { white-space: nowrap; }
+.briefing-pressure-details summary { cursor: pointer; min-height: 48px; padding: 14px 0; }
 .timeline-page > p { margin: 0; }
 .timeline-circuit { color: var(--muted); font-size: 0.9rem; }
 .timeline-chart-card,

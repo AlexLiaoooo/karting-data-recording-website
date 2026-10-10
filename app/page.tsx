@@ -39,6 +39,7 @@ import { AppData, createRun, emptyExperiment, nextRunNumber, EventRecord, RunRec
 import { recordedRuns, type RecordedRun as HistoricalRun } from "@/lib/experiments";
 import { ExperimentJournal, RunExperiment } from "@/components/experiment-journal";
 import { SessionTimeline } from "@/components/session-timeline";
+import { TrackBriefing } from "@/components/track-briefing";
 import type { TemperatureView, TimelineMetric } from "@/lib/session-timeline";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
@@ -58,7 +59,7 @@ import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -250,6 +251,7 @@ export default function HomePage() {
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [compareBack, setCompareBack] = useState<"session" | "run" | "journal" | "timeline">("session");
   const [runBack, setRunBack] = useState<"session" | "journal" | "timeline">("session");
+  const [briefingBack, setBriefingBack] = useState<"event" | "session">("event");
   const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>("laps");
   const [timelineTemperature, setTimelineTemperature] = useState<TemperatureView>("hot");
   const [isStandalone, setIsStandalone] = useState(false);
@@ -984,6 +986,7 @@ export default function HomePage() {
               <Stat label={t("Surface")} value={t(selectedEvent.condition)} />
             </div>
           </article>
+          <button className="button button-soft button-block" onClick={() => { setBriefingBack("event"); setScreen("briefing"); }}><BookOpen /> {t("Returning-to-track briefing")}</button>
           <section className="list-section">
             <div className="section-heading"><h2>{t("Sessions")}</h2><span className="muted">{selectedEvent.sessions.length}</span></div>
             {selectedEvent.sessions.length ? (
@@ -1036,6 +1039,7 @@ export default function HomePage() {
             <SessionConditionsLine event={selectedEvent} session={selectedSession} />
           </article>
           <div className="action-stack">
+            <button className="button button-soft button-block" onClick={() => { setBriefingBack("session"); setScreen("briefing"); }}><BookOpen /> {t("Returning-to-track briefing")}</button>
             <button className="button button-soft button-block" onClick={() => setScreen("session-track-notes")}><MapPinned /> {t("Track notes")}</button>
             {!selectedEvent.trackLayoutId && <p className="help-text session-track-help">{t("Edit this Event and choose a saved Track Layout before adding Session Track notes.")}</p>}
             {unfinishedRun && <button className="button button-primary button-block" onClick={() => {
@@ -1108,6 +1112,8 @@ export default function HomePage() {
     );
   } else if (screen === "compare") {
     content = <CompareRuns runs={historicalRuns} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
+  } else if (screen === "briefing" && selectedEvent) {
+    content = <><TopBar title={t("Returning-to-track briefing")} subtitle={selectedEvent.name} onBack={() => setScreen(briefingBack)} /><TrackBriefing events={data.events} event={selectedEvent} session={briefingBack === "session" ? selectedSession : undefined} maps={trackMapData} /></>;
   } else if (screen === "journal") {
     content = <><TopBar title={t("Setup experiment journal")} onBack={() => setScreen("home")} /><ExperimentJournal runs={historicalRuns} onOpen={openJournalRun} onCompare={compareExperiment} /></>;
   } else if (screen === "settings") {

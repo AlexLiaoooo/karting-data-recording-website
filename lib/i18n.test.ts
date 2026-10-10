@@ -8,6 +8,7 @@ const SOURCES = [
   "app/page.tsx",
   "components/experiment-journal.tsx",
   "components/session-timeline.tsx",
+  "components/track-briefing.tsx",
   ...readdirSync(join(ROOT, "components/track-map"))
     .filter((file) => file.endsWith(".tsx"))
     .map((file) => `components/track-map/${file}`),
