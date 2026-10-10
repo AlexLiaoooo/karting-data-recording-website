@@ -137,6 +137,7 @@ export function TrackBriefing({ events, event, session, maps }: {
           temperature: String(nearest.trackTemperature), event: nearest.eventName, session: nearest.sessionName, number: String(nearest.runNumber).padStart(2, "0"),
         })}</p>}
         <details className="briefing-pressure-details"><summary>{t("Recorded pressure readings")}</summary>
+          <p className="help-text">{t("Scroll sideways to see every tyre.")}</p>
           <div className="briefing-table-scroll" role="region" aria-label={t("Recorded pressure readings")} tabIndex={0}>
             <table><caption>{t("Cold → hot (gain), PSI. Missing readings are shown as —.")}</caption><thead><tr><th scope="col">{t("Run")}</th><th scope="col">{t("Track")} °C</th>{corners.map(corner => <th scope="col" key={corner}>{corner.toUpperCase()}</th>)}</tr></thead><tbody>{pressureEntries.map(entry => <tr key={`${entry.eventId}/${entry.sessionId}/${entry.run.id}`}>
               <th scope="row">{entry.date}<br />{entry.eventName}<br />{entry.sessionName} · {runTitle(entry.run.number)}<br /><span className="muted">{stateText(entry.run.completed, runRecordingPhase(entry.run))}</span></th>

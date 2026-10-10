@@ -52,6 +52,7 @@ const zh: Record<string, string> = {
   "1 Run with paired cold/hot readings": "1 次 Run 有成对的冷胎与热胎读数",
   "Closest recorded track temperature: {temperature} °C · {event} · {session} · Run {number}": "最接近的历史赛道温度：{temperature} °C · {event} · {session} · Run {number}",
   "Recorded pressure readings": "历史胎压读数",
+  "Scroll sideways to see every tyre.": "左右滚动即可查看每条轮胎。",
   "Cold → hot (gain), PSI. Missing readings are shown as —.": "冷胎 → 热胎（增幅），单位 PSI。缺失读数显示为 —。",
   "No paired cold/hot pressure readings recorded on earlier visits in {condition} conditions.": "此前到访未记录{condition}条件下成对的冷胎与热胎压力读数。",
   "Session timeline & charts": "Session 时间线与图表",
