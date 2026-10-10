@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   BookOpen,
+  ChartNoAxesCombined,
   Check,
   ChevronRight,
   CircleGauge,
@@ -37,6 +38,8 @@ import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, emptyExperiment, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { recordedRuns, type RecordedRun as HistoricalRun } from "@/lib/experiments";
 import { ExperimentJournal, RunExperiment } from "@/components/experiment-journal";
+import { SessionTimeline } from "@/components/session-timeline";
+import type { TemperatureView, TimelineMetric } from "@/lib/session-timeline";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
@@ -55,7 +58,7 @@ import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -245,8 +248,10 @@ export default function HomePage() {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
-  const [compareBack, setCompareBack] = useState<"session" | "run" | "journal">("session");
-  const [runBack, setRunBack] = useState<"session" | "journal">("session");
+  const [compareBack, setCompareBack] = useState<"session" | "run" | "journal" | "timeline">("session");
+  const [runBack, setRunBack] = useState<"session" | "journal" | "timeline">("session");
+  const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>("laps");
+  const [timelineTemperature, setTimelineTemperature] = useState<TemperatureView>("hot");
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -1043,6 +1048,7 @@ export default function HomePage() {
             {/* Two Runs anywhere, not two in this Session: the first Run of a day used to have
                 nothing to compare against, which is exactly when last time out is worth seeing. */}
             {historicalRuns.length > 1 && <button className="button button-secondary button-block" onClick={startCompare}><CircleGauge /> {t("Compare runs")}</button>}
+            <button className="button button-secondary button-block" onClick={() => setScreen("timeline")}><ChartNoAxesCombined /> {t("Session timeline & charts")}</button>
           </div>
           <section className="list-section">
             <div className="section-heading"><h2>{t("Runs")}</h2><span className="muted">{t("Newest first")}</span></div>
@@ -1063,6 +1069,20 @@ export default function HomePage() {
         </div>
       </>
     );
+  } else if (screen === "timeline" && selectedEvent && selectedSession) {
+    content = <>
+      <TopBar title={selectedSession.name} subtitle={selectedEvent.name} onBack={() => setScreen("session")} />
+      <div className="page-content timeline-page">
+        <h1>{t("Session timeline & charts")}</h1>
+        <p className="lead">{t("Follow readings and recorded changes across successive Runs in this Session.")}</p>
+        <p className="timeline-circuit">{selectedEvent.track || t("Track not set")}</p>
+        <SessionConditionsLine event={selectedEvent} session={selectedSession} />
+        <SessionTimeline session={selectedSession} metric={timelineMetric} temperatureView={timelineTemperature}
+          onMetric={setTimelineMetric} onTemperatureView={setTimelineTemperature}
+          onOpen={run => { setRunId(run.id); setRunBack("timeline"); setScreen("run"); }}
+          onCompare={(baselineId, testId) => { setCompareIds([baselineId, testId]); setCompareBack("timeline"); setScreen("compare"); }} />
+      </div>
+    </>;
   } else if (screen === "run" && selectedSession && selectedRun) {
     content = (
       <RunEditor
@@ -1074,7 +1094,7 @@ export default function HomePage() {
         onDelete={() => requestDelete({ kind: "run", id: selectedRun.id, name: `Run ${String(selectedRun.number).padStart(2, "0")}` })}
         onComplete={() => {
           updateRun(selectedRun.id, (run) => ({ ...run, completed: true, recordingPhase: "after" }));
-          setScreen("session");
+          setScreen(runBack === "timeline" ? "timeline" : "session");
           flash(t("Run {number} completed", { number: String(selectedRun.number).padStart(2, "0") }));
         }}
         templates={data.setupTemplates}

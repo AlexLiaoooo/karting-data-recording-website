@@ -395,3 +395,108 @@ describe("setup experiment journal", () => {
     expect(container.textContent).toContain("COMPLETED RUN");
   });
 });
+
+async function openTimeline(data: AppData) {
+  vi.mocked(loadData).mockResolvedValue(data);
+  await render();
+  await act(async () => button("Resume recording").click());
+  const session = [...container.querySelectorAll<HTMLButtonElement>("button.list-item")]
+    .find(element => element.textContent?.includes("Practice 1"))!;
+  await act(async () => session.click());
+  await act(async () => button("Session timeline & charts").click());
+}
+
+function timelineRecords() {
+  const baseline = makeRun({ number: 1, fastestLap: "1:02.500", averageLap: "63.0" });
+  baseline.tyres.fl.coldTemperature = "0";
+  const gap = { ...createRun(4), id: "gap" };
+  const test = makeRun({ id: "test", number: 7, fastestLap: "1:01.500", averageLap: "61.8", completed: false, recordingPhase: "after", comments: "More stable exit" });
+  test.tyres.fl.coldPressure = "10.5";
+  test.tyres.fl.coldTemperature = "-2";
+  test.tyres.fl.hotTemperature = "44";
+  test.setup.rearSprocket = "84";
+  return makeAppData({ events: [makeEvent({ sessions: [makeSession({ condition: "Wet", trackTemperature: "14", runs: [baseline, gap, test] })] })] });
+}
+
+describe("Session timeline and charts", () => {
+  it("opens an empty Session timeline and returns safely to recording", async () => {
+    await openTimeline(makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [] })] })] }));
+    expect(container.textContent).toContain("No Runs to show yet");
+    expect(container.querySelector(".timeline-chart")).toBeNull();
+    await act(async () => button("Back").click());
+    expect(button("Add blank Run 01")).toBeDefined();
+  });
+
+  it("shows unknown readings without plotting zeros, including a single blank Run", async () => {
+    await openTimeline(recordWith(createRun(1)));
+    expect(container.textContent).toContain("No usable readings for this chart yet");
+    expect(container.querySelector(".timeline-chart")).toBeNull();
+    const row = container.querySelector(".timeline-values tbody tr")!;
+    expect([...row.querySelectorAll("td")].map(cell => cell.textContent)).toEqual(["—", "—"]);
+    expect(container.querySelectorAll(".timeline-run-card")).toHaveLength(1);
+    expect(container.textContent).toContain("First recorded Run in this Session");
+  });
+
+  it("displays Session context, ordered Run numbers, and chart gaps with usable minute lap times", async () => {
+    const records = timelineRecords();
+    records.events[0].sessions[0].runs.reverse();
+    await openTimeline(records);
+    expect(container.textContent).toContain("Wet");
+    expect(container.textContent).toContain("14 °C");
+    expect([...container.querySelectorAll(".timeline-run-card h3")].map(heading => heading.textContent)).toEqual(["Run 01", "Run 04", "Run 07"]);
+    expect(container.querySelectorAll(".timeline-chart circle")).toHaveLength(4);
+    expect(container.querySelectorAll(".timeline-chart polyline")).toHaveLength(0);
+    const rows = [...container.querySelectorAll(".timeline-values tbody tr")];
+    expect(rows[0].textContent).toContain("1:02.500");
+    expect([...rows[1].querySelectorAll("td")].map(cell => cell.textContent)).toEqual(["—", "—"]);
+    expect(container.querySelectorAll(".timeline-run-card")[2].textContent).toContain("since Run 04");
+    expect(container.querySelectorAll(".timeline-run-card")[2].textContent).toContain("Rear sprocket");
+    expect(container.querySelectorAll(".timeline-run-card")[2].textContent).toContain("— → 84");
+    expect(container.textContent).toContain("More stable exit");
+  });
+
+  it("switches pressure/temperature/gearing readings and preserves the selected view through edits and comparison", async () => {
+    await openTimeline(timelineRecords());
+    await act(async () => button("Pressure gains").click());
+    expect(container.querySelector(".timeline-values tbody tr")!.textContent).toContain("+2.5");
+    await act(async () => button("Tyre temperatures").click());
+    expect(container.querySelector(".timeline-values tbody tr")!.textContent).toContain("48");
+    await act(async () => button("Cold tyres").click());
+    const first = container.querySelector(".timeline-values tbody tr")!;
+    expect(first.querySelector("td")!.textContent).toBe("0");
+    const last = [...container.querySelectorAll(".timeline-values tbody tr")].at(-1)!;
+    expect(last.querySelector("td")!.textContent).toBe("-2");
+    await act(async () => button("Open Run 07").click());
+    await editInput("Fastest lap", "1:00.500");
+    await act(async () => button("Back").click());
+    expect(button("Tyre temperatures").getAttribute("aria-pressed")).toBe("true");
+    expect(button("Cold tyres").getAttribute("aria-pressed")).toBe("true");
+    await act(async () => button("Lap times").click());
+    expect([...container.querySelectorAll(".timeline-values tbody tr")].at(-1)!.textContent).toContain("1:00.500");
+    await act(async () => button("Gearing").click());
+    expect([...container.querySelectorAll(".timeline-values tbody tr")].at(-1)!.textContent).toContain("7.64");
+    await act(async () => button("Compare with Run 04").click());
+    expect([...container.querySelectorAll(".compare-head > strong")].map(heading => heading.firstChild?.textContent)).toEqual(["Run 04", "Run 07"]);
+    await act(async () => button("Back").click());
+    expect(button("Gearing").getAttribute("aria-pressed")).toBe("true");
+    await act(async () => button("Open Run 07").click());
+    await act(async () => button("Complete Run 07").click());
+    expect(container.querySelector(".session-timeline")).not.toBeNull();
+    expect(container.querySelectorAll(".timeline-run-card")[2].textContent).toContain("Completed");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 600)); });
+    const saved = vi.mocked(saveData).mock.calls.at(-1)![0].events[0].sessions[0].runs[2];
+    expect(saved.fastestLap).toBe("1:00.500");
+    expect(saved.completed).toBe(true);
+  });
+
+  it("keeps a long timeline scoped to this Session and exposes every Run's values and actions", async () => {
+    const runs = Array.from({ length: 24 }, (_, index) => makeRun({ id: `run-${index}`, number: index + 1, fastestLap: String(49 + index / 100) }));
+    const data = makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs }), makeSession({ id: "other-session", name: "Qualifying", runs: [makeRun({ id: "other", number: 99 })] })] })] });
+    await openTimeline(data);
+    expect(container.querySelectorAll(".timeline-run-card")).toHaveLength(24);
+    expect(container.querySelectorAll(".timeline-values tbody tr")).toHaveLength(24);
+    expect(container.textContent).not.toContain("Run 99");
+    expect(button("Open Run 24")).toBeDefined();
+    expect([...container.querySelectorAll(".timeline-chart circle title")].some(title => title.textContent?.includes("Run 24"))).toBe(true);
+  });
+});
