@@ -28,6 +28,11 @@ A mobile-first, local-first web application for recording competition karting ty
   reopen either Run, or compare the linked pair with both sets of conditions beside the result.
 - JSON backups retain experiment notes and baseline links. CSV appends Run IDs, baseline IDs
   and all three notes to the existing Run table. Copies start with no inherited experiment.
+- Session timeline and charts: follow fastest/average laps, each tyre's pressure gain, cold/hot
+  temperatures and gearing across successive Runs. A chronological timeline highlights recorded
+  setup/cold-pressure changes and lets you open a Run or compare it with the previous one.
+- Charts show missing readings as gaps, preserve genuine zero/negative temperature or gain
+  readings, and offer a values table. Longer Sessions scroll horizontally within the chart.
 - Kart-specific chassis setup fields.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
@@ -103,6 +108,9 @@ data rather than looking wrong:
 - **Setup experiments** (`lib/experiments.test.ts`, `lib/storage-ui.test.ts`) — validated notes
   and baseline links, backup/CSV preservation, Session condition overrides, missing baselines,
   phase switching, journal search, linked comparisons and cross-Event navigation.
+- **Session timeline** (`lib/session-timeline.test.ts`, `lib/storage-ui.test.ts`) — minute lap
+  times, chart gaps, valid zero/negative readings, finite chart scales, deleted Run numbers,
+  recorded changes, chart selection through edits/comparison, completion, and 24-Run Sessions.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that

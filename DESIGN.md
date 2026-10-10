@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.25 (committed and pushed to GitHub)
-**Last updated:** 2026-10-09
+**Document status:** Implemented prototype v1.26 (committed and pushed to GitHub)
+**Last updated:** 2026-10-10
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -260,6 +260,27 @@ The user should be able to:
 - Session options menu with a Delete Session action.
 - Deleting a Session also deletes every Run contained within it.
 
+### Session timeline and charts
+
+- A Session action opens its charts and chronological Run timeline. The circuit and resolved
+  Session condition/temperatures lead the page. Only Runs from that Session contribute.
+- Chart controls select fastest/average lap times, four-corner pressure gain, four-corner
+  tyre temperatures (hot or cold), or gear ratio derived from the recorded sprockets.
+- Runs are ordered by their recorded number, oldest first, without inserting deleted numbers.
+  The x-axis represents successive recorded Runs, not elapsed time. Missing/invalid readings
+  have no point and break a line; isolated measured points remain visible. Unfinished Runs may
+  contribute measurements and retain their recording status in the timeline.
+- A values table exposes chart readings and links to the Run editor. Zero and winter tyre
+  temperatures, zero/negative pressure gains and both lap-time notations remain valid.
+- SVG charts use labelled axes, units, colour/dash legends and an accessible description/table.
+  Longer Sessions scroll inside their own chart/table regions without widening the page.
+- Timeline cards show lap summaries, gearing/RPM, feedback and experiment change/outcome notes.
+  Expandable differences show setup/cold-pressure fields relative to the previous surviving
+  Run, including newly filled or cleared fields. They describe the saved records, not causation.
+- Users can open a Run or compare with its predecessor. Returning from editing, completion or
+  comparison restores the timeline's in-memory chart/temperature selection and latest values.
+- Everything is derived from existing records; no schema, backup/export or dependency changes.
+
 ### Run editor
 
 - Two large controls select Before Run and After Run; the selected view persists with the Run.
@@ -497,6 +518,20 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.26 — 2026-10-10
+
+- Implemented approved option 4: Session lap, pressure-gain, cold/hot-temperature and gearing
+  charts, chart values tables, and chronological Run cards with recorded setup/pressure changes.
+- Preserved missing-data gaps, zero/negative readings, minute-format laps and original Run
+  numbers. No new persisted fields or third-party chart dependency were introduced.
+- Added Run opening and predecessor comparison with chart selection retained on return.
+- All 346 tests across 20 files, lint and production build pass. Isolated browser verification
+  covered sample restore, chart switching, corrections and comparison, persisted lap edits,
+  offline reload/reopening, Chinese at 320px with 48px controls, and horizontal scrolling to
+  Run 24 without page overflow. Browser runtime errors were empty.
+- Updated the guide with checked chart and timeline screenshots. Each verified step was
+  committed and pushed using the standing project workflow.
 
 ### Implemented prototype v1.25 — 2026-10-09
 
