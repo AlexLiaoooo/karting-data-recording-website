@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.26 (committed and pushed to GitHub)
-**Last updated:** 2026-10-10
+**Document status:** Implemented prototype v1.27 (committed and pushed to GitHub)
+**Last updated:** 2026-10-11
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -281,6 +281,29 @@ The user should be able to:
   comparison restores the timeline's in-memory chart/temperature selection and latest values.
 - Everything is derived from existing records; no schema, backup/export or dependency changes.
 
+### Returning-to-track briefing
+
+- Event and Session actions open a read-only briefing for the Event's exact saved Layout ID.
+  An absent/deleted Layout or invalid current start date explains what to correct. Free-text
+  track names never substitute for Layout links; matching unlinked names are counted as a hint.
+- Earlier Events are ordered by start date, then creation timestamp for same-day visits.
+  Current/future Events, invalid dates and equal-time same-day ambiguities are excluded.
+- The previous Event remains explicit even if it contains no Runs. Its last nonblank setup or
+  cold-pressure record is chosen in Session creation order, then Run-number order; blank Runs
+  are skipped. Source Session/Run, surface and recording status accompany all displayed values.
+- Event and Session notes, Run comments and saved TrackVisit summaries/observations from the
+  previous Event appear with their source context. Orphaned Session visits are ignored;
+  missing Markers retain their observation text with an unavailable label. Corner labels resolve
+  from the current Layout, with manually entered names retaining precedence.
+- Reference notes follow the view's selected condition. Dry/Wet show their corresponding
+  notes; Damp/Mixed show both, alongside general Track/Layout/Marker notes and instructions.
+- Gearing and pressure summaries use only earlier Runs in the selected resolved Session
+  condition. Counts, original readings, dates, lap/RPM context and nearest track temperature
+  keep the history assessable. Unfinished records contribute saved values with clear labels.
+- The view initially uses Event or Session conditions according to its entry point. Switching
+  conditions does not write records; Back returns to that Event or Session. Data and notes
+  remain available offline. No new storage schema, dependencies or recommendation model.
+
 ### Run editor
 
 - Two large controls select Before Run and After Run; the selected view persists with the Run.
@@ -518,6 +541,19 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.27 — 2026-10-11
+
+- Implemented approved option 5: returning-to-track briefing with the previous visit's setup,
+  pressures and notes, condition-specific reference notes, gearing and pressure histories.
+- Exact Layout matching excludes current/future Events and unlinked track-name matches.
+  Blank Runs are skipped and unfinished setups retain their status; no records are rewritten.
+- All 366 tests across 21 files, lint and production build pass. Isolated browser verification
+  restored a five-Event sample through the app, checked exclusion and dry/wet separation,
+  Session overrides, unchanged saved conditions, 390px English / 320px Chinese layouts,
+  48px condition controls, offline reload/reopening, and empty browser runtime errors.
+- Updated the guide with inspected briefing screenshots and documented matching/ordering.
+  Each completed step was committed and pushed using the standing project workflow.
 
 ### Implemented prototype v1.26 — 2026-10-10
 

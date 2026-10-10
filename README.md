@@ -33,6 +33,10 @@ A mobile-first, local-first web application for recording competition karting ty
   setup/cold-pressure changes and lets you open a Run or compare it with the previous one.
 - Charts show missing readings as gaps, preserve genuine zero/negative temperature or gain
   readings, and offer a values table. Longer Sessions scroll horizontally within the chart.
+- Returning-to-track briefing from an Event or Session: the previous visit's last recorded
+  setup and tyre pressures, Event/Session/track notes, surface-specific reference notes, and
+  condition-specific gearing and pressure history together. Uses the exact saved Layout;
+  excludes current/future Events, labels unfinished records, and works with saved data offline.
 - Kart-specific chassis setup fields.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
@@ -111,6 +115,9 @@ data rather than looking wrong:
 - **Session timeline** (`lib/session-timeline.test.ts`, `lib/storage-ui.test.ts`) — minute lap
   times, chart gaps, valid zero/negative readings, finite chart scales, deleted Run numbers,
   recorded changes, chart selection through edits/comparison, completion, and 24-Run Sessions.
+- **Track briefing** (`lib/track-briefing.test.ts`, `lib/storage-ui.test.ts`) — exact Layout
+  matching, date ordering, current/future exclusions, blank/incomplete setups, Session condition
+  overrides, separated dry/wet histories, reference notes, missing Layouts, and return navigation.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that
