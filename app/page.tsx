@@ -41,6 +41,7 @@ import { ExperimentJournal, RunExperiment } from "@/components/experiment-journa
 import { SessionTimeline } from "@/components/session-timeline";
 import { TrackBriefing } from "@/components/track-briefing";
 import { RunTyreSet, TyreSetLibrary } from "@/components/tyre-sets";
+import { MechanicHandover } from "@/components/mechanic-handover";
 import { tyreUsageByRun, type TyreUsage } from "@/lib/tyre-sets";
 import type { TemperatureView, TimelineMetric } from "@/lib/session-timeline";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
@@ -61,7 +62,7 @@ import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -855,7 +856,7 @@ export default function HomePage() {
   }
 
   let content: ReactNode;
-  const hasRecords = data.events.length > 0 || data.setupTemplates.length > 0
+  const hasRecords = data.events.length > 0 || data.setupTemplates.length > 0 || data.tyreSets.length > 0
     || trackMapData.tracks.length > 0 || trackMapData.layouts.length > 0
     || trackMapData.visits.length > 0 || trackMapData.assets.length > 0;
   const backupReminder = backupIsDue(hasRecords, backupHistory, reminderNow) ? (
@@ -1114,8 +1115,11 @@ export default function HomePage() {
         onCompare={compareExperiment}
         onSaveTemplate={() => setShowSaveTemplateForm(true)}
         onApplyTemplate={() => setShowApplyTemplateForm(true)}
+        onHandover={() => setScreen("handover")}
       />
     );
+  } else if (screen === "handover" && selectedRun) {
+    content = <><TopBar title={t("Mechanic handover card")} onBack={() => setScreen("run")} /><MechanicHandover data={data} entry={historicalRuns.find(entry => entry.run.id === selectedRun.id)!} /></>;
   } else if (screen === "compare") {
     content = <CompareRuns runs={historicalRuns} tyreSets={data.tyreSets} tyreAges={tyreAges} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
   } else if (screen === "tyres") {
@@ -1576,6 +1580,7 @@ function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data:
           markers: counted(markerCount, "marker"),
           images: counted(data.trackMapData.assets.length, "map image"),
         })}</p>
+        {data.appData.tyreSets.length > 0 && <p>{t("Tyre sets in this backup: {count}", { count: data.appData.tyreSets.length })}</p>}
         {failed && <p className="restore-error" role="alert">{t("Restore failed. Your saved data was not replaced. Check available device storage and try again.")}</p>}
         <div className="action-stack" aria-busy={busy}>
           <button className="button button-primary button-block" disabled={busy} onClick={onConfirm}>{busy ? t("Restoring…") : t("Restore backup")}</button>
@@ -1644,7 +1649,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
+function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1673,6 +1678,7 @@ function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pres
       <div className="page-content run-page">
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
         <RunTyreSet run={run} sets={tyreSets} usage={tyreAge} onUpdate={onUpdate} />
+        <button type="button" className="button button-soft button-block handover-action" onClick={onHandover}><Share2 />{t("Mechanic handover card")}</button>
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>
           <button type="button" ref={afterButton} aria-pressed={phase === "after"} aria-controls="run-recording-fields" onClick={() => choosePhase("after")}>{t("After Run")}</button>

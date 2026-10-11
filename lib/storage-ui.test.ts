@@ -10,10 +10,12 @@ import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData, makeLay
 import { createRun, type AppData, type RunRecord } from "./types";
 import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
+import { handoverImages } from "./handover-image";
 
 vi.mock("./database", async (original) => ({ ...await original<typeof import("./database")>(), loadData: vi.fn(), saveData: vi.fn() }));
 vi.mock("./track-map/database", async (original) => ({ ...await original<typeof import("./track-map/database")>(), loadTrackMapData: vi.fn(), saveTrackMapData: vi.fn(), restoreFullData: vi.fn() }));
 vi.mock("./track-map/built-in-maps", () => ({ refreshBuiltInMaps: vi.fn((data) => Promise.resolve(data)) }));
+vi.mock("./handover-image", async original => ({ ...await original<typeof import("./handover-image")>(), handoverImages: vi.fn() }));
 
 let root: Root;
 let container: HTMLDivElement;
@@ -35,6 +37,7 @@ beforeEach(() => {
   vi.mocked(saveData).mockResolvedValue();
   vi.mocked(saveTrackMapData).mockResolvedValue();
   vi.mocked(restoreFullData).mockResolvedValue();
+  vi.mocked(handoverImages).mockResolvedValue([new Blob(["test image"], { type: "image/png" })]);
 });
 
 afterEach(async () => {
@@ -177,8 +180,55 @@ function recordWith(run: RunRecord) {
   return makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
 }
 
+describe("mechanic handover screen", () => {
+  it("previews, downloads and returns to the same Run without changing its fields", async () => {
+    const data = recordWith(makeRun({ comments: "Keep the outside line" }));
+    const original = JSON.stringify(data);
+    await openRecordedRun(data);
+    await act(async () => button("Mechanic handover card").click());
+    expect(container.textContent).toContain("Keep the outside line");
+    expect(container.querySelector(".handover-images img")).not.toBeNull();
+    expect(button("Download handover images").disabled).toBe(false);
+    await act(async () => button("Download handover images").click());
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+    expect(JSON.stringify(data)).toBe(original);
+    await act(async () => button("Back").click());
+    expect(inputNamed("Run label")).not.toBeNull();
+    expect(container.querySelector(".handover-images")).toBeNull();
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+  it("offers a ready file to native sharing, treats cancellation normally and explains sharing failures", async () => {
+    const share = vi.fn().mockRejectedValueOnce(new DOMException("Cancelled", "AbortError")).mockRejectedValueOnce(new DOMException("Blocked", "NotAllowedError"));
+    vi.stubGlobal("navigator", { userAgent: "Test browser", share, canShare: vi.fn(() => true) });
+    await openRecordedRun(recordWith(makeRun()));
+    await act(async () => button("Mechanic handover card").click());
+    await act(async () => button("Share handover card").click());
+    expect(share.mock.calls[0][0].files[0]).toBeInstanceOf(File);
+    expect(share.mock.calls[0][0].files[0].type).toBe("image/png");
+    expect(container.textContent).not.toContain("Sharing could not open");
+    await act(async () => button("Share handover card").click());
+    expect(container.textContent).toContain("Sharing could not open");
+    expect(button("Download handover images").disabled).toBe(false);
+  });
+  it("keeps an accessible text card available on image failure and supports retry", async () => {
+    vi.mocked(handoverImages).mockRejectedValueOnce(new Error("Canvas unavailable"));
+    await openRecordedRun(recordWith(makeRun({ comments: "Original feedback" })));
+    await act(async () => button("Mechanic handover card").click());
+    expect(container.textContent).toContain("The card images could not be created");
+    expect(container.textContent).toContain("Original feedback");
+    expect(button("Download handover images").disabled).toBe(true);
+    await act(async () => button("Retry image creation").click());
+    expect(button("Download handover images").disabled).toBe(false);
+  });
+});
+
 describe("tyre-set recording screens", () => {
   const tyreSet = { id: "set-1", name: "Dry A", compound: "Medium", notes: "", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "2026-08-01", updatedAt: "2026-08-01" };
+  it("offers backup protection when tyre sets are the only saved records", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [], lastEventId: null, tyreSets: [tyreSet] }));
+    await render();
+    expect(container.textContent).toContain("Keep a backup of your track days");
+  });
   it("creates a tyre set, rejects invalid starting usage, and preserves retired history", async () => {
     await render();
     await act(async () => button("Tyre-set history").click());

@@ -649,6 +649,20 @@ h2 {
 .timeline-page { display: grid; gap: 14px; }
 .timeline-page > h1,
 .track-briefing { display: grid; gap: 16px; }
+.handover-page { display: grid; gap: 16px; }
+.handover-page > p { margin: 0; }
+.handover-action { margin-bottom: 16px; }
+.handover-images { display: grid; gap: 16px; min-width: 0; }
+.handover-images figure { margin: 0; }
+.handover-images img { background: white; border: 1px solid var(--line); border-radius: 10px; display: block; height: auto; max-width: 100%; width: 100%; }
+.handover-images figcaption { font-size: 0.85rem; line-height: 1.6; margin-top: 8px; }
+.handover-images a { color: var(--blue); }
+.handover-text { min-width: 0; overflow-wrap: anywhere; }
+.handover-text summary { cursor: pointer; min-height: 48px; padding: 14px 0; }
+.handover-text h1 { font-size: 1.2rem; }
+.handover-text dl { display: grid; gap: 10px; }
+.handover-text dt { color: var(--muted); font-size: 0.85rem; }
+.handover-text dd { margin: 4px 0 0; white-space: pre-wrap; }
 .tyre-set-library { display: grid; gap: 16px; }
 .tyre-set-library .lead { margin: 0; }
 .tyre-set-card, .tyre-set-form, .run-tyre-set { min-width: 0; overflow-wrap: anywhere; }
