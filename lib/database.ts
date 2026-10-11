@@ -1,4 +1,4 @@
-import type { AppData, EventRecord } from "./types";
+import type { AppData, EventRecord, TyreSet } from "./types";
 import { isRecord, validAppRecords } from "./validation";
 
 const DB_NAME = "kart-data-recorder";
@@ -11,6 +11,7 @@ export const emptyAppData = (): AppData => ({
   events: [],
   lastEventId: null,
   setupTemplates: [],
+  tyreSets: [],
 });
 
 /**
@@ -38,6 +39,7 @@ export function normalizeAppData(value: unknown): AppData | null {
     events?: unknown;
     lastEventId?: unknown;
     setupTemplates?: unknown;
+    tyreSets?: unknown;
   };
   if ((candidate.version !== 1 && candidate.version !== 2) || !Array.isArray(candidate.events)) return null;
 
@@ -46,6 +48,7 @@ export function normalizeAppData(value: unknown): AppData | null {
     events: migrateRuns(candidate.events as EventRecord[]),
     lastEventId: typeof candidate.lastEventId === "string" ? candidate.lastEventId : null,
     setupTemplates: Array.isArray(candidate.setupTemplates) ? candidate.setupTemplates : [],
+    tyreSets: Array.isArray(candidate.tyreSets) ? candidate.tyreSets as TyreSet[] : [],
   };
 }
 

@@ -33,12 +33,21 @@ function setup(value: unknown): boolean {
 }
 
 export function validAppRecords(value: RecordValue): boolean {
+  const tyreSetIds = new Set<string>();
+  const nonnegativeInteger = (item: unknown) => typeof item === "number" && Number.isSafeInteger(item) && item >= 0;
+  if (value.tyreSets !== undefined && !records(value.tyreSets, record =>
+    strings(record, ["name", "compound", "notes", "createdAt", "updatedAt"])
+    && Boolean((record.name as string).trim()) && typeof record.retired === "boolean"
+    && nonnegativeInteger(record.initialLaps) && nonnegativeInteger(record.initialHeatCycles), tyreSetIds)) return false;
   const sessionIds = new Set<string>();
   const runIds = new Set<string>();
   const run = (record: RecordValue) => strings(record, ["label", "recordedAt", "laps", "fastestLap", "averageLap", "position", "cornerEntry", "midCorner", "cornerExit", "comments", "updatedAt"])
     && optionalStrings(record, ["maxRpm"])
     && positiveInteger(record.number) && typeof record.completed === "boolean"
     && (record.recordingPhase === undefined || choice(record.recordingPhase, ["before", "after"]))
+    && (record.tyreSetId === undefined || record.tyreSetId === null || (typeof record.tyreSetId === "string" && tyreSetIds.has(record.tyreSetId)))
+    && (record.tyreHeatCycle === undefined || typeof record.tyreHeatCycle === "boolean")
+    && (record.tyreHeatCycle !== true || typeof record.tyreSetId === "string")
     && (record.experiment === undefined || (isRecord(record.experiment)
       && strings(record.experiment, ["change", "expectation", "outcome"])
       && (record.experiment.baselineRunId === null || (typeof record.experiment.baselineRunId === "string"

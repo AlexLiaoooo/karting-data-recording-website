@@ -35,6 +35,18 @@ export type SetupTemplate = {
 
 export type RunRecordingPhase = "before" | "after";
 
+export type TyreSet = {
+  id: string;
+  name: string;
+  compound: string;
+  notes: string;
+  initialLaps: number;
+  initialHeatCycles: number;
+  retired: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SetupExperiment = {
   baselineRunId: string | null;
   change: string;
@@ -71,6 +83,9 @@ export type RunRecord = {
   recordingPhase?: RunRecordingPhase;
   /** Optional journal entry. Copied Runs start without the previous experiment's notes. */
   experiment?: SetupExperiment;
+  tyreSetId?: string | null;
+  /** Explicitly recorded by the driver; never inferred from a hot reading or completion. */
+  tyreHeatCycle?: boolean;
   updatedAt: string;
 };
 
@@ -117,6 +132,7 @@ export type AppData = {
   events: EventRecord[];
   lastEventId: string | null;
   setupTemplates: SetupTemplate[];
+  tyreSets: TyreSet[];
 };
 
 export const emptyTyre = (): TyreReading => ({
@@ -192,6 +208,8 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     comments: "",
     completed: false,
     recordingPhase: "before",
+    tyreSetId: previous?.tyreSetId ?? null,
+    tyreHeatCycle: false,
     updatedAt: now,
   };
 };

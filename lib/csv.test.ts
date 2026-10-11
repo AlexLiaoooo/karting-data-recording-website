@@ -8,6 +8,18 @@ function tables(csv: string) {
 }
 
 describe("buildCsv", () => {
+  it("exports tyre identity, age before each Run, cycle flags and a tyre-set inventory table", () => {
+    const set = { id: "set-1", name: "Dry A", compound: "Medium", notes: "Used before recording", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "stamp", updatedAt: "stamp" };
+    const data = makeAppData({ tyreSets: [set], events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ tyreSetId: "set-1", tyreHeatCycle: true })] })] })] });
+    const [runs, , , inventory] = tables(buildCsv(data, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+    expect(row["Tyre set ID"]).toBe("set-1");
+    expect(row["Recorded tyre laps before Run"]).toBe("20");
+    expect(row["Heat cycle recorded"]).toBe("Yes");
+    expect(inventory[0]).toEqual(["TYRE SETS"]);
+    expect(inventory[2]).toHaveLength(inventory[1].length);
+    expect(inventory[2][7]).toBe("32");
+  });
   it("emits three tables: runs, track markers, session observations", () => {
     const [runs, markers, observations] = tables(buildCsv(makeAppData(), makeTrackMapData()));
 

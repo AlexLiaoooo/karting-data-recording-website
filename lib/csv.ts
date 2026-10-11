@@ -1,4 +1,5 @@
-import type { AppData, ChassisSetup, RunRecord, TyreCorner } from "./types";
+import type { AppData, ChassisSetup, RunRecord, TyreCorner, TyreSet } from "./types";
+import { tyreSetSummary, tyreUsageByRun, type TyreUsage } from "./tyre-sets";
 import { markerLabel, type TrackMapData } from "./track-map/types";
 import { gearRatio } from "./gearing";
 import { parseLapTime } from "./lap-time";
@@ -99,6 +100,7 @@ const feedbackHeaders = [
 ];
 
 const experimentHeaders = ["Run ID", "Baseline Run ID", "Experiment change", "Experiment expectation", "Experiment outcome"];
+const tyreSetHeaders = ["Tyre set ID", "Tyre set name", "Tyre compound", "Heat cycle recorded", "Recorded tyre laps before Run", "Recorded heat cycles before Run", "Missing lap counts before Run"];
 
 /**
  * A gain as the app computes it everywhere else, so the spreadsheet and the screens cannot
@@ -109,10 +111,10 @@ function csvGain(gain: number | null) {
   return gain === null ? "" : gain.toFixed(2);
 }
 
-function runValues(run?: RunRecord) {
+function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage) {
   if (!run) {
     // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
-    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length).fill("");
+    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length + tyreSetHeaders.length).fill("");
   }
 
   return [
@@ -152,6 +154,9 @@ function runValues(run?: RunRecord) {
     run.experiment?.change ?? "",
     run.experiment?.expectation ?? "",
     run.experiment?.outcome ?? "",
+    run.tyreSetId ?? "", set?.name ?? "", set?.compound ?? "",
+    run.tyreHeatCycle === undefined ? "" : run.tyreHeatCycle ? "Yes" : "No",
+    age?.laps ?? "", age?.heatCycles ?? "", age?.missingLaps ?? "",
   ];
 }
 
@@ -276,7 +281,9 @@ function section(title: string, header: string[], rows: unknown[][]) {
 }
 
 export function buildCsv(data: AppData, trackMap: TrackMapData) {
-  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders];
+  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders, ...tyreSetHeaders];
+  const ages = tyreUsageByRun(data);
+  const sets = new Map(data.tyreSets.map(set => [set.id, set]));
   const rows: unknown[][] = [];
 
   for (const event of data.events) {
@@ -317,7 +324,7 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
       }
 
       for (const run of session.runs) {
-        rows.push([...eventValues, ...sessionValues, ...runValues(run)]);
+        rows.push([...eventValues, ...sessionValues, ...runValues(run, sets.get(run.tyreSetId ?? ""), ages.get(run.id))]);
       }
     }
   }
@@ -327,6 +334,10 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
     section("TRACK REFERENCE MARKERS", markerHeaders, markerRows(trackMap)),
     section("SESSION TRACK OBSERVATIONS", observationHeaders, observationRows(data, trackMap)),
   ];
+  if (data.tyreSets.length) tables.push(section("TYRE SETS", ["Tyre set ID", "Name", "Compound", "Notes", "Retired", "Starting laps", "Starting heat cycles", "Recorded total laps", "Recorded total heat cycles", "Completed Runs", "Missing lap counts"], data.tyreSets.map(set => {
+    const usage = tyreSetSummary(data, set);
+    return [set.id, set.name, set.compound, set.notes, set.retired ? "Yes" : "No", set.initialLaps, set.initialHeatCycles, usage.laps, usage.heatCycles, usage.completedRuns, usage.missingLaps];
+  })));
 
   const body = tables
     .map((table) => table.map((row) => row.map(escapeCsv).join(",")).join("\r\n"))
