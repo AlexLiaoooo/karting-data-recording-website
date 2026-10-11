@@ -38,6 +38,12 @@ A mobile-first, local-first web application for recording competition karting ty
   condition-specific gearing and pressure history together. Uses the exact saved Layout;
   excludes current/future Events, labels unfinished records, and works with saved data offline.
 - Kart-specific chassis setup fields.
+- Tyre-set history from Home: name each set, record its compound/model and starting usage,
+  assign it to Runs, and follow completed laps and explicitly recorded heat cycles across Events.
+  Retiring preserves history; Run comparisons show the recorded tyre age before each outing.
+- Mechanic handover card from any Run: preview and download local PNG images containing
+  conditions, tyre age/readings, setup, performance, recorded changes and feedback. Long cards
+  continue on additional pages, with device file sharing offered where supported.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
 - Lap times in either notation: 52.400 or 1:02.500. Both are read wherever a lap is counted, and a lap the app cannot read says so beneath the field rather than being dropped in silence.
@@ -46,7 +52,10 @@ A mobile-first, local-first web application for recording competition karting ty
 - Compare any two Runs on record, from different Sessions and different Events, across every performance, tyre, setup and feedback field with differences highlighted. Each column names the Event and Session it came from, because two Runs from different Events are both "Run 01". The table opens with what each Run ran in, and a comparison between a dry Run and a wet one is flagged as not like for like beside the lap delta, since that delta says little about the setup.
 - Before Run's Cold tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
-- Versioned JSON backup/restore with confirmation, and an Excel-ready CSV export containing three tables: Events/Sessions/Runs, Track reference markers, and Session track observations.
+- Versioned JSON backup/restore with confirmation, including tyre sets and Run assignments.
+  Excel-ready CSV exports contain Events/Sessions/Runs, Track reference markers, Session track
+  observations, and an additional tyre-set inventory when sets exist. The Run table includes
+  assignment, heat-cycle status and recorded usage before each Run.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
 - Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
 - Save failures remain visible on every screen, with retry and full export of the current in-memory records. Pending saves cannot overwrite a newer restore.
@@ -91,7 +100,7 @@ data rather than looking wrong:
 - **Backup round-trip** (`lib/track-map/backup.test.ts`) — events, tracks, layouts, markers
   and visits restore unchanged, map image bytes survive exactly, backups predating Track
   Maps still restore, and malformed files are rejected instead of partially applied.
-- **CSV export** (`lib/csv.test.ts`) — the three tables, correct column counts, computed
+- **CSV export** (`lib/csv.test.ts`) — the three core tables and optional tyre-set inventory, correct column counts, computed
   pressure/temperature gains left blank wherever the app's screens show none (a mistyped 0
   pressure included), the UTF-8 BOM, and escaping of quotes, commas and line breaks in
   free-text notes.
@@ -118,6 +127,12 @@ data rather than looking wrong:
 - **Track briefing** (`lib/track-briefing.test.ts`, `lib/storage-ui.test.ts`) — exact Layout
   matching, date ordering, current/future exclusions, blank/incomplete setups, Session condition
   overrides, separated dry/wet histories, reference notes, missing Layouts, and return navigation.
+- **Tyre sets** (`lib/tyre-sets.test.ts`, `lib/storage-ui.test.ts`) — legacy migration, validated
+  assignments and starting usage, backup/CSV preservation, completed-only totals, incomplete lap
+  history, chronological age before each Run, retirement, copies and comparison context.
+- **Mechanic handover** (`lib/handover.test.ts`, `lib/storage-ui.test.ts`) — complete snapshots,
+  named baseline selection, condition warnings, Unicode/long-note pagination, downloads,
+  share cancellation/failure, image-generation recovery and retained accessible text.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that

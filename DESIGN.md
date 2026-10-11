@@ -1,6 +1,6 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.27 (committed and pushed to GitHub)
+**Document status:** Implemented prototype v1.28 (committed and pushed to GitHub)
 **Last updated:** 2026-10-11
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
@@ -136,11 +136,14 @@ Proposed initial units:
 
 Units should be treated as a configurable product decision, even if the first version initially defaults to PSI and °C.
 
-Optional tyre fields to validate during testing:
+Each reusable tyre set has an ID, name, compound/model, notes, starting laps and heat cycles,
+retirement status and timestamps. Runs optionally reference a set and explicitly mark a recorded
+heat cycle. Old Runs retain no assignment rather than inferring one from their measurements.
 
-- Tyre manufacturer/model or compound.
-- Tyre set identifier.
-- Approximate tyre age or accumulated laps.
+Starting usage describes use before the first Run recorded here. Derived totals add only completed
+assigned Runs; unknown/invalid lap counts produce an incomplete-history warning. Heat cycles are
+explicit records, never inferred from temperature or pressure. Editing/deleting a Run recalculates
+usage. Copies keep the set identity, clear the cycle flag and begin with blank results.
 
 ### 5.5 Chassis setup
 
@@ -342,6 +345,30 @@ JSON backups preserve the view. CSV measurements/comparisons retain their existi
 - JSON backups preserve notes and links. CSV appends Run ID, Baseline Run ID and the three
   notes after existing measurement columns. New and copied Runs have no inherited experiment.
 
+### Tyre-set history
+
+Home's Track tools opens a library with add/edit, retire/reactivate and source-Run history.
+Retired sets remain in historical records and appear in the Run selector only when already assigned.
+Both recording phases expose the assignment and cycle checkbox. Usage before each Run is
+derived in Event date order, then Session creation order and Run number; completed Runs alone
+advance the counters. The library totals, Run context, comparison and CSV share this calculation.
+Counters describe recorded usage, including starting usage, rather than estimating unrecorded use.
+
+### Mechanic handover card
+
+Every Run opens a read-only snapshot with Event/Session/Run identity and completion status,
+resolved conditions, tyre set and age before this Run, all four tyre readings/gains, recorded
+setup and ratio, performance, changes/experiment notes and driver feedback. Changes name their
+source: an explicit experiment baseline, otherwise the previous Run in the same Session. A
+missing explicit baseline stays missing; differing conditions/circuits carry a context warning.
+
+Canvas creates PNG pages locally with no external rendering service. Text wraps at measured
+width, including CJK and long words, and pages are bounded to 54 body lines. Each repeats the
+Run/Session reference and page number. Individual page downloads remain available alongside
+the all-pages button. Native file sharing appears only when supported; cancellation is normal,
+and failure offers manual downloads. A readable text snapshot and image retry remain available
+if rendering fails. Blob URLs are released when the snapshot changes or the view closes.
+
 ### Compare view
 
 - Select any two Runs on record, from any Session or Event, grouped by Event and Session.
@@ -434,7 +461,7 @@ Because there is no cloud account, backup is a first-version requirement rather 
   retaining supported legacy fields and historical observations of deleted Events/Sessions.
 - Block editing and autosaving after a failed or invalid startup read. Offer retry and a
   validated backup restore without clearing the database.
-- Restore Events, templates, Tracks, Layouts, visits and map images in one IndexedDB transaction.
+- Restore Events, templates, tyre sets, Tracks, Layouts, visits and map images in one IndexedDB transaction.
   Wait for active saves first and cancel older debounce callbacks. Show success after commit;
   failure must preserve the previous stored data and current in-memory records.
 - Serialize saves within the page. Keep collection-specific failures visible on every screen
@@ -541,6 +568,23 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.28 — 2026-10-11
+
+- Implemented approved options 6 and 7: tyre-set history and mechanic handover cards.
+- Tyre sets support starting usage, per-Run assignment/heat cycles, completed-only totals,
+  recorded age in comparisons, retirement and compatible JSON/CSV exports. Existing records
+  and backups remain readable without guessing tyre identities or cycles.
+- Run snapshots export local PNG pages with conditions, tyre/setup/performance details, named
+  changes and feedback; supported devices offer file sharing. Long notes are preserved across
+  pages and rendering failure retains text with retry.
+- All 401 tests across 23 files, lint and production build pass. An empty isolated browser
+  restored synthetic records, verified totals, retirement across reload, edited lap/cycle
+  persistence in IndexedDB, source-Run return navigation, 390px English / 320px Chinese layouts,
+  offline reopening and actual PNG downloads. English/Chinese exported images were inspected;
+  native sharing request, cancellation and failure are covered by mocked interface tests.
+- Updated the guide with inspected screenshots and an exported sample. Each coherent step
+  was committed and pushed under the standing project workflow.
 
 ### Implemented prototype v1.27 — 2026-10-11
 
