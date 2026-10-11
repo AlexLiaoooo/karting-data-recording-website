@@ -40,6 +40,8 @@ import { recordedRuns, type RecordedRun as HistoricalRun } from "@/lib/experimen
 import { ExperimentJournal, RunExperiment } from "@/components/experiment-journal";
 import { SessionTimeline } from "@/components/session-timeline";
 import { TrackBriefing } from "@/components/track-briefing";
+import { RunTyreSet, TyreSetLibrary } from "@/components/tyre-sets";
+import { tyreUsageByRun, type TyreUsage } from "@/lib/tyre-sets";
 import type { TemperatureView, TimelineMetric } from "@/lib/session-timeline";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
@@ -59,7 +61,7 @@ import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -250,7 +252,7 @@ export default function HomePage() {
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [compareBack, setCompareBack] = useState<"session" | "run" | "journal" | "timeline">("session");
-  const [runBack, setRunBack] = useState<"session" | "journal" | "timeline">("session");
+  const [runBack, setRunBack] = useState<"session" | "journal" | "timeline" | "tyres">("session");
   const [briefingBack, setBriefingBack] = useState<"event" | "session">("event");
   const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>("laps");
   const [timelineTemperature, setTimelineTemperature] = useState<TemperatureView>("hot");
@@ -415,6 +417,7 @@ export default function HomePage() {
   );
   const activeEvent = data.events.find((event) => event.id === data.lastEventId) ?? data.events[0];
   const historicalRuns = useMemo(() => recordedRuns(data.events), [data.events]);
+  const tyreAges = useMemo(() => tyreUsageByRun(data), [data]);
 
   /**
    * Every past Run, keyed by the Layout its Event named, for the Track Map pages' gearing and
@@ -921,6 +924,7 @@ export default function HomePage() {
               <span className="list-copy"><strong>{t("Setup experiment journal")}</strong><span>{t("Changes, expectations and outcomes across your Runs")}</span></span>
               <ChevronRight />
             </button>
+            <button className="list-item" aria-label={t("Tyre-set history")} onClick={() => setScreen("tyres")}><span className="list-icon"><CircleGauge /></span><span className="list-copy"><strong>{t("Tyre-set history")}</strong><span>{t("Named sets, accumulated laps and recorded heat cycles")}</span></span><ChevronRight /></button>
           </section>
 
           {data.events.length > 0 && (
@@ -1098,10 +1102,12 @@ export default function HomePage() {
         onDelete={() => requestDelete({ kind: "run", id: selectedRun.id, name: `Run ${String(selectedRun.number).padStart(2, "0")}` })}
         onComplete={() => {
           updateRun(selectedRun.id, (run) => ({ ...run, completed: true, recordingPhase: "after" }));
-          setScreen(runBack === "timeline" ? "timeline" : "session");
+          setScreen(runBack === "timeline" || runBack === "tyres" ? runBack : "session");
           flash(t("Run {number} completed", { number: String(selectedRun.number).padStart(2, "0") }));
         }}
         templates={data.setupTemplates}
+        tyreSets={data.tyreSets}
+        tyreAge={tyreAges.get(selectedRun.id)}
         pressureHint={pressureHint}
         entry={historicalRuns.find(item => item.run.id === selectedRun.id)!}
         historicalRuns={historicalRuns}
@@ -1111,7 +1117,9 @@ export default function HomePage() {
       />
     );
   } else if (screen === "compare") {
-    content = <CompareRuns runs={historicalRuns} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
+    content = <CompareRuns runs={historicalRuns} tyreSets={data.tyreSets} tyreAges={tyreAges} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
+  } else if (screen === "tyres") {
+    content = <><TopBar title={t("Tyre-set history")} onBack={() => setScreen("home")} /><TyreSetLibrary data={data} onSave={set => setData(current => ({ ...current, tyreSets: current.tyreSets.some(item => item.id === set.id) ? current.tyreSets.map(item => item.id === set.id ? set : item) : [...current.tyreSets, set] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("tyres"); setScreen("run"); }} /></>;
   } else if (screen === "briefing" && selectedEvent) {
     content = <><TopBar title={t("Returning-to-track briefing")} subtitle={selectedEvent.name} onBack={() => setScreen(briefingBack)} /><TrackBriefing events={data.events} event={selectedEvent} session={briefingBack === "session" ? selectedSession : undefined} maps={trackMapData} /></>;
   } else if (screen === "journal") {
@@ -1636,7 +1644,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
+function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1664,6 +1672,7 @@ function RunEditor({ run, session, saveState, templates, pressureHint, entry, hi
       />
       <div className="page-content run-page">
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
+        <RunTyreSet run={run} sets={tyreSets} usage={tyreAge} onUpdate={onUpdate} />
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>
           <button type="button" ref={afterButton} aria-pressed={phase === "after"} aria-controls="run-recording-fields" onClick={() => choosePhase("after")}>{t("After Run")}</button>
@@ -1794,7 +1803,7 @@ function RunEditor({ run, session, saveState, templates, pressureHint, entry, hi
  * because two Runs from different Events are both "Run 01", each column and each option says
  * where it came from.
  */
-function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids: [string, string]; setIds: (ids: [string, string]) => void; onBack: () => void }) {
+function CompareRuns({ runs, tyreSets, tyreAges, ids, setIds, onBack }: { runs: HistoricalRun[]; tyreSets: AppData["tyreSets"]; tyreAges: Map<string, TyreUsage>; ids: [string, string]; setIds: (ids: [string, string]) => void; onBack: () => void }) {
   const { t } = useTranslation();
   const [differencesOnly, setDifferencesOnly] = useState(false);
   const entryA = runs.find((item) => item.run.id === ids[0]);
@@ -1811,7 +1820,13 @@ function CompareRuns({ runs, ids, setIds, onBack }: { runs: HistoricalRun[]; ids
       { label: t("Ambient temperature"), a: unit(entryA.conditions.ambientTemperature, "°C"), b: unit(entryB.conditions.ambientTemperature, "°C") },
     ],
   } : null;
-  const sections = runA && runB && conditionSection ? [conditionSection, ...comparisonSections(runA, runB, t)] : [];
+  const tyreContext = (run: RunRecord) => {
+    const set = tyreSets.find(item => item.id === run.tyreSetId);
+    const age = tyreAges.get(run.id);
+    return [set?.name || t("No tyre set assigned"), set?.compound || "—", String(age?.laps ?? "—"), String(age?.heatCycles ?? "—"), age?.missingLaps ? t("Incomplete lap history") : set ? t("Recorded usage only") : "—"];
+  };
+  const tyreSection = runA && runB ? { title: t("Tyre-set context"), values: [t("Tyre set"), t("Compound / model"), t("Recorded laps before Run"), t("Recorded heat cycles before Run"), t("History completeness")].map((label, index) => ({ label, a: tyreContext(runA)[index], b: tyreContext(runB)[index] })) } : null;
+  const sections = runA && runB && conditionSection && tyreSection ? [conditionSection, tyreSection, ...comparisonSections(runA, runB, t)] : [];
   const fastestDelta = lapDelta(runA?.fastestLap, runB?.fastestLap, t);
   // Only the condition itself is flagged. A temperature gap is visible in the table, but where it
   // stops being comparable is a judgement; dry against wet is not.

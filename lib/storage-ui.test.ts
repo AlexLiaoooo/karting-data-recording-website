@@ -177,6 +177,77 @@ function recordWith(run: RunRecord) {
   return makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
 }
 
+describe("tyre-set recording screens", () => {
+  const tyreSet = { id: "set-1", name: "Dry A", compound: "Medium", notes: "", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "2026-08-01", updatedAt: "2026-08-01" };
+  it("creates a tyre set, rejects invalid starting usage, and preserves retired history", async () => {
+    await render();
+    await act(async () => button("Tyre-set history").click());
+    await act(async () => button("Add tyre set").click());
+    await editInput("Tyre set name", "Dry A");
+    await editInput("Starting laps", "-1");
+    await act(async () => container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(container.textContent).toContain("nonnegative whole numbers");
+    await editInput("Starting laps", "20");
+    await editInput("Starting heat cycles", "2");
+    await act(async () => container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(container.textContent).toContain("Includes starting usage: 20 laps · 2 heat cycles");
+    await act(async () => button("Retire tyre set").click());
+    expect(container.textContent).toContain("Retired");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 550)); });
+    expect(vi.mocked(saveData).mock.lastCall?.[0].tyreSets[0]).toMatchObject({ name: "Dry A", initialLaps: 20, initialHeatCycles: 2, retired: true });
+    await act(async () => button("Reactivate tyre set").click());
+    expect(container.textContent).toContain("Active");
+  });
+
+  it("assigns a set, records a cycle, counts completed usage and resets the cycle on duplication", async () => {
+    await openRecordedRun(makeAppData({ tyreSets: [tyreSet] }));
+    const picker = container.querySelector<HTMLSelectElement>(".run-tyre-set select")!;
+    await act(async () => { picker.value = "set-1"; picker.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(container.textContent).toContain("Recorded age before this Run: 20 laps · 2 heat cycles");
+    await act(async () => container.querySelector<HTMLInputElement>(".tyre-cycle input")!.click());
+    await act(async () => button("Back").click());
+    await act(async () => button("Duplicate last run").click());
+    expect(container.querySelector<HTMLSelectElement>(".run-tyre-set select")!.value).toBe("set-1");
+    expect(container.querySelector<HTMLInputElement>(".tyre-cycle input")!.checked).toBe(false);
+    expect(container.textContent).toContain("Recorded age before this Run: 32 laps · 3 heat cycles");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 550)); });
+    const savedRuns = vi.mocked(saveData).mock.lastCall?.[0].events[0].sessions[0].runs;
+    expect(savedRuns?.[0].tyreHeatCycle).toBe(true);
+    expect(savedRuns?.[1].tyreHeatCycle).toBe(false);
+    await act(async () => {
+      const currentPicker = container.querySelector<HTMLSelectElement>(".run-tyre-set select")!;
+      currentPicker.value = ""; currentPicker.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(container.querySelector<HTMLInputElement>(".tyre-cycle input")!.disabled).toBe(true);
+  });
+
+  it("opens assigned Run history and returns to the tyre library after editing/completion", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData({ tyreSets: [{ ...tyreSet, retired: true }], events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ tyreSetId: "set-1" })] })] })] }));
+    await render();
+    await act(async () => button("Tyre-set history").click());
+    await act(async () => container.querySelector(".tyre-set-card summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => container.querySelector<HTMLButtonElement>(".tyre-set-card .list-item")!.click());
+    expect(container.querySelector<HTMLSelectElement>(".run-tyre-set select")!.textContent).toContain("Dry A · Medium · Retired");
+    await act(async () => button("After Run").click());
+    await act(async () => button("Done").click());
+    expect(container.textContent).toContain("Assigned Run history");
+    expect(container.textContent).toContain("Retired");
+  });
+
+  it("shows set identity and distinct age before each Run in comparison", async () => {
+    const data = makeAppData({ tyreSets: [tyreSet], events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ tyreSetId: "set-1", laps: "12" }), makeRun({ id: "second", number: 2, tyreSetId: "set-1" })] })] })] });
+    vi.mocked(loadData).mockResolvedValue(data);
+    await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => container.querySelector<HTMLButtonElement>("button.list-item")!.click());
+    await act(async () => button("Compare runs").click());
+    const section = [...container.querySelectorAll(".compare-section")].find(element => element.textContent?.includes("Tyre-set context"))!;
+    expect(section.textContent).toContain("Dry A");
+    expect(section.textContent).toContain("20");
+    expect(section.textContent).toContain("32");
+  });
+});
+
 function inputNamed(name: string) {
   const element = [...container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")]
     .find((input) => input.getAttribute("aria-label") === name || input.closest("label")?.querySelector("span")?.textContent === name);

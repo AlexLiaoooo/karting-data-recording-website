@@ -649,6 +649,21 @@ h2 {
 .timeline-page { display: grid; gap: 14px; }
 .timeline-page > h1,
 .track-briefing { display: grid; gap: 16px; }
+.tyre-set-library { display: grid; gap: 16px; }
+.tyre-set-library .lead { margin: 0; }
+.tyre-set-card, .tyre-set-form, .run-tyre-set { min-width: 0; overflow-wrap: anywhere; }
+.tyre-set-card h2 { margin: 0; }
+.tyre-set-card .stat-grid strong { display: block; margin-top: 6px; }
+.tyre-set-card .stat-grid span { color: var(--muted); font-size: 0.8rem; }
+.tyre-set-card summary { cursor: pointer; min-height: 48px; padding: 14px 0; }
+.tyre-set-card .list-copy { white-space: normal; }
+.tyre-set-notes { white-space: pre-wrap; }
+.tyre-set-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tyre-set-actions .button { flex: 1; min-width: 110px; }
+.run-tyre-set { margin-bottom: 16px; }
+.tyre-age p { margin: 10px 0; }
+.tyre-cycle { min-height: 48px; }
+.tyre-cycle input { height: 22px; width: 22px; flex-shrink: 0; }
 .track-briefing .summary-card { min-width: 0; overflow-wrap: anywhere; }
 .track-briefing h1 { font-size: 1.3rem; }
 .track-briefing h2 { font-size: 1.1rem; margin: 0 0 12px; }
