@@ -17,6 +17,11 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Fast driver debrief": "快速车手反馈",
+  "Recorded {date} · {duration}": "录制于 {date} · {duration}",
+  "Driver debrief audio": "车手反馈录音",
+  "Download audio note": "下载录音",
+  "This browser could not play the recording. Download it and try an audio player on your device.": "当前浏览器无法播放此录音，请下载后使用设备上的音频播放器。",
   "Tyre sets in this backup: {count}": "此备份中的轮胎组：{count}",
   "Mechanic handover card": "技师交接卡",
   "Comparison source": "比较来源",

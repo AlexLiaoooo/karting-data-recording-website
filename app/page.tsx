@@ -61,6 +61,7 @@ import { PressureAxles } from "@/components/track-map/pressure-summary";
 import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
+import { DebriefPlayback } from "@/components/debrief-playback";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
@@ -1679,6 +1680,7 @@ function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pres
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
         <RunTyreSet run={run} sets={tyreSets} usage={tyreAge} onUpdate={onUpdate} />
         <button type="button" className="button button-soft button-block handover-action" onClick={onHandover}><Share2 />{t("Mechanic handover card")}</button>
+        {run.driverDebrief && <section className="summary-card"><h2>{t("Fast driver debrief")}</h2><DebriefPlayback note={run.driverDebrief} runId={run.id} runNumber={run.number} /></section>}
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>
           <button type="button" ref={afterButton} aria-pressed={phase === "after"} aria-controls="run-recording-fields" onClick={() => choosePhase("after")}>{t("After Run")}</button>
