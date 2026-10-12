@@ -1070,7 +1070,7 @@ export default function HomePage() {
                 {[...selectedSession.runs].reverse().map((run) => (
                   <button className="list-item" key={run.id} onClick={() => openRun(run.id)}>
                     <span className="list-icon"><Route /></span>
-                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.completed ? t("Completed") : runRecordingPhase(run) === "before" ? t("Before Run") : t("After Run")} · {t("{count} laps", { count: run.laps || "0" })} · {run.balance ? t(run.balance) : t("No feedback")}</span></span>
+                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.completed ? t("Completed") : runRecordingPhase(run) === "before" ? t("Before Run") : t("After Run")} · {t("{count} laps", { count: run.laps || "0" })} · {run.balance ? t(run.balance) : t("No feedback")}{run.driverDebrief ? ` · ${t("Audio note")}` : ""}</span></span>
                     <span className="run-result"><strong>{run.fastestLap || "—"}</strong><span>{t("best lap")}</span></span>
                   </button>
                 ))}
@@ -1591,6 +1591,7 @@ function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data:
           images: counted(data.trackMapData.assets.length, "map image"),
         })}</p>
         {data.appData.tyreSets.length > 0 && <p>{t("Tyre sets in this backup: {count}", { count: data.appData.tyreSets.length })}</p>}
+        <p>{t("Audio notes in this backup: {count}", { count: data.appData.events.flatMap(event => event.sessions.flatMap(session => session.runs)).filter(run => run.driverDebrief).length })}</p>
         {failed && <p className="restore-error" role="alert">{t("Restore failed. Your saved data was not replaced. Check available device storage and try again.")}</p>}
         <div className="action-stack" aria-busy={busy}>
           <button className="button button-primary button-block" disabled={busy} onClick={onConfirm}>{busy ? t("Restoring…") : t("Restore backup")}</button>

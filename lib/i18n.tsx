@@ -18,6 +18,8 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  */
 const zh: Record<string, string> = {
   "Fast driver debrief": "快速车手反馈",
+  "Audio notes in this backup: {count}": "此备份中的录音：{count}",
+  "Audio note": "录音",
   "Stop recording, then save or discard the new note before leaving.": "请停止录音，并保存或放弃新录音后再离开。",
   "Audio recording is unavailable here. Open this app in a supported browser over HTTPS, or use written driver feedback.": "此处无法录音。请使用支持录音的浏览器通过 HTTPS 打开，或填写文字车手反馈。",
   "Microphone access was denied. Allow it in your browser settings and try again, or use written driver feedback.": "麦克风权限被拒绝，请在浏览器设置中允许后重试，或填写文字车手反馈。",

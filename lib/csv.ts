@@ -101,6 +101,7 @@ const feedbackHeaders = [
 
 const experimentHeaders = ["Run ID", "Baseline Run ID", "Experiment change", "Experiment expectation", "Experiment outcome"];
 const tyreSetHeaders = ["Tyre set ID", "Tyre set name", "Tyre compound", "Heat cycle recorded", "Recorded tyre laps before Run", "Recorded heat cycles before Run", "Missing lap counts before Run"];
+const debriefHeaders = ["Driver audio recorded at", "Driver audio duration (s)", "Driver audio type", "Driver audio size (bytes)"];
 
 /**
  * A gain as the app computes it everywhere else, so the spreadsheet and the screens cannot
@@ -114,7 +115,7 @@ function csvGain(gain: number | null) {
 function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage) {
   if (!run) {
     // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
-    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length + tyreSetHeaders.length).fill("");
+    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length + tyreSetHeaders.length + debriefHeaders.length).fill("");
   }
 
   return [
@@ -157,6 +158,8 @@ function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage) {
     run.tyreSetId ?? "", set?.name ?? "", set?.compound ?? "",
     run.tyreHeatCycle === undefined ? "" : run.tyreHeatCycle ? "Yes" : "No",
     age?.laps ?? "", age?.heatCycles ?? "", age?.missingLaps ?? "",
+    run.driverDebrief?.recordedAt ?? "", run.driverDebrief ? run.driverDebrief.durationMs / 1000 : "",
+    run.driverDebrief?.mimeType ?? "", run.driverDebrief?.size ?? "",
   ];
 }
 
@@ -281,7 +284,7 @@ function section(title: string, header: string[], rows: unknown[][]) {
 }
 
 export function buildCsv(data: AppData, trackMap: TrackMapData) {
-  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders, ...tyreSetHeaders];
+  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders, ...tyreSetHeaders, ...debriefHeaders];
   const ages = tyreUsageByRun(data);
   const sets = new Map(data.tyreSets.map(set => [set.id, set]));
   const rows: unknown[][] = [];

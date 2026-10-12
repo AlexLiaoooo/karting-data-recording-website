@@ -8,6 +8,17 @@ function tables(csv: string) {
 }
 
 describe("buildCsv", () => {
+  it("appends audio metadata without putting recordings in spreadsheets and leaves missing notes blank", () => {
+    const note = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm" as const, size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
+    const data = makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ driverDebrief: note }), makeRun({ id: "other", number: 2 })] }), makeSession({ id: "empty", runs: [] })] })] });
+    const csv = buildCsv(data, emptyTrackMapData());
+    const [runs] = tables(csv); const first = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+    expect(first["Driver audio recorded at"]).toBe(note.recordedAt); expect(first["Driver audio duration (s)"]).toBe("3.5");
+    expect(first["Driver audio type"]).toBe("audio/webm"); expect(first["Driver audio size (bytes)"]).toBe("4");
+    expect(csv).not.toContain(note.dataUrl); expect(csv).not.toContain("AQIDBA==");
+    expect(runs[2].slice(-4)).toEqual(["", "", "", ""]); expect(runs[3].slice(-4)).toEqual(["", "", "", ""]);
+    for (const row of runs.slice(1)) expect(row.length).toBe(runs[0].length);
+  });
   it("exports tyre identity, age before each Run, cycle flags and a tyre-set inventory table", () => {
     const set = { id: "set-1", name: "Dry A", compound: "Medium", notes: "Used before recording", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "stamp", updatedAt: "stamp" };
     const data = makeAppData({ tyreSets: [set], events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ tyreSetId: "set-1", tyreHeatCycle: true })] })] })] });
