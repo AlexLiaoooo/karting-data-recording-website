@@ -605,7 +605,9 @@ now v1.12.
   correction passed its 42 related tests and another build. React and full-flow reviews checked
   local recording → saved Run → IndexedDB → reload → playback/download/backup boundaries.
 - An isolated Chromium browser with a synthetic microphone recorded and decoded a real WebM
-  note. Download and full JSON export matched the original 42,920 audio bytes exactly. Offline
+  note. Download and full JSON export matched the original 42,920 audio bytes exactly, and the
+  real backup confirmation reported one recording; restoring the identical synthetic backup
+  reopened its playable audio. Offline
   reload/reopening and replacement/discard worked; 390px English / 320px Chinese layouts fit,
   actions measured 48px, and browser runtime errors remained empty. Physical iPhone recording
   remains a device-testing limit; audio format/permission failure paths have automated coverage.
