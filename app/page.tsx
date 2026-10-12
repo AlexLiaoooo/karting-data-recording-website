@@ -17,6 +17,7 @@ import {
   LoaderCircle,
   MapPinned,
   MessageSquareText,
+  Mic,
   Moon,
   Pencil,
   Plus,
@@ -62,8 +63,9 @@ import { refreshBuiltInMaps } from "@/lib/track-map/built-in-maps";
 import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 import { DebriefPlayback } from "@/components/debrief-playback";
+import { DriverDebriefPanel } from "@/components/driver-debrief";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "debrief" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -234,6 +236,7 @@ export default function HomePage() {
   const [saveState, setSaveState] = useState<SaveStatus>("Saved");
   const [saveQueue] = useState(() => new SaveQueue(setSaveState));
   const [screen, setScreen] = useState<Screen>("home");
+  const [debriefBusy, setDebriefBusy] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -1117,8 +1120,14 @@ export default function HomePage() {
         onSaveTemplate={() => setShowSaveTemplateForm(true)}
         onApplyTemplate={() => setShowApplyTemplateForm(true)}
         onHandover={() => setScreen("handover")}
+        onDebrief={() => setScreen("debrief")}
       />
     );
+  } else if (screen === "debrief" && selectedRun && selectedSession) {
+    content = <><TopBar title={t("Fast driver debrief")} subtitle={`${selectedSession.name} · Run ${String(selectedRun.number).padStart(2, "0")}`} action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{t(saveState)}</span>} onBack={() => {
+      if (debriefBusy) flash(t("Stop recording, then save or discard the new note before leaving."));
+      else setScreen("run");
+    }} /><DriverDebriefPanel key={selectedRun.id} run={selectedRun} onChange={note => updateRun(selectedRun.id, run => ({ ...run, driverDebrief: note }))} onBusyChange={setDebriefBusy} /></>;
   } else if (screen === "handover" && selectedRun) {
     content = <><TopBar title={t("Mechanic handover card")} onBack={() => setScreen("run")} /><MechanicHandover data={data} entry={historicalRuns.find(entry => entry.run.id === selectedRun.id)!} /></>;
   } else if (screen === "compare") {
@@ -1650,7 +1659,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void }) {
+function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1680,6 +1689,7 @@ function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pres
         <div className="run-heading"><div><p className="eyebrow">{run.completed ? t("COMPLETED RUN") : t("CURRENT RUN")}</p><h1><input className="heading-input" aria-label={t("Run label")} placeholder={t("Trackside entry")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></h1></div><IconButton label={t("Delete run")} onClick={onDelete}><Trash2 /></IconButton></div>
         <RunTyreSet run={run} sets={tyreSets} usage={tyreAge} onUpdate={onUpdate} />
         <button type="button" className="button button-soft button-block handover-action" onClick={onHandover}><Share2 />{t("Mechanic handover card")}</button>
+        <button type="button" className="button button-soft button-block handover-action" onClick={onDebrief}><Mic />{t("Fast driver debrief")}</button>
         {run.driverDebrief && <section className="summary-card"><h2>{t("Fast driver debrief")}</h2><DebriefPlayback note={run.driverDebrief} runId={run.id} runNumber={run.number} /></section>}
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>

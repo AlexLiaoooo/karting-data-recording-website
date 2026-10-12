@@ -45,6 +45,13 @@ function storedTrackMaps() {
 }
 
 describe("safe startup reads", () => {
+  it("retains exact debrief audio through save/reload, and removes it with its owning Run", async () => {
+    const note = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm" as const, size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
+    const data = makeAppData(); data.events[0].sessions[0].runs[0].driverDebrief = note;
+    await saveData(data); expect((await loadData()).events[0].sessions[0].runs[0].driverDebrief).toEqual(note);
+    data.events[0].sessions[0].runs = []; await saveData(data);
+    expect((await loadData()).events[0].sessions[0].runs).toEqual([]);
+  });
   it.each([null, { version: 2, events: [null] }, { version: 9, events: [] }])("rejects damaged saved records instead of presenting an empty database", async (stored) => {
     await seedVersion1Database(stored);
     await expect(loadData()).rejects.toThrow("could not be read safely");

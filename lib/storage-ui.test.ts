@@ -7,7 +7,7 @@ import { emptyAppData, loadData, saveData } from "./database";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "./track-map/database";
 import { buildFullBackup } from "./track-map/backup";
 import { makeAppData, makeEvent, makeRun, makeSession, makeTrackMapData, makeLayout, makeMarker, makeVisit } from "./test-fixtures";
-import { createRun, type AppData, type RunRecord } from "./types";
+import { createRun, type AppData, type RunRecord, type DriverDebrief } from "./types";
 import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
 import { handoverImages } from "./handover-image";
@@ -16,6 +16,17 @@ vi.mock("./database", async (original) => ({ ...await original<typeof import("./
 vi.mock("./track-map/database", async (original) => ({ ...await original<typeof import("./track-map/database")>(), loadTrackMapData: vi.fn(), saveTrackMapData: vi.fn(), restoreFullData: vi.fn() }));
 vi.mock("./track-map/built-in-maps", () => ({ refreshBuiltInMaps: vi.fn((data) => Promise.resolve(data)) }));
 vi.mock("./handover-image", async original => ({ ...await original<typeof import("./handover-image")>(), handoverImages: vi.fn() }));
+const debriefRecorder = vi.hoisted(() => ({ callbacks: null as null | { state: (state: "idle" | "recording") => void; complete: (note: DriverDebrief) => void } }));
+vi.mock("./driver-recorder", () => ({
+  canRecordDebrief: () => true,
+  DriverRecorder: class {
+    constructor(callbacks: NonNullable<typeof debriefRecorder.callbacks>) { debriefRecorder.callbacks = callbacks; }
+    start() { debriefRecorder.callbacks!.state("recording"); }
+    stop() { debriefRecorder.callbacks!.state("idle"); }
+    cancel() { debriefRecorder.callbacks!.state("idle"); }
+    dispose() {}
+  },
+}));
 
 let root: Root;
 let container: HTMLDivElement;
@@ -179,6 +190,47 @@ describe("backup reminder controls", () => {
 function recordWith(run: RunRecord) {
   return makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
 }
+
+describe("Run driver debrief integration", () => {
+  const note: DriverDebrief = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm", size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
+  it("guards recording/draft navigation, saves to the selected Run and retains its measurements and phase", async () => {
+    const run = makeRun({ comments: "Use a later apex", recordingPhase: "after" });
+    await openRecordedRun(recordWith(run)); await act(async () => button("Fast driver debrief").click());
+    await act(async () => button("Record audio note").click()); await act(async () => button("Back").click());
+    expect(container.querySelector(".debrief-page")).not.toBeNull();
+    expect(container.textContent).toContain("Stop recording, then save or discard");
+    await act(async () => { debriefRecorder.callbacks!.state("idle"); debriefRecorder.callbacks!.complete(note); });
+    await act(async () => button("Back").click()); expect(container.querySelector(".debrief-page")).not.toBeNull();
+    await act(async () => button("Save audio note").click());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    const saved = vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0];
+    expect(saved.driverDebrief).toEqual(note); expect(saved.comments).toBe(run.comments);
+    expect(saved.tyres).toEqual(run.tyres); expect(saved.fastestLap).toBe(run.fastestLap); expect(saved.recordingPhase).toBe("after");
+    await act(async () => button("Back").click()); expect(container.querySelector("audio")!.src).toBe(note.dataUrl);
+    await act(async () => button("Done").click()); await act(async () => button("Duplicate last run").click());
+    expect(container.querySelector("audio")).toBeNull();
+  });
+  it("keeps saved audio and written feedback when a replacement is discarded, then removes only confirmed audio", async () => {
+    await openRecordedRun(recordWith(makeRun({ driverDebrief: note, comments: "Good traction" })));
+    await act(async () => button("Fast driver debrief").click());
+    await act(async () => { debriefRecorder.callbacks!.complete({ ...note, recordedAt: "2026-10-12T09:02:00.000Z" }); });
+    await act(async () => button("Discard recording").click()); expect(container.querySelector("audio")!.src).toBe(note.dataUrl);
+    await act(async () => button("Remove audio note").click()); await act(async () => button("Confirm removal").click());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    const saved = vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0];
+    expect(saved.driverDebrief).toBeUndefined(); expect(saved.comments).toBe("Good traction");
+  });
+  it("retains attached audio for retry and backup when local saving fails", async () => {
+    await openRecordedRun(recordWith(makeRun())); await act(async () => { await new Promise(resolve => setTimeout(resolve, 600)); });
+    vi.mocked(saveData).mockRejectedValueOnce(new Error("Quota exceeded"));
+    await act(async () => button("Fast driver debrief").click()); await act(async () => debriefRecorder.callbacks!.complete(note));
+    await act(async () => button("Save audio note").click()); await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    expect(container.textContent).toContain("Changes could not be saved"); expect(container.querySelector("audio")!.src).toBe(note.dataUrl);
+    await act(async () => button("Retry saving").click());
+    expect(vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0].driverDebrief).toEqual(note);
+    expect(container.textContent).not.toContain("Changes could not be saved");
+  });
+});
 
 describe("mechanic handover screen", () => {
   it("previews, downloads and returns to the same Run without changing its fields", async () => {
