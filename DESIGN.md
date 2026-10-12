@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.28 (committed and pushed to GitHub)
-**Last updated:** 2026-10-11
+**Document status:** Implemented prototype v1.29 (committed and pushed to GitHub)
+**Last updated:** 2026-10-12
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -369,6 +369,32 @@ the all-pages button. Native file sharing appears only when supported; cancellat
 and failure offers manual downloads. A readable text snapshot and image retry remain available
 if rendering fails. Blob URLs are released when the snapshot changes or the view closes.
 
+### Fast driver debrief
+
+A Run's Fast driver debrief action opens a dedicated screen and returns to the same Run/view.
+The driver can record for up to 60 seconds, review the take, then save or discard it. One saved
+note belongs to each Run; replacement recording leaves it intact until Save is pressed. Saved
+audio plays in both the debrief screen and the Run editor, is marked in the Session list, can
+be downloaded in its original format, and is removed only after confirmation. Run measurements,
+written feedback, completion and before/after phase are preserved. Copies begin without audio.
+
+MediaRecorder captures audio only after an explicit request. Supported audio containers are
+chosen at runtime (WebM, MP4, Ogg); stored MIME metadata excludes codec parameters. The controller
+releases microphone tracks on stop/cancel/error/disposal, stops when backgrounded or at the
+one-minute deadline, and rejects captures over 2 MB. Generation checks suppress late permission
+grants and canceled conversion results. Denial/unavailable-device errors allow retry or text feedback.
+
+Drafts are not persisted until Save. In-app Back stays on the screen during permission requests,
+recording, processing or draft review; beforeunload requests a browser warning. The header says
+Not saved for active/draft audio, and local-save errors retain their existing visible retry/export
+controls. Backgrounding stops capture into a review draft; that draft must still be saved.
+
+The optional Run field stores timestamp, duration, MIME type, byte count and a bounded base64
+data URL. This deliberately uses the existing app save queue and atomic backup transaction,
+with no new database version or separate orphaned assets. Validation checks metadata, base64
+shape and decoded size before startup/restore. Full JSON includes original audio; CSV appends
+only metadata. No network audio storage, speech recognition or suggested corner notes are added.
+
 ### Compare view
 
 - Select any two Runs on record, from any Session or Event, grouped by Event and Session.
@@ -568,6 +594,23 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.29 — 2026-10-12
+
+- Implemented approved option 8: fast offline driver debrief with recording, review/save,
+  playback, original-file download, safe replacement and confirmed removal.
+- Existing JSON storage/backups preserve audio bytes; CSV exposes metadata and restore
+  confirmation reports audio count. Old Runs remain compatible; copies inherit no recording.
+- All 454 tests across 27 files, lint and production build pass. The subsequent unsaved-header
+  correction passed its 42 related tests and another build. React and full-flow reviews checked
+  local recording → saved Run → IndexedDB → reload → playback/download/backup boundaries.
+- An isolated Chromium browser with a synthetic microphone recorded and decoded a real WebM
+  note. Download and full JSON export matched the original 42,920 audio bytes exactly. Offline
+  reload/reopening and replacement/discard worked; 390px English / 320px Chinese layouts fit,
+  actions measured 48px, and browser runtime errors remained empty. Physical iPhone recording
+  remains a device-testing limit; audio format/permission failure paths have automated coverage.
+- Updated README/design and the Chinese guide with inspected screenshots. Small coherent
+  changes were individually checked, committed and pushed under the owner's requested workflow.
 
 ### Implemented prototype v1.28 — 2026-10-11
 

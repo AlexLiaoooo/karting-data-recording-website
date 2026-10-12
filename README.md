@@ -44,6 +44,10 @@ A mobile-first, local-first web application for recording competition karting ty
 - Mechanic handover card from any Run: preview and download local PNG images containing
   conditions, tyre age/readings, setup, performance, recorded changes and feedback. Long cards
   continue on additional pages, with device file sharing offered where supported.
+- Fast driver debrief from any Run: record a short voice note offline, listen before saving,
+  then replay or download the original audio. Each Run holds one note of up to one minute / 2 MB.
+  Replacement drafts preserve the previous note until saved; removal requires confirmation.
+  Unsaved recordings stay clearly marked and prevent accidental in-app navigation. No transcription.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
 - Lap times in either notation: 52.400 or 1:02.500. Both are read wherever a lap is counted, and a lap the app cannot read says so beneath the field rather than being dropped in silence.
@@ -53,9 +57,11 @@ A mobile-first, local-first web application for recording competition karting ty
 - Before Run's Cold tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
 - Versioned JSON backup/restore with confirmation, including tyre sets and Run assignments.
+  Saved debrief audio is embedded with its Run and survives the same atomic restore.
   Excel-ready CSV exports contain Events/Sessions/Runs, Track reference markers, Session track
   observations, and an additional tyre-set inventory when sets exist. The Run table includes
   assignment, heat-cycle status and recorded usage before each Run.
+  Audio columns describe recording time, duration, type and size; audio bytes stay in JSON.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
 - Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
 - Save failures remain visible on every screen, with retry and full export of the current in-memory records. Pending saves cannot overwrite a newer restore.
@@ -133,6 +139,11 @@ data rather than looking wrong:
 - **Mechanic handover** (`lib/handover.test.ts`, `lib/storage-ui.test.ts`) — complete snapshots,
   named baseline selection, condition warnings, Unicode/long-note pagination, downloads,
   share cancellation/failure, image-generation recovery and retained accessible text.
+- **Driver debrief** (`lib/driver-debrief.test.ts`, `lib/driver-recorder.test.ts`,
+  `lib/debrief-playback.test.ts`, `lib/driver-debrief-ui.test.ts`, `lib/storage-ui.test.ts`) —
+  exact audio backup bytes, malformed/oversized payload rejection, codec selection, microphone
+  permission and release, late cancellation, background/time limits, draft review, replacement,
+  removal, navigation guards, playback fallback, save retry and copies without inherited audio.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that
@@ -174,6 +185,13 @@ Records are stored in IndexedDB in the current browser. There is no account or c
 Keep the downloaded JSON file outside the browser. The last-export timestamp records that
 a download was started; the app cannot verify where you retained the file. Use one editing
 tab at a time: coordination between competing tabs remains a separate planned improvement.
+
+Audio notes remain local and are included in full JSON backups, which grow with saved recordings.
+The app requests the microphone only after Record is pressed and releases it on stop, cancel,
+backgrounding or view disposal. Recording requires a supported browser on HTTPS (or localhost
+for development); existing notes remain downloadable if playback is unsupported. There is no
+audio upload or transcription service. Real browser verification uses a synthetic microphone;
+physical iPhone microphone/format behavior still needs device testing.
 
 ## Project workflow
 
