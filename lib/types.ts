@@ -35,6 +35,15 @@ export type SetupTemplate = {
 
 export type RunRecordingPhase = "before" | "after";
 
+/** A bounded, portable recording owned by this Run, included in ordinary JSON backups. */
+export type DriverDebrief = {
+  recordedAt: string;
+  durationMs: number;
+  mimeType: "audio/webm" | "audio/mp4" | "audio/ogg";
+  size: number;
+  dataUrl: string;
+};
+
 export type TyreSet = {
   id: string;
   name: string;
@@ -86,6 +95,8 @@ export type RunRecord = {
   tyreSetId?: string | null;
   /** Explicitly recorded by the driver; never inferred from a hot reading or completion. */
   tyreHeatCycle?: boolean;
+  /** A copied Run starts without the previous driver's recording. */
+  driverDebrief?: DriverDebrief;
   updatedAt: string;
 };
 

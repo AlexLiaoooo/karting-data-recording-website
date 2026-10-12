@@ -1,5 +1,6 @@
 import { emptySetup, emptyTyre } from "./types";
 import { legacyMarkerTypes, markerTypes } from "./track-map/types";
+import { validDriverDebrief } from "./driver-debrief";
 
 type RecordValue = Record<string, unknown>;
 
@@ -48,6 +49,7 @@ export function validAppRecords(value: RecordValue): boolean {
     && (record.tyreSetId === undefined || record.tyreSetId === null || (typeof record.tyreSetId === "string" && tyreSetIds.has(record.tyreSetId)))
     && (record.tyreHeatCycle === undefined || typeof record.tyreHeatCycle === "boolean")
     && (record.tyreHeatCycle !== true || typeof record.tyreSetId === "string")
+    && (record.driverDebrief === undefined || validDriverDebrief(record.driverDebrief))
     && (record.experiment === undefined || (isRecord(record.experiment)
       && strings(record.experiment, ["change", "expectation", "outcome"])
       && (record.experiment.baselineRunId === null || (typeof record.experiment.baselineRunId === "string"
