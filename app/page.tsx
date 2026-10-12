@@ -1124,7 +1124,7 @@ export default function HomePage() {
       />
     );
   } else if (screen === "debrief" && selectedRun && selectedSession) {
-    content = <><TopBar title={t("Fast driver debrief")} subtitle={`${selectedSession.name} · Run ${String(selectedRun.number).padStart(2, "0")}`} action={<span className={`save-status ${saveState === "Error" ? "save-error" : ""}`}><span />{t(saveState)}</span>} onBack={() => {
+    content = <><TopBar title={t("Fast driver debrief")} subtitle={`${selectedSession.name} · Run ${String(selectedRun.number).padStart(2, "0")}`} action={<span className={`save-status ${saveState === "Error" ? "save-error" : debriefBusy ? "save-unsaved" : ""}`}><span />{t(debriefBusy && saveState !== "Error" ? "Not saved" : saveState)}</span>} onBack={() => {
       if (debriefBusy) flash(t("Stop recording, then save or discard the new note before leaving."));
       else setScreen("run");
     }} /><DriverDebriefPanel key={selectedRun.id} run={selectedRun} onChange={note => updateRun(selectedRun.id, run => ({ ...run, driverDebrief: note }))} onBusyChange={setDebriefBusy} /></>;

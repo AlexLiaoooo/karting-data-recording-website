@@ -198,11 +198,13 @@ describe("Run driver debrief integration", () => {
     await openRecordedRun(recordWith(run)); await act(async () => button("Fast driver debrief").click());
     await act(async () => button("Record audio note").click()); await act(async () => button("Back").click());
     expect(container.querySelector(".debrief-page")).not.toBeNull();
+    expect(container.querySelector(".save-status")?.textContent).toBe("Not saved");
     expect(container.textContent).toContain("Stop recording, then save or discard");
     await act(async () => { debriefRecorder.callbacks!.state("idle"); debriefRecorder.callbacks!.complete(note); });
     await act(async () => button("Back").click()); expect(container.querySelector(".debrief-page")).not.toBeNull();
     await act(async () => button("Save audio note").click());
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    expect(container.querySelector(".save-status")?.textContent).toBe("Saved");
     const saved = vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0];
     expect(saved.driverDebrief).toEqual(note); expect(saved.comments).toBe(run.comments);
     expect(saved.tyres).toEqual(run.tyres); expect(saved.fastestLap).toBe(run.fastestLap); expect(saved.recordingPhase).toBe("after");

@@ -606,6 +606,7 @@ h2 {
 .save-status.save-error {
   color: var(--red);
 }
+.save-status.save-unsaved { color: var(--amber); }
 
 .run-heading {
   margin-bottom: 14px;

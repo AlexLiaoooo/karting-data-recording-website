@@ -18,6 +18,7 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  */
 const zh: Record<string, string> = {
   "Fast driver debrief": "快速车手反馈",
+  "Not saved": "未保存",
   "Audio notes in this backup: {count}": "此备份中的录音：{count}",
   "Audio note": "录音",
   "Stop recording, then save or discard the new note before leaving.": "请停止录音，并保存或放弃新录音后再离开。",
