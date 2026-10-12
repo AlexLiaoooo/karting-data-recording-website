@@ -12,6 +12,7 @@ const SOURCES = [
   "components/tyre-sets.tsx",
   "components/mechanic-handover.tsx",
   "components/debrief-playback.tsx",
+  "components/driver-debrief.tsx",
   "lib/handover.ts",
   ...readdirSync(join(ROOT, "components/track-map"))
     .filter((file) => file.endsWith(".tsx"))

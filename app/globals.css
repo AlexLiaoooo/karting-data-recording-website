@@ -2040,3 +2040,9 @@ h2 {
 }
 .debrief-playback audio { display: block; width: 100%; height: 54px; margin: 12px 0; }
 .debrief-playback .help-text { overflow-wrap: anywhere; }
+.debrief-page .summary-card > h1 { font-size: 24px; }
+.debrief-clock { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.recording-dot { width: 12px; height: 12px; border-radius: 50%; background: #d52d43; flex-shrink: 0; }
+.debrief-draft { padding-top: 16px; border-top: 1px solid var(--border); }
+.debrief-page .action-stack { margin-top: 16px; }
+.debrief-removal { margin-top: 16px; }
