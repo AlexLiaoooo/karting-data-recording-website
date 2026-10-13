@@ -1605,6 +1605,8 @@ function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data:
           images: counted(data.trackMapData.assets.length, "map image"),
         })}</p>
         {data.appData.tyreSets.length > 0 && <p>{t("Tyre sets in this backup: {count}", { count: data.appData.tyreSets.length })}</p>}
+        <p>{t("Components in this backup: {count}", { count: data.appData.components.length })}</p>
+        <p>{t("Logger photos in this backup: {count}", { count: data.appData.events.flatMap(event => event.sessions.flatMap(session => session.runs)).filter(run => run.loggerPhoto).length })}</p>
         <p>{t("Audio notes in this backup: {count}", { count: data.appData.events.flatMap(event => event.sessions.flatMap(session => session.runs)).filter(run => run.driverDebrief).length })}</p>
         {failed && <p className="restore-error" role="alert">{t("Restore failed. Your saved data was not replaced. Check available device storage and try again.")}</p>}
         <div className="action-stack" aria-busy={busy}>

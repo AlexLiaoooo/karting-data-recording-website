@@ -16,8 +16,20 @@ describe("buildCsv", () => {
     expect(first["Driver audio recorded at"]).toBe(note.recordedAt); expect(first["Driver audio duration (s)"]).toBe("3.5");
     expect(first["Driver audio type"]).toBe("audio/webm"); expect(first["Driver audio size (bytes)"]).toBe("4");
     expect(csv).not.toContain(note.dataUrl); expect(csv).not.toContain("AQIDBA==");
-    expect(runs[2].slice(-4)).toEqual(["", "", "", ""]); expect(runs[3].slice(-4)).toEqual(["", "", "", ""]);
+    for (const row of [runs[2], runs[3]]) for (const header of ["Driver audio recorded at", "Driver audio duration (s)", "Driver audio type", "Driver audio size (bytes)"]) expect(row[runs[0].indexOf(header)]).toBe("");
     for (const row of runs.slice(1)) expect(row.length).toBe(runs[0].length);
+  });
+  it("exports source-photo metadata, installed parts, lifetime counters and service records without image bytes", () => {
+    const component = { id: "engine-a", name: "Engine A", kind: "Engine" as const, notes: "Race engine", initialLaps: 100, serviceIntervalLaps: 120, retired: false, services: [{ id: "s", date: "2026-10-10", lapsAtService: 90, notes: "Top-end service" }], createdAt: "stamp", updatedAt: "stamp" };
+    const photo = { capturedAt: "2026-10-13T09:00:00.000Z", sourceName: "logger.png", mimeType: "image/png" as const, size: 4, width: 1200, height: 800, dataUrl: "data:image/png;base64,AQIDBA==" };
+    const data = makeAppData({ components: [component], events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ componentIds: [component.id], loggerPhoto: photo })] }), makeSession({ id: "empty", runs: [] })] })] });
+    const csv = buildCsv(data, emptyTrackMapData()); const [runs, , , inventory, services] = tables(csv);
+    const values = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+    expect(values["Logger photo source name"]).toBe("logger.png"); expect(values["Installed component names"]).toBe("Engine A"); expect(values["Logger photo size (bytes)"]).toBe("4");
+    expect(csv).not.toContain(photo.dataUrl); expect(csv).not.toContain("AQIDBA==");
+    expect(inventory[0]).toEqual(["COMPONENTS"]); expect(inventory[2][7]).toBe("112"); expect(inventory[2][8]).toBe("22");
+    expect(services[0]).toEqual(["COMPONENT SERVICES"]); expect(services[2]).toEqual(["engine-a", "Engine A", "Engine", "s", "2026-10-10", "90", "Top-end service"]);
+    expect(runs[2].length).toBe(runs[0].length); expect(runs[2].slice(-8)).toEqual(Array(8).fill(""));
   });
   it("exports tyre identity, age before each Run, cycle flags and a tyre-set inventory table", () => {
     const set = { id: "set-1", name: "Dry A", compound: "Medium", notes: "Used before recording", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "stamp", updatedAt: "stamp" };

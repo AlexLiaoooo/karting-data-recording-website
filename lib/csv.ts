@@ -5,6 +5,8 @@ import { gearRatio } from "./gearing";
 import { parseLapTime } from "./lap-time";
 import { sessionConditions } from "./conditions";
 import { pressureGain, temperatureGain } from "./pressure";
+import { componentUsage } from "./component-life";
+import type { KartComponent } from "./types";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -102,6 +104,8 @@ const feedbackHeaders = [
 const experimentHeaders = ["Run ID", "Baseline Run ID", "Experiment change", "Experiment expectation", "Experiment outcome"];
 const tyreSetHeaders = ["Tyre set ID", "Tyre set name", "Tyre compound", "Heat cycle recorded", "Recorded tyre laps before Run", "Recorded heat cycles before Run", "Missing lap counts before Run"];
 const debriefHeaders = ["Driver audio recorded at", "Driver audio duration (s)", "Driver audio type", "Driver audio size (bytes)"];
+const photoHeaders = ["Logger photo captured at", "Logger photo source name", "Logger photo type", "Logger photo size (bytes)", "Logger photo width", "Logger photo height"];
+const componentHeaders = ["Installed component IDs", "Installed component names"];
 
 /**
  * A gain as the app computes it everywhere else, so the spreadsheet and the screens cannot
@@ -112,10 +116,10 @@ function csvGain(gain: number | null) {
   return gain === null ? "" : gain.toFixed(2);
 }
 
-function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage) {
+function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage, components?: Map<string, KartComponent>) {
   if (!run) {
     // The + 1 is the derived gear ratio, which has a header but no field in setupFields.
-    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length + tyreSetHeaders.length + debriefHeaders.length).fill("");
+    return Array(runHeaders.length + tyreHeaders.length + setupFields.length + 1 + feedbackHeaders.length + experimentHeaders.length + tyreSetHeaders.length + debriefHeaders.length + photoHeaders.length + componentHeaders.length).fill("");
   }
 
   return [
@@ -160,6 +164,8 @@ function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage) {
     age?.laps ?? "", age?.heatCycles ?? "", age?.missingLaps ?? "",
     run.driverDebrief?.recordedAt ?? "", run.driverDebrief ? run.driverDebrief.durationMs / 1000 : "",
     run.driverDebrief?.mimeType ?? "", run.driverDebrief?.size ?? "",
+    run.loggerPhoto?.capturedAt ?? "", run.loggerPhoto?.sourceName ?? "", run.loggerPhoto?.mimeType ?? "", run.loggerPhoto?.size ?? "", run.loggerPhoto?.width ?? "", run.loggerPhoto?.height ?? "",
+    (run.componentIds ?? []).join("; "), (run.componentIds ?? []).map(id => components?.get(id)?.name ?? id).join("; "),
   ];
 }
 
@@ -284,9 +290,10 @@ function section(title: string, header: string[], rows: unknown[][]) {
 }
 
 export function buildCsv(data: AppData, trackMap: TrackMapData) {
-  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders, ...tyreSetHeaders, ...debriefHeaders];
+  const header = [...baseHeaders, ...tyreHeaders, ...setupFields.map(([, label]) => label), "Gear ratio", ...feedbackHeaders, ...experimentHeaders, ...tyreSetHeaders, ...debriefHeaders, ...photoHeaders, ...componentHeaders];
   const ages = tyreUsageByRun(data);
   const sets = new Map(data.tyreSets.map(set => [set.id, set]));
+  const components = new Map(data.components.map(component => [component.id, component]));
   const rows: unknown[][] = [];
 
   for (const event of data.events) {
@@ -327,7 +334,7 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
       }
 
       for (const run of session.runs) {
-        rows.push([...eventValues, ...sessionValues, ...runValues(run, sets.get(run.tyreSetId ?? ""), ages.get(run.id))]);
+        rows.push([...eventValues, ...sessionValues, ...runValues(run, sets.get(run.tyreSetId ?? ""), ages.get(run.id), components)]);
       }
     }
   }
@@ -341,6 +348,13 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
     const usage = tyreSetSummary(data, set);
     return [set.id, set.name, set.compound, set.notes, set.retired ? "Yes" : "No", set.initialLaps, set.initialHeatCycles, usage.laps, usage.heatCycles, usage.completedRuns, usage.missingLaps];
   })));
+  if (data.components.length) {
+    tables.push(section("COMPONENTS", ["Component ID", "Name", "Type", "Notes", "Retired", "Starting laps", "Service interval (laps)", "Lifetime recorded laps", "Laps since service", "Laps remaining", "Reminder state", "Completed assigned Runs", "Missing lap counts"], data.components.map(component => {
+      const usage = componentUsage(data, component);
+      return [component.id, component.name, component.kind, component.notes, component.retired ? "Yes" : "No", component.initialLaps, component.serviceIntervalLaps, usage.totalLaps, usage.sinceService, usage.remainingLaps, usage.state, usage.completedRuns, usage.missingLaps];
+    })));
+    tables.push(section("COMPONENT SERVICES", ["Component ID", "Component name", "Type", "Service ID", "Service date", "Lifetime laps at service", "Service performed"], data.components.flatMap(component => component.services.map(service => [component.id, component.name, component.kind, service.id, service.date, service.lapsAtService, service.notes]))));
+  }
 
   const body = tables
     .map((table) => table.map((row) => row.map(escapeCsv).join(",")).join("\r\n"))
