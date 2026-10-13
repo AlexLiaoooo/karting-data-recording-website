@@ -11,11 +11,15 @@ import { createRun, type AppData, type RunRecord, type DriverDebrief } from "./t
 import { BACKUP_HISTORY_KEY, ONE_DAY } from "./backup-reminder";
 import { emptyTrackMapData } from "./track-map/types";
 import { handoverImages } from "./handover-image";
+import { captureLoggerPhoto } from "./logger-photo";
+import { readLoggerPhoto } from "./logger-ocr";
 
 vi.mock("./database", async (original) => ({ ...await original<typeof import("./database")>(), loadData: vi.fn(), saveData: vi.fn() }));
 vi.mock("./track-map/database", async (original) => ({ ...await original<typeof import("./track-map/database")>(), loadTrackMapData: vi.fn(), saveTrackMapData: vi.fn(), restoreFullData: vi.fn() }));
 vi.mock("./track-map/built-in-maps", () => ({ refreshBuiltInMaps: vi.fn((data) => Promise.resolve(data)) }));
 vi.mock("./handover-image", async original => ({ ...await original<typeof import("./handover-image")>(), handoverImages: vi.fn() }));
+vi.mock("./logger-photo", async original => ({ ...await original<typeof import("./logger-photo")>(), captureLoggerPhoto: vi.fn() }));
+vi.mock("./logger-ocr", () => ({ readLoggerPhoto: vi.fn() }));
 const debriefRecorder = vi.hoisted(() => ({ callbacks: null as null | { state: (state: "idle" | "recording") => void; complete: (note: DriverDebrief) => void } }));
 vi.mock("./driver-recorder", () => ({
   canRecordDebrief: () => true,
@@ -190,6 +194,32 @@ describe("backup reminder controls", () => {
 function recordWith(run: RunRecord) {
   return makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
 }
+
+describe("Run logger photo integration", () => {
+  it("guards drafts, saves photo plus selected values together, and copies no evidence", async () => {
+    const photo = { capturedAt: "2026-10-13T09:00:00.000Z", sourceName: "logger.png", mimeType: "image/png" as const, size: 4, width: 1200, height: 800, dataUrl: "data:image/png;base64,AQIDBA==" };
+    vi.mocked(captureLoggerPhoto).mockResolvedValue(photo);
+    vi.mocked(readLoggerPhoto).mockReturnValue({ result: Promise.resolve("BEST LAP 47.900\nLAPS 14\nMAX RPM 15900"), cancel: vi.fn() });
+    const original = makeRun({ comments: "Keep the outside line", recordingPhase: "after" });
+    await openRecordedRun(recordWith(original)); await act(async () => button("Data-logger photo capture").click());
+    const input = container.querySelector<HTMLInputElement>('[aria-label="Photo file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [new File(["test"], "logger.png", { type: "image/png" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => button("Back").click()); expect(container.querySelector(".logger-photo-page")).not.toBeNull();
+    expect(container.querySelector(".save-status")?.textContent).toBe("Not saved");
+    await act(async () => button("Read photo on this device").click());
+    await act(async () => container.querySelectorAll<HTMLInputElement>('.logger-reading input[type="checkbox"]')[1].click());
+    await act(async () => button("Save photo and selected readings").click());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    const saved = vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0];
+    expect(saved.loggerPhoto).toEqual(photo); expect(saved.laps).toBe("14"); expect(saved.fastestLap).toBe(original.fastestLap);
+    expect(saved.maxRpm).toBe(original.maxRpm); expect(saved.comments).toBe(original.comments); expect(saved.recordingPhase).toBe("after");
+    await act(async () => button("Back").click()); await act(async () => button("Done").click());
+    expect(container.textContent).toContain("Logger photo");
+    await act(async () => button("Duplicate last run").click()); await act(async () => button("Data-logger photo capture").click());
+    expect(container.querySelector("img")).toBeNull();
+  });
+});
 
 describe("Run driver debrief integration", () => {
   const note: DriverDebrief = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm", size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };

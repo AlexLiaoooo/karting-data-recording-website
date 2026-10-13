@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   BookOpen,
+  Camera,
   ChartNoAxesCombined,
   Check,
   ChevronRight,
@@ -64,8 +65,9 @@ import { attachMarkersToCorners } from "@/lib/track-map/database";
 import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 import { DebriefPlayback } from "@/components/debrief-playback";
 import { DriverDebriefPanel } from "@/components/driver-debrief";
+import { LoggerPhotoPanel } from "@/components/logger-photo";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "debrief" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "debrief" | "logger" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -237,6 +239,7 @@ export default function HomePage() {
   const [saveQueue] = useState(() => new SaveQueue(setSaveState));
   const [screen, setScreen] = useState<Screen>("home");
   const [debriefBusy, setDebriefBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -1070,7 +1073,7 @@ export default function HomePage() {
                 {[...selectedSession.runs].reverse().map((run) => (
                   <button className="list-item" key={run.id} onClick={() => openRun(run.id)}>
                     <span className="list-icon"><Route /></span>
-                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.completed ? t("Completed") : runRecordingPhase(run) === "before" ? t("Before Run") : t("After Run")} · {t("{count} laps", { count: run.laps || "0" })} · {run.balance ? t(run.balance) : t("No feedback")}{run.driverDebrief ? ` · ${t("Audio note")}` : ""}</span></span>
+                    <span className="list-copy"><strong>Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</strong><span>{run.completed ? t("Completed") : runRecordingPhase(run) === "before" ? t("Before Run") : t("After Run")} · {t("{count} laps", { count: run.laps || "0" })} · {run.balance ? t(run.balance) : t("No feedback")}{run.driverDebrief ? ` · ${t("Audio note")}` : ""}{run.loggerPhoto ? ` · ${t("Logger photo")}` : ""}</span></span>
                     <span className="run-result"><strong>{run.fastestLap || "—"}</strong><span>{t("best lap")}</span></span>
                   </button>
                 ))}
@@ -1121,8 +1124,14 @@ export default function HomePage() {
         onApplyTemplate={() => setShowApplyTemplateForm(true)}
         onHandover={() => setScreen("handover")}
         onDebrief={() => setScreen("debrief")}
+        onLoggerPhoto={() => setScreen("logger")}
       />
     );
+  } else if (screen === "logger" && selectedRun && selectedSession) {
+    content = <><TopBar title={t("Data-logger photo capture")} subtitle={`${selectedSession.name} · Run ${String(selectedRun.number).padStart(2, "0")}`} action={<span className={`save-status ${saveState === "Error" ? "save-error" : photoBusy ? "save-unsaved" : ""}`}><span />{t(photoBusy && saveState !== "Error" ? "Not saved" : saveState)}</span>} onBack={() => {
+      if (photoBusy) flash(t("Save or discard the photo draft before leaving."));
+      else setScreen("run");
+    }} /><LoggerPhotoPanel key={selectedRun.id} run={selectedRun} onSave={(photo, readings) => updateRun(selectedRun.id, run => ({ ...run, ...readings, loggerPhoto: photo }))} onRemove={() => updateRun(selectedRun.id, run => ({ ...run, loggerPhoto: undefined }))} onBusyChange={setPhotoBusy} /></>;
   } else if (screen === "debrief" && selectedRun && selectedSession) {
     content = <><TopBar title={t("Fast driver debrief")} subtitle={`${selectedSession.name} · Run ${String(selectedRun.number).padStart(2, "0")}`} action={<span className={`save-status ${saveState === "Error" ? "save-error" : debriefBusy ? "save-unsaved" : ""}`}><span />{t(debriefBusy && saveState !== "Error" ? "Not saved" : saveState)}</span>} onBack={() => {
       if (debriefBusy) flash(t("Stop recording, then save or discard the new note before leaving."));
@@ -1660,7 +1669,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void }) {
+function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief, onLoggerPhoto }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void; onLoggerPhoto: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1691,6 +1700,7 @@ function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pres
         <RunTyreSet run={run} sets={tyreSets} usage={tyreAge} onUpdate={onUpdate} />
         <button type="button" className="button button-soft button-block handover-action" onClick={onHandover}><Share2 />{t("Mechanic handover card")}</button>
         <button type="button" className="button button-soft button-block handover-action" onClick={onDebrief}><Mic />{t("Fast driver debrief")}</button>
+        <button type="button" className="button button-soft button-block handover-action" onClick={onLoggerPhoto}><Camera />{t("Data-logger photo capture")}</button>
         {run.driverDebrief && <section className="summary-card"><h2>{t("Fast driver debrief")}</h2><DebriefPlayback note={run.driverDebrief} runId={run.id} runNumber={run.number} /></section>}
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>

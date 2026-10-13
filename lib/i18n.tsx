@@ -17,6 +17,8 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Save or discard the photo draft before leaving.": "请保存或放弃照片草稿后再离开。",
+  "Logger photo": "记录仪照片",
   "Cancel photo loading": "取消加载照片",
   "Data-logger photo": "数据记录仪照片",
   "Download original photo": "下载原始照片",
