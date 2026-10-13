@@ -864,7 +864,7 @@ export default function HomePage() {
   }
 
   let content: ReactNode;
-  const hasRecords = data.events.length > 0 || data.setupTemplates.length > 0 || data.tyreSets.length > 0
+  const hasRecords = data.events.length > 0 || data.setupTemplates.length > 0 || data.tyreSets.length > 0 || data.components.length > 0
     || trackMapData.tracks.length > 0 || trackMapData.layouts.length > 0
     || trackMapData.visits.length > 0 || trackMapData.assets.length > 0;
   const backupReminder = backupIsDue(hasRecords, backupHistory, reminderNow) ? (
