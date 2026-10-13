@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.29 (committed and pushed to GitHub)
-**Last updated:** 2026-10-12
+**Document status:** Implemented prototype v1.30 (committed and pushed to GitHub)
+**Last updated:** 2026-10-13
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -395,6 +395,56 @@ with no new database version or separate orphaned assets. Validation checks meta
 shape and decoded size before startup/restore. Full JSON includes original audio; CSV appends
 only metadata. No network audio storage, speech recognition or suggested corner notes are added.
 
+### Data-logger photo capture
+
+Each Run opens a dedicated camera/file-picker screen. Accepted JPEG/PNG/WebP photos are bounded
+to 6 MB, 24 megapixels and 12,000 pixels per edge. Native decoding verifies dimensions before
+attachment. Source name, attachment timestamp, MIME type, dimensions, byte size and original
+image Blob remain on that Run; copies start without evidence. Replacing a photo keeps the
+previous one until Save, and confirmed removal leaves the Run's measured values intact.
+Native Blob storage avoids repeated encoded-text copies during ordinary Run edits. JSON export
+converts bytes to the compatible base64 photo representation; import and legacy startup migrate
+it back to a Blob. Preview subscriptions allocate one local URL and revoke it on disposal;
+image dimensions reserve the preview's aspect ratio before its source loads.
+
+Recognition is requested explicitly and uses Tesseract.js 7.0.0 with its English model entirely
+on the device. Build preparation copies the installed worker, all three LSTM device variants,
+language data and license notices to same-origin public files included in the production cache.
+No photo is uploaded. The job has cancellation, a one-minute watchdog and worker termination;
+unavailable/failed recognition retains manual review. The original image is never replaced by OCR.
+
+The parser accepts explicit BEST/FASTEST lap, completed-lap count and MAX/PEAK RPM labels.
+Unlabelled, conflicting, average, last/current or minimum readings are not promoted to fastest
+or peak fields. Every suggestion starts unchecked and is editable. Saving merges only checked,
+validated fields with the source photo in one Run update; measurements, feedback and phase
+otherwise remain intact. Photo-only saves are supported. Active/draft state is marked Not saved,
+guards in-app Back, and requests beforeunload protection; slow photo loading can be canceled.
+
+### Component-life notebook
+
+Home opens reusable Engine/Chain/Sprocket/Brake records with name, notes, starting laps, optional
+lap-based service interval, retirement and service history. The Run editor's collapsed Installed
+components panel holds explicit component IDs. Copies carry these identities in a new array;
+only completed assigned Runs add valid whole laps. Missing counts remain incomplete, and edits,
+deletion or reassignment recalculate usage. No hours or unrecorded usage are estimated.
+
+Service entries retain their ID, date, description and lifetime lap counter. The highest recorded
+service counter is the maintenance baseline, regardless of entry order. Laps since service use
+the current known lifetime total minus that counter. A counter above current usage or numeric
+overflow is flagged instead of showing a fresh interval. Known usage at/above the interval is
+due; otherwise missing lap history is incomplete. Due soon means remaining laps at/below 10%
+of the interval (at least one lap). An empty interval disables interval reminders.
+
+The notebook supports metadata changes, retirement/reactivation, service recording/editing and
+confirmed service removal, plus links to source Runs returning to the notebook. Metadata saves
+retain newly added service records and current retirement state. Retired parts remain in history
+and the Run selector only when already assigned. Reminder intervals are entered by the owner.
+
+The components collection defaults to empty for legacy data; optional Run links reference known,
+unique IDs. Existing app/database/backup versions are unchanged. JSON retains every record and
+photo; CSV appends photo metadata and installed IDs/names and adds inventory/service tables.
+Restore confirmation reports component/photo counts; component-only records trigger reminders.
+
 ### Compare view
 
 - Select any two Runs on record, from any Session or Event, grouped by Event and Session.
@@ -594,6 +644,29 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.30 — 2026-10-13
+
+- Implemented approved options 9 and 10: on-device logger-photo review and component-life
+  notebook with installed-part assignments, service history and lap-based reminders.
+- All 531 tests across 36 files, lint and production build pass. The generated worker caches
+  47 files including local OCR assets. Production dependency audit is clear after compatible
+  Sharp 0.35.5 and source-map-js patches during OCR preparation.
+- Real browser recognition of the synthetic image returned 48.321, 12 and 15800 online and
+  offline. All suggestions were unchecked; applying only laps preserved blank lap/RPM fields.
+  The JSON download retained all 48,699 source-image bytes exactly, two component links and
+  one service entry. Restoring the identical isolated test backup reopened the photo and history.
+  The final native-Blob migration retained the original byte count, reopened the image and
+  recognized it offline; storage, portable backup bytes and preview URL lifecycle have regression tests.
+- Completed Run usage produced engine 112 laps / 8 remaining (near due) and chain 32 / 0 (due).
+  Service at 112 reset engine service usage to 0 / 120 remaining. Retirement and service history
+  survived offline reload. 390px English / 320px Chinese layouts fit; controls measured at least
+  48px and browser runtime errors were empty. Inspected counters received a separate layout fix.
+- The component-only reminder omission was corrected after its failed integration check; the
+  subsequent full suite passed. Small changes were committed/pushed individually, with README,
+  design and Chinese guide updates and inspected screenshots.
+- Recognition accuracy on actual logger photographs and physical phone camera/file-format
+  behavior remain field-testing limits. The image stays available for manual correction.
 
 ### Implemented prototype v1.29 — 2026-10-12
 

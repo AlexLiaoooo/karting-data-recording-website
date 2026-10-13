@@ -48,6 +48,14 @@ A mobile-first, local-first web application for recording competition karting ty
   then replay or download the original audio. Each Run holds one note of up to one minute / 2 MB.
   Replacement drafts preserve the previous note until saved; removal requires confirmation.
   Unsaved recordings stay clearly marked and prevent accidental in-app navigation. No transcription.
+- Data-logger photo capture from any Run: take or choose a JPEG/PNG/WebP photo, preserve its
+  original bytes, and read labelled fastest lap, lap count and peak RPM on the device. All
+  suggestions start unchecked; saving applies only readings explicitly selected after review.
+  Conflicting/unlabelled values stay blank, with manual entry, cancellation and safe replacement.
+- Component-life notebook from Home: name engines, chains, sprockets and brakes, assign installed
+  parts to Runs, and track completed laps plus starting usage. Record/edit service history at a
+  lifetime lap counter, choose your own lap interval, and see near-due/due or incomplete counters.
+  Retirement preserves history; Run corrections/deletions recalculate usage without rewriting services.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
 - Lap times in either notation: 52.400 or 1:02.500. Both are read wherever a lap is counted, and a lap the app cannot read says so beneath the field rather than being dropped in silence.
@@ -57,11 +65,14 @@ A mobile-first, local-first web application for recording competition karting ty
 - Before Run's Cold tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
 - Versioned JSON backup/restore with confirmation, including tyre sets and Run assignments.
-  Saved debrief audio is embedded with its Run and survives the same atomic restore.
+  Saved debrief audio and logger source photos are embedded with their Run; components and
+  service history survive the same atomic restore.
   Excel-ready CSV exports contain Events/Sessions/Runs, Track reference markers, Session track
   observations, and an additional tyre-set inventory when sets exist. The Run table includes
   assignment, heat-cycle status and recorded usage before each Run.
   Audio columns describe recording time, duration, type and size; audio bytes stay in JSON.
+  Photo columns contain metadata, and installed-component columns retain IDs/names. When parts
+  exist, CSV adds component inventory and service-history tables. Image bytes stay in JSON.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
 - Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
 - Save failures remain visible on every screen, with retry and full export of the current in-memory records. Pending saves cannot overwrite a newer restore.
@@ -92,6 +103,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Development and production builds first prepare same-origin OCR files under `public/ocr/`
+from the pinned Tesseract.js engine and English model. This generated folder is ignored by Git;
+the build includes it in the offline cache. Licenses are copied alongside it. Recognition adds
+worker/model files to the initial cache download, so let the app load online before a circuit day.
+
 ## Verification
 
 ```bash
@@ -106,7 +122,8 @@ data rather than looking wrong:
 - **Backup round-trip** (`lib/track-map/backup.test.ts`) — events, tracks, layouts, markers
   and visits restore unchanged, map image bytes survive exactly, backups predating Track
   Maps still restore, and malformed files are rejected instead of partially applied.
-- **CSV export** (`lib/csv.test.ts`) — the three core tables and optional tyre-set inventory, correct column counts, computed
+- **CSV export** (`lib/csv.test.ts`) — the three core tables, optional tyre-set/component inventories
+  and component service history, correct column counts, computed
   pressure/temperature gains left blank wherever the app's screens show none (a mistyped 0
   pressure included), the UTF-8 BOM, and escaping of quotes, commas and line breaks in
   free-text notes.
@@ -144,6 +161,17 @@ data rather than looking wrong:
   exact audio backup bytes, malformed/oversized payload rejection, codec selection, microphone
   permission and release, late cancellation, background/time limits, draft review, replacement,
   removal, navigation guards, playback fallback, save retry and copies without inherited audio.
+- **Logger photos** (`lib/logger-photo.test.ts`, `lib/logger-readings.test.ts`,
+  `lib/logger-ocr.test.ts`, `lib/logger-photo-ui.test.ts`, `lib/photo-source.test.ts`,
+  `lib/ocr-assets.test.ts`) — native image storage and portable backup bytes, legacy photo migration,
+  preview URL allocation/release, bounded media validation, conservative labelled suggestions, no live/average
+  values promoted to fastest/peak results, same-origin assets, cancellation, manual fallback,
+  explicit selection and replacement/removal. Run integration also checks draft navigation and copies.
+- **Component life** (`lib/component-records.test.ts`, `lib/component-life.test.ts`,
+  `lib/component-life-ui.test.ts`, `lib/storage-ui.test.ts`) — migration, service/assignment
+  validation, completed-only counters, interval boundaries, missing laps, overflow/inconsistent
+  service counters, retirement, service editing/removal, metadata edits preserving new service
+  history, backup reminders and source-Run return navigation.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that
@@ -192,6 +220,17 @@ backgrounding or view disposal. Recording requires a supported browser on HTTPS 
 for development); existing notes remain downloadable if playback is unsupported. There is no
 audio upload or transcription service. Real browser verification uses a synthetic microphone;
 physical iPhone microphone/format behavior still needs device testing.
+
+Logger photos are also local, with one original image per Run (up to 6 MB / 24 megapixels).
+Images are stored as native Blobs, avoiding repeated copies of encoded image text during Run
+edits. JSON exports encode the original bytes for portability; older inline photos migrate on
+load. Preview URLs are released when their view closes.
+Recognition uses English/numeric labels such as BEST/FASTEST, LAPS and MAX/PEAK RPM, and never
+uploads a photo. Recognition can fail or misread a display: review against the image and select
+each desired value before applying it. JSON keeps the source evidence; photo drafts need Save.
+Browser checks use a synthetic logger image; real camera capture and actual display accuracy
+still need field testing. Component reminders describe recorded laps against the interval you
+enter; the notebook does not supply manufacturer intervals or estimate unrecorded use.
 
 ## Project workflow
 
