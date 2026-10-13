@@ -59,7 +59,7 @@ export function makeEvent(overrides: Partial<EventRecord> = {}): EventRecord {
 }
 
 export function makeAppData(overrides: Partial<AppData> = {}): AppData {
-  return { version: 2, events: [makeEvent()], lastEventId: "event-1", setupTemplates: [], tyreSets: [], ...overrides };
+  return { version: 2, events: [makeEvent()], lastEventId: "event-1", setupTemplates: [], tyreSets: [], components: [], ...overrides };
 }
 
 export function makeMarker(overrides: Partial<TrackMarker> = {}): TrackMarker {

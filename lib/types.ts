@@ -54,6 +54,21 @@ export type LoggerPhoto = {
   dataUrl: string;
 };
 
+export type ComponentKind = "Engine" | "Chain" | "Sprocket" | "Brake";
+export type ComponentService = { id: string; date: string; lapsAtService: number; notes: string };
+export type KartComponent = {
+  id: string;
+  name: string;
+  kind: ComponentKind;
+  notes: string;
+  initialLaps: number;
+  serviceIntervalLaps: number | null;
+  retired: boolean;
+  services: ComponentService[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TyreSet = {
   id: string;
   name: string;
@@ -109,6 +124,7 @@ export type RunRecord = {
   driverDebrief?: DriverDebrief;
   /** Source evidence belongs only to this outing; copies start without a photo. */
   loggerPhoto?: LoggerPhoto;
+  componentIds?: string[];
   updatedAt: string;
 };
 
@@ -156,6 +172,7 @@ export type AppData = {
   lastEventId: string | null;
   setupTemplates: SetupTemplate[];
   tyreSets: TyreSet[];
+  components: KartComponent[];
 };
 
 export const emptyTyre = (): TyreReading => ({
@@ -233,6 +250,7 @@ export const createRun = (number: number, previous?: RunRecord): RunRecord => {
     recordingPhase: "before",
     tyreSetId: previous?.tyreSetId ?? null,
     tyreHeatCycle: false,
+    componentIds: [...(previous?.componentIds ?? [])],
     updatedAt: now,
   };
 };

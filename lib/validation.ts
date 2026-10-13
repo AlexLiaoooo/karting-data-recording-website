@@ -37,6 +37,14 @@ function setup(value: unknown): boolean {
 export function validAppRecords(value: RecordValue): boolean {
   const tyreSetIds = new Set<string>();
   const nonnegativeInteger = (item: unknown) => typeof item === "number" && Number.isSafeInteger(item) && item >= 0;
+  const componentIds = new Set<string>();
+  const serviceIds = new Set<string>();
+  if (value.components !== undefined && !records(value.components, record =>
+    strings(record, ["name", "notes", "createdAt", "updatedAt"]) && Boolean((record.name as string).trim())
+    && choice(record.kind, ["Engine", "Chain", "Sprocket", "Brake"]) && nonnegativeInteger(record.initialLaps)
+    && (record.serviceIntervalLaps === null || positiveInteger(record.serviceIntervalLaps)) && typeof record.retired === "boolean"
+    && records(record.services, service => strings(service, ["notes"]) && service.date !== "" && date(service.date)
+      && nonnegativeInteger(service.lapsAtService), serviceIds), componentIds)) return false;
   if (value.tyreSets !== undefined && !records(value.tyreSets, record =>
     strings(record, ["name", "compound", "notes", "createdAt", "updatedAt"])
     && Boolean((record.name as string).trim()) && typeof record.retired === "boolean"
@@ -52,6 +60,9 @@ export function validAppRecords(value: RecordValue): boolean {
     && (record.tyreHeatCycle !== true || typeof record.tyreSetId === "string")
     && (record.driverDebrief === undefined || validDriverDebrief(record.driverDebrief))
     && (record.loggerPhoto === undefined || validLoggerPhoto(record.loggerPhoto))
+    && (record.componentIds === undefined || (Array.isArray(record.componentIds)
+      && record.componentIds.every(id => typeof id === "string" && componentIds.has(id))
+      && new Set(record.componentIds).size === record.componentIds.length))
     && (record.experiment === undefined || (isRecord(record.experiment)
       && strings(record.experiment, ["change", "expectation", "outcome"])
       && (record.experiment.baselineRunId === null || (typeof record.experiment.baselineRunId === "string"

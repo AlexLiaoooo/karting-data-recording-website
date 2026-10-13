@@ -1,4 +1,4 @@
-import type { AppData, EventRecord, TyreSet } from "./types";
+import type { AppData, EventRecord, TyreSet, KartComponent } from "./types";
 import { isRecord, validAppRecords } from "./validation";
 
 const DB_NAME = "kart-data-recorder";
@@ -12,6 +12,7 @@ export const emptyAppData = (): AppData => ({
   lastEventId: null,
   setupTemplates: [],
   tyreSets: [],
+  components: [],
 });
 
 /**
@@ -40,6 +41,7 @@ export function normalizeAppData(value: unknown): AppData | null {
     lastEventId?: unknown;
     setupTemplates?: unknown;
     tyreSets?: unknown;
+    components?: unknown;
   };
   if ((candidate.version !== 1 && candidate.version !== 2) || !Array.isArray(candidate.events)) return null;
 
@@ -49,6 +51,7 @@ export function normalizeAppData(value: unknown): AppData | null {
     lastEventId: typeof candidate.lastEventId === "string" ? candidate.lastEventId : null,
     setupTemplates: Array.isArray(candidate.setupTemplates) ? candidate.setupTemplates : [],
     tyreSets: Array.isArray(candidate.tyreSets) ? candidate.tyreSets as TyreSet[] : [],
+    components: Array.isArray(candidate.components) ? candidate.components as KartComponent[] : [],
   };
 }
 
