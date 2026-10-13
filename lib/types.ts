@@ -44,6 +44,16 @@ export type DriverDebrief = {
   dataUrl: string;
 };
 
+export type LoggerPhoto = {
+  capturedAt: string;
+  sourceName: string;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  size: number;
+  width: number;
+  height: number;
+  dataUrl: string;
+};
+
 export type TyreSet = {
   id: string;
   name: string;
@@ -97,6 +107,8 @@ export type RunRecord = {
   tyreHeatCycle?: boolean;
   /** A copied Run starts without the previous driver's recording. */
   driverDebrief?: DriverDebrief;
+  /** Source evidence belongs only to this outing; copies start without a photo. */
+  loggerPhoto?: LoggerPhoto;
   updatedAt: string;
 };
 
