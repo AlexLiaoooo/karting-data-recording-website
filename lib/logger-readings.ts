@@ -16,13 +16,13 @@ export function validLoggerReading(field: LoggerField, value: string): boolean {
 export function suggestLoggerReadings(text: string): LoggerSuggestions {
   const candidates: Record<LoggerField, Set<string>> = { fastestLap: new Set(), laps: new Set(), maxRpm: new Set() };
   const labels: Array<[LoggerField, RegExp]> = [
-    ["fastestLap", /\b(?:BEST(?:\s+LAP(?:\s+TIME)?)?|FASTEST(?:\s+LAP(?:\s+TIME)?)?|LAP\s+TIME)\b/i],
+    ["fastestLap", /\b(?:BEST(?:\s+LAP(?:\s+TIME)?)?|FASTEST(?:\s+LAP(?:\s+TIME)?)?)\b/i],
     ["laps", /\b(?:LAPS(?:\s+(?:COMPLETED|COUNT))?|LAP\s+COUNT|TOTAL\s+LAPS)\b/i],
-    ["maxRpm", /\b(?:MAX(?:IMUM)?\s*RPM|PEAK\s*RPM|RPM\s*MAX|RPM)\b/i],
+    ["maxRpm", /\b(?:MAX(?:IMUM)?\s*RPM|PEAK\s*RPM|RPM\s*MAX)\b/i],
   ];
   const lines = text.slice(0, 20_000).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   for (const [index, line] of lines.entries()) {
-    if (/\b(?:AVERAGE|AVG|LAST|MIN(?:IMUM)?|THEORETICAL)\b/i.test(line)) continue;
+    if (/\b(?:AVERAGE|AVG|LAST|CURRENT|MIN(?:IMUM)?|THEORETICAL)\b/i.test(line)) continue;
     for (const [field, label] of labels) {
       const match = label.exec(line); if (!match) continue;
       let tail = line.slice(match.index + match[0].length).replace(/^\s*[:=]\s*/, "").trim();

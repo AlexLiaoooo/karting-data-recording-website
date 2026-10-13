@@ -20,4 +20,7 @@ describe("labelled logger reading suggestions", () => {
     expect(validLoggerReading("laps", "0")).toBe(true); expect(validLoggerReading("maxRpm", "0")).toBe(false);
     expect(validLoggerReading("maxRpm", "1e4")).toBe(false); expect(validLoggerReading("fastestLap", "1:02.500")).toBe(true);
   });
+  it("does not relabel live RPM or an unspecified lap time as a peak or fastest reading", () => {
+    expect(suggestLoggerReadings("RPM 5000\nCURRENT RPM 6000\nLAP TIME 48.321\nCURRENT BEST LAP 49.500").values).toEqual({ fastestLap: "", laps: "", maxRpm: "" });
+  });
 });
