@@ -2051,7 +2051,7 @@ h2 {
 .logger-photo-preview { margin: 16px 0; }
 .logger-photo-preview img { display: block; width: 100%; height: auto; border-radius: 12px; }
 .logger-photo-preview figcaption { overflow-wrap: anywhere; margin: 10px 0; color: var(--muted); }
-.logger-reading { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logger-reading { padding: 14px 0; border-bottom: 1px solid var(--line); }
 .logger-reading .difference-toggle { min-height: 48px; }
 .logger-raw-text pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 .logger-photo-page h1 { font-size: 24px; }
@@ -2059,10 +2059,15 @@ h2 {
 .component-choice { min-height: 48px; padding: 8px 0; overflow-wrap: anywhere; }
 .component-actions { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
 .component-actions > button { flex: 1; min-height: 48px; }
-.component-services { margin: 20px 0; border-top: 1px solid var(--border); padding-top: 16px; }
-.component-service-entry { margin: 16px 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.component-services { margin: 20px 0; border-top: 1px solid var(--line); padding-top: 16px; }
+.component-service-entry { margin: 16px 0; padding-top: 16px; border-top: 1px solid var(--line); }
 .component-service-entry p, .component-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
 .component-service-form .field { margin: 12px 0; }
 .component-state-due, .component-state-check { color: var(--red); }
 .component-state-soon, .component-state-incomplete { color: var(--amber); }
 .component-card .card-head { flex-wrap: wrap; }
+.component-card .card-head > div { flex: 1; min-width: 0; }
+.component-card h2 { overflow-wrap: anywhere; }
+.component-card .stat-grid > div { min-width: 0; }
+.component-card .stat-grid span { display: block; min-height: 3em; color: var(--muted); font-size: 0.8rem; }
+.component-card .stat-grid strong { display: block; margin-top: 6px; font-size: 1.4rem; overflow-wrap: anywhere; }

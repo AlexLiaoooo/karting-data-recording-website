@@ -64,7 +64,7 @@ const zh: Record<string, string> = {
   "Lifetime recorded laps": "记录的累计圈数",
   "Laps since service": "保养后的圈数",
   "Laps remaining": "剩余圈数",
-  "Starting usage: {laps} laps · {runs} completed assigned Runs": "起始使用量：{laps} 圈 · {runs} 个已完成关联 Run",
+  "Starting laps: {laps} · Completed assigned Runs: {runs}": "起始圈数：{laps} · 已完成关联 Run：{runs}",
   "A service counter exceeds recorded usage, or the total is too large. Check starting usage and service records.": "保养圈数超过记录的使用量，或累计数值过大，请核对起始使用量及保养记录。",
   "Reactivate component": "重新启用部件",
   "Retire component": "停用部件",

@@ -60,7 +60,7 @@ export function ComponentLifeNotebook({ data, onSave, onOpen }: { data: AppData;
       return <article className="summary-card component-card" key={component.id}>
         <div className="card-head"><div><h2>{component.name}</h2><span className="muted">{t(component.kind)} · {component.retired ? t("Retired") : t("Active")}</span></div><span className={`badge component-state-${usage.state}`}>{stateLabel(usage.state, t)}</span></div>
         <div className="stat-grid"><div><span>{t("Lifetime recorded laps")}</span><strong>{usage.totalLaps ?? "—"}</strong></div><div><span>{t("Laps since service")}</span><strong>{usage.sinceService ?? "—"}</strong></div><div><span>{t("Laps remaining")}</span><strong>{usage.remainingLaps ?? "—"}</strong></div></div>
-        <p className="help-text">{t("Starting usage: {laps} laps · {runs} completed assigned Runs", { laps: component.initialLaps, runs: usage.completedRuns })}</p>
+        <p className="help-text">{t("Starting laps: {laps} · Completed assigned Runs: {runs}", { laps: component.initialLaps, runs: usage.completedRuns })}</p>
         {usage.missingLaps > 0 && <p className="help-text">{t("{count} completed Runs have missing or invalid lap counts; the lap total is incomplete.", { count: usage.missingLaps })}</p>}
         {usage.state === "check" && <p className="form-error">{t("A service counter exceeds recorded usage, or the total is too large. Check starting usage and service records.")}</p>}
         {component.notes && <p className="component-notes">{component.notes}</p>}
