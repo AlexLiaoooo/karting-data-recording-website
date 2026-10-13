@@ -7,9 +7,9 @@ export function readLoggerPhoto(photo: LoggerPhoto, progress: (percent: number) 
   let worker: import("tesseract.js").Worker | null = null;
   let cancelReject: ((reason: Error) => void) | undefined;
   const canceled = new Promise<never>((_resolve, reject) => { cancelReject = reject; });
-  const cancel = () => {
+  const cancel = (reason: Error = new DOMException("Recognition canceled", "AbortError")) => {
     controller.abort();
-    cancelReject?.(new DOMException("Recognition canceled", "AbortError"));
+    cancelReject?.(reason);
     void worker?.terminate();
   };
   const work = (async () => {
@@ -37,7 +37,7 @@ export function readLoggerPhoto(photo: LoggerPhoto, progress: (percent: number) 
       return data.text.slice(0, 20_000);
     } finally { await worker.terminate(); worker = null; }
   })();
-  const timer = setTimeout(cancel, 60_000);
+  const timer = setTimeout(() => cancel(new DOMException("Recognition timed out", "TimeoutError")), 60_000);
   const result = Promise.race([work, canceled]).finally(() => clearTimeout(timer));
   return { result, cancel };
 }

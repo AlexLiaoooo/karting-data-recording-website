@@ -2047,3 +2047,11 @@ h2 {
 .debrief-draft { padding-top: 16px; border-top: 1px solid var(--border); }
 .debrief-page .action-stack { margin-top: 16px; }
 .debrief-removal { margin-top: 16px; }
+
+.logger-photo-preview { margin: 16px 0; }
+.logger-photo-preview img { display: block; width: 100%; height: auto; border-radius: 12px; }
+.logger-photo-preview figcaption { overflow-wrap: anywhere; margin: 10px 0; color: var(--muted); }
+.logger-reading { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.logger-reading .difference-toggle { min-height: 48px; }
+.logger-raw-text pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.logger-photo-page h1 { font-size: 24px; }
