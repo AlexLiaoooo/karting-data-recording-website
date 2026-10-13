@@ -2055,3 +2055,14 @@ h2 {
 .logger-reading .difference-toggle { min-height: 48px; }
 .logger-raw-text pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 .logger-photo-page h1 { font-size: 24px; }
+
+.component-choice { min-height: 48px; padding: 8px 0; overflow-wrap: anywhere; }
+.component-actions { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+.component-actions > button { flex: 1; min-height: 48px; }
+.component-services { margin: 20px 0; border-top: 1px solid var(--border); padding-top: 16px; }
+.component-service-entry { margin: 16px 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.component-service-entry p, .component-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.component-service-form .field { margin: 12px 0; }
+.component-state-due, .component-state-check { color: var(--red); }
+.component-state-soon, .component-state-incomplete { color: var(--amber); }
+.component-card .card-head { flex-wrap: wrap; }
