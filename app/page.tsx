@@ -66,8 +66,9 @@ import { LanguageToggle, type Translate, useTranslation } from "@/lib/i18n";
 import { DebriefPlayback } from "@/components/debrief-playback";
 import { DriverDebriefPanel } from "@/components/driver-debrief";
 import { LoggerPhotoPanel } from "@/components/logger-photo";
+import { ComponentLifeNotebook, RunComponents } from "@/components/component-life";
 
-type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "handover" | "debrief" | "logger" | "settings" | "track-maps" | "session-track-notes";
+type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "components" | "handover" | "debrief" | "logger" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
 type EventFormData = Omit<EventRecord, "id" | "sessions" | "createdAt" | "updatedAt">;
 /** As the form holds it. A blank condition or temperature means "same as the Event". */
@@ -260,7 +261,7 @@ export default function HomePage() {
   const [toast, setToast] = useState("");
   const [compareIds, setCompareIds] = useState<[string, string]>(["", ""]);
   const [compareBack, setCompareBack] = useState<"session" | "run" | "journal" | "timeline">("session");
-  const [runBack, setRunBack] = useState<"session" | "journal" | "timeline" | "tyres">("session");
+  const [runBack, setRunBack] = useState<"session" | "journal" | "timeline" | "tyres" | "components">("session");
   const [briefingBack, setBriefingBack] = useState<"event" | "session">("event");
   const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>("laps");
   const [timelineTemperature, setTimelineTemperature] = useState<TemperatureView>("hot");
@@ -922,6 +923,7 @@ export default function HomePage() {
 
           <section className="list-section">
             <div className="section-heading"><h2>{t("Track tools")}</h2></div>
+            <button type="button" className="list-item" aria-label={t("Component-life notebook")} onClick={() => setScreen("components")}><span className="list-icon"><Wrench /></span><span className="list-copy"><strong>{t("Component-life notebook")}</strong><span>{t("Part usage, service records and your maintenance reminders")}</span></span><ChevronRight /></button>
             <button className="list-item" onClick={() => setScreen("track-maps")}>
               <span className="list-icon"><MapPinned /></span>
               <span className="list-copy"><strong>{t("Track Library")}</strong><span>{t("Map corners, braking points and reference notes")}</span></span>
@@ -1110,11 +1112,12 @@ export default function HomePage() {
         onDelete={() => requestDelete({ kind: "run", id: selectedRun.id, name: `Run ${String(selectedRun.number).padStart(2, "0")}` })}
         onComplete={() => {
           updateRun(selectedRun.id, (run) => ({ ...run, completed: true, recordingPhase: "after" }));
-          setScreen(runBack === "timeline" || runBack === "tyres" ? runBack : "session");
+          setScreen(runBack === "timeline" || runBack === "tyres" || runBack === "components" ? runBack : "session");
           flash(t("Run {number} completed", { number: String(selectedRun.number).padStart(2, "0") }));
         }}
         templates={data.setupTemplates}
         tyreSets={data.tyreSets}
+        components={data.components}
         tyreAge={tyreAges.get(selectedRun.id)}
         pressureHint={pressureHint}
         entry={historicalRuns.find(item => item.run.id === selectedRun.id)!}
@@ -1143,6 +1146,8 @@ export default function HomePage() {
     content = <CompareRuns runs={historicalRuns} tyreSets={data.tyreSets} tyreAges={tyreAges} ids={compareIds} setIds={setCompareIds} onBack={() => setScreen(compareBack)} />;
   } else if (screen === "tyres") {
     content = <><TopBar title={t("Tyre-set history")} onBack={() => setScreen("home")} /><TyreSetLibrary data={data} onSave={set => setData(current => ({ ...current, tyreSets: current.tyreSets.some(item => item.id === set.id) ? current.tyreSets.map(item => item.id === set.id ? set : item) : [...current.tyreSets, set] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("tyres"); setScreen("run"); }} /></>;
+  } else if (screen === "components") {
+    content = <><TopBar title={t("Component-life notebook")} onBack={() => setScreen("home")} /><ComponentLifeNotebook data={data} onSave={component => setData(current => ({ ...current, components: current.components.some(item => item.id === component.id) ? current.components.map(item => item.id === component.id ? component : item) : [...current.components, component] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("components"); setScreen("run"); }} /></>;
   } else if (screen === "briefing" && selectedEvent) {
     content = <><TopBar title={t("Returning-to-track briefing")} subtitle={selectedEvent.name} onBack={() => setScreen(briefingBack)} /><TrackBriefing events={data.events} event={selectedEvent} session={briefingBack === "session" ? selectedSession : undefined} maps={trackMapData} /></>;
   } else if (screen === "journal") {
@@ -1669,7 +1674,7 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
   );
 }
 
-function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief, onLoggerPhoto }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void; onLoggerPhoto: () => void }) {
+function RunEditor({ run, session, saveState, templates, tyreSets, components, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief, onLoggerPhoto }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; components: AppData["components"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void; onLoggerPhoto: () => void }) {
   const { t } = useTranslation();
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
@@ -1701,6 +1706,7 @@ function RunEditor({ run, session, saveState, templates, tyreSets, tyreAge, pres
         <button type="button" className="button button-soft button-block handover-action" onClick={onHandover}><Share2 />{t("Mechanic handover card")}</button>
         <button type="button" className="button button-soft button-block handover-action" onClick={onDebrief}><Mic />{t("Fast driver debrief")}</button>
         <button type="button" className="button button-soft button-block handover-action" onClick={onLoggerPhoto}><Camera />{t("Data-logger photo capture")}</button>
+        <RunComponents run={run} components={components} onUpdate={onUpdate} />
         {run.driverDebrief && <section className="summary-card"><h2>{t("Fast driver debrief")}</h2><DebriefPlayback note={run.driverDebrief} runId={run.id} runNumber={run.number} /></section>}
         <div className="run-phase-switch" role="group" aria-label={t("Run recording phase")}>
           <button type="button" ref={beforeButton} aria-pressed={phase === "before"} aria-controls="run-recording-fields" onClick={() => choosePhase("before")}>{t("Before Run")}</button>

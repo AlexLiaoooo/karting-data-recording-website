@@ -17,6 +17,7 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Part usage, service records and your maintenance reminders": "部件使用量、保养历史和您设置的保养提醒",
   "Component-life notebook": "部件寿命记录",
   "Engine": "发动机",
   "Chain": "链条",

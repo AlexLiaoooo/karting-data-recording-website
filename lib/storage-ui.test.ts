@@ -221,6 +221,29 @@ describe("Run logger photo integration", () => {
   });
 });
 
+describe("component notebook Run integration", () => {
+  const component = { id: "chain-a", name: "Chain A", kind: "Chain" as const, notes: "", initialLaps: 20, serviceIntervalLaps: 30, retired: false, services: [], createdAt: "stamp", updatedAt: "stamp" };
+  it("offers a backup reminder for a component-only library", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [], lastEventId: null, components: [component] }));
+    await render(); expect(container.textContent).toContain("Keep a backup of your track days");
+    await act(async () => button("Component-life notebook").click()); expect(container.textContent).toContain("Chain A");
+  });
+  it("saves installed-part changes, counts completed usage, and returns source Runs to the notebook", async () => {
+    const data = recordWith(makeRun({ laps: "12" })); data.components = [component];
+    await openRecordedRun(data);
+    await act(async () => container.querySelector<HTMLDetailsElement>(".run-components")!.querySelector<HTMLElement>("summary")!.click());
+    await act(async () => container.querySelector<HTMLInputElement>('.run-components input[type="checkbox"]')!.click());
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 500)); });
+    expect(vi.mocked(saveData).mock.lastCall![0].events[0].sessions[0].runs[0].componentIds).toEqual([component.id]);
+    await act(async () => button("Back").click()); await act(async () => button("Back").click()); await act(async () => button("Back").click());
+    await act(async () => button("Component-life notebook").click()); expect(container.textContent).toContain("Service due"); expect(container.textContent).toContain("32");
+    await act(async () => container.querySelector<HTMLButtonElement>(".component-card .list-item")!.click());
+    await act(async () => button("After Run").click()); await act(async () => button("Done").click());
+    expect(container.querySelector(".component-notebook")).not.toBeNull();
+    await act(async () => button("Retire component").click()); expect(container.textContent).toContain("Retired"); expect(container.textContent).toContain("32");
+  });
+});
+
 describe("Run driver debrief integration", () => {
   const note: DriverDebrief = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm", size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
   it("guards recording/draft navigation, saves to the selected Run and retains its measurements and phase", async () => {

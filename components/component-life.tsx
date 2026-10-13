@@ -17,7 +17,7 @@ function stateLabel(state: ComponentUsage["state"], t: Translate) {
 
 export function RunComponents({ run, components, onUpdate }: { run: RunRecord; components: KartComponent[]; onUpdate: (updater: (run: RunRecord) => RunRecord) => void }) {
   const { t } = useTranslation();
-  return <section className="summary-card run-components"><h2>{t("Installed components")}</h2>
+  return <details className="summary-card run-components"><summary>{t("Installed components")} · {run.componentIds?.length ?? 0}</summary>
     {components.filter(component => !component.retired || run.componentIds?.includes(component.id)).map(component => <label className="difference-toggle component-choice" key={component.id}>
       <input type="checkbox" checked={run.componentIds?.includes(component.id) ?? false} onChange={event => {
         const checked = event.target.checked;
@@ -25,7 +25,7 @@ export function RunComponents({ run, components, onUpdate }: { run: RunRecord; c
       }} />{component.name} · {t(component.kind)}{component.retired ? ` · ${t("Retired")}` : ""}
     </label>)}
     <p className="help-text">{components.length ? t("Only completed Runs add laps to selected components. Correcting or deleting a Run recalculates usage.") : t("Create parts from Component-life notebook on Home, then select the installed parts here.")}</p>
-  </section>;
+  </details>;
 }
 
 export function ComponentLifeNotebook({ data, onSave, onOpen }: { data: AppData; onSave: (component: KartComponent) => void; onOpen: (run: RecordedRun) => void }) {
