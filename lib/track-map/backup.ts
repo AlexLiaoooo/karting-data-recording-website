@@ -3,6 +3,8 @@ import { normalizeAppData } from "@/lib/database";
 import { migrateMarkerTypes } from "./database";
 import { emptyTrackMapData, MapAsset, TrackMapData } from "./types";
 import { validPortableTrackMap } from "../validation";
+import { loggerPhotoBlob } from "../logger-photo";
+import { mediaDataUrl } from "../portable-media";
 
 type PortableMapAsset = Omit<MapAsset, "blob"> & { dataUrl: string };
 
@@ -38,6 +40,11 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export async function buildFullBackup(appData: AppData, trackMapData: TrackMapData): Promise<string> {
+  const portableApp = { ...appData, events: await Promise.all(appData.events.map(async event => ({ ...event, sessions: await Promise.all(event.sessions.map(async session => ({ ...session, runs: await Promise.all(session.runs.map(async run => {
+    if (!run.loggerPhoto) return run;
+    const photo = { ...run.loggerPhoto }; delete photo.blob; delete photo.dataUrl;
+    return { ...run, loggerPhoto: { ...photo, dataUrl: await mediaDataUrl(loggerPhotoBlob(run.loggerPhoto)) } };
+  })) }))) }))) };
   const assets = await Promise.all(trackMapData.assets.map(async ({ blob, ...asset }) => ({
     ...asset,
     dataUrl: await blobToDataUrl(blob),
@@ -46,7 +53,7 @@ export async function buildFullBackup(appData: AppData, trackMapData: TrackMapDa
     kind: "kart-data-full-backup",
     version: 3,
     exportedAt: new Date().toISOString(),
-    appData,
+    appData: portableApp,
     trackMap: { ...trackMapData, assets },
   };
   return JSON.stringify(backup, null, 2);

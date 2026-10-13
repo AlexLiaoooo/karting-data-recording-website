@@ -45,6 +45,15 @@ function storedTrackMaps() {
 }
 
 describe("safe startup reads", () => {
+  it("saves original photo bytes as a native Blob through later Run edits and reload", async () => {
+    const data = makeAppData();
+    data.events[0].sessions[0].runs[0].loggerPhoto = { capturedAt: "2026-10-13T09:00:00.000Z", sourceName: "logger.png", mimeType: "image/png", size: 4, width: 1200, height: 800, blob: new NodeBlob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" }) as unknown as Blob };
+    await saveData(data); const reopened = await loadData();
+    reopened.events[0].sessions[0].runs[0].laps = "14"; await saveData(reopened);
+    const photo = (await loadData()).events[0].sessions[0].runs[0].loggerPhoto!;
+    expect(photo.dataUrl).toBeUndefined(); expect(photo.blob?.size).toBe(4);
+    expect(Array.from(new Uint8Array(await photo.blob!.arrayBuffer()))).toEqual([1, 2, 3, 4]);
+  });
   it("retains exact debrief audio through save/reload, and removes it with its owning Run", async () => {
     const note = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm" as const, size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
     const data = makeAppData(); data.events[0].sessions[0].runs[0].driverDebrief = note;

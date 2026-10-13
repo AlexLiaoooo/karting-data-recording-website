@@ -51,7 +51,9 @@ export type LoggerPhoto = {
   size: number;
   width: number;
   height: number;
-  dataUrl: string;
+  /** Native Blob in device storage; base64 remains supported for portable/older backups. */
+  blob?: Blob;
+  dataUrl?: string;
 };
 
 export type ComponentKind = "Engine" | "Chain" | "Sprocket" | "Brake";

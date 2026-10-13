@@ -13,7 +13,23 @@ export function validLoggerPhoto(value: unknown): value is LoggerPhoto {
     && typeof item.width === "number" && Number.isSafeInteger(item.width) && item.width > 0 && item.width <= 12000
     && typeof item.height === "number" && Number.isSafeInteger(item.height) && item.height > 0 && item.height <= 12000
     && item.width * item.height <= MAX_LOGGER_PHOTO_PIXELS
-    && typeof item.size === "number" && validMediaDataUrl(item.dataUrl, item.mimeType, item.size, MAX_LOGGER_PHOTO_BYTES);
+    && typeof item.size === "number" && Number.isSafeInteger(item.size) && item.size > 0 && item.size <= MAX_LOGGER_PHOTO_BYTES
+    && (item.dataUrl !== undefined ? item.blob === undefined && validMediaDataUrl(item.dataUrl, item.mimeType, item.size, MAX_LOGGER_PHOTO_BYTES)
+      : Object.prototype.toString.call(item.blob) === "[object Blob]" && (item.blob as Blob).size === item.size && (item.blob as Blob).type === item.mimeType);
+}
+
+export function loggerPhotoBlob(photo: LoggerPhoto): Blob {
+  if (!validLoggerPhoto(photo)) throw new Error("Invalid photo");
+  if (photo.blob) return photo.blob;
+  const encoded = photo.dataUrl!.slice(photo.dataUrl!.indexOf(",") + 1);
+  const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+  return new Blob([bytes], { type: photo.mimeType });
+}
+
+export function storedLoggerPhoto(photo: LoggerPhoto): LoggerPhoto {
+  if (photo.blob) return photo;
+  const metadata = { ...photo }; delete metadata.dataUrl;
+  return { ...metadata, blob: loggerPhotoBlob(photo) };
 }
 
 /** Keep the accepted source bytes; OCR and suggested readings never replace this evidence. */
@@ -26,7 +42,7 @@ export async function captureLoggerPhoto(file: File): Promise<LoggerPhoto> {
     image.onerror = () => reject(new Error("Photo could not be decoded"));
     image.src = dataUrl;
   });
-  const photo = { capturedAt: new Date().toISOString(), sourceName: file.name, mimeType: file.type as LoggerPhoto["mimeType"], size: file.size, dataUrl, width, height };
+  const photo = { capturedAt: new Date().toISOString(), sourceName: file.name, mimeType: file.type as LoggerPhoto["mimeType"], size: file.size, blob: new Blob([file], { type: file.type }), width, height };
   if (!validLoggerPhoto(photo)) throw new Error("Invalid photo dimensions");
   return photo;
 }

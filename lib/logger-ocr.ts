@@ -32,7 +32,7 @@ export function readLoggerPhoto(photo: LoggerPhoto, progress: (percent: number) 
     try {
       if (controller.signal.aborted) throw new DOMException("Recognition canceled", "AbortError");
       await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      const { data } = await worker.recognize(photo.dataUrl);
+      const { data } = await worker.recognize(photo.blob ?? photo.dataUrl!);
       if (controller.signal.aborted) throw new DOMException("Recognition canceled", "AbortError");
       return data.text.slice(0, 20_000);
     } finally { await worker.terminate(); worker = null; }

@@ -7,17 +7,19 @@ import { readLoggerPhoto } from "@/lib/logger-ocr";
 import { emptyLoggerReadings, suggestLoggerReadings, validLoggerReading, type LoggerField, type LoggerReadings } from "@/lib/logger-readings";
 import type { LoggerPhoto, RunRecord } from "@/lib/types";
 import { useTranslation } from "@/lib/i18n";
+import { usePhotoSource } from "@/lib/photo-source";
 
 const fields: Array<[LoggerField, string]> = [["fastestLap", "Fastest lap"], ["laps", "Laps"], ["maxRpm", "Max RPM"]];
 const unselected = () => ({ fastestLap: false, laps: false, maxRpm: false });
 function PhotoPreview({ photo, run }: { photo: LoggerPhoto; run: RunRecord }) {
   const { t } = useTranslation();
+  const source = usePhotoSource(photo);
   const identity = run.id.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 8) || "record";
   return <figure className="logger-photo-preview">
     {/* eslint-disable-next-line @next/next/no-img-element -- Bounded original evidence data URL stored locally; no remote image optimization. */}
-    <img src={photo.dataUrl} alt={t("Data-logger photo")} />
+    <img src={source || undefined} width={photo.width} height={photo.height} alt={t("Data-logger photo")} />
     <figcaption>{photo.sourceName} · {photo.width} × {photo.height}</figcaption>
-    <a className="button button-secondary button-block" href={photo.dataUrl} download={`kart-logger-${photo.capturedAt.slice(0, 10)}-run-${String(run.number).padStart(2, "0")}-${identity}.${loggerPhotoExtension(photo.mimeType)}`}><Download />{t("Download original photo")}</a>
+    <a className="button button-secondary button-block" href={source || undefined} download={`kart-logger-${photo.capturedAt.slice(0, 10)}-run-${String(run.number).padStart(2, "0")}-${identity}.${loggerPhotoExtension(photo.mimeType)}`}><Download />{t("Download original photo")}</a>
   </figure>;
 }
 

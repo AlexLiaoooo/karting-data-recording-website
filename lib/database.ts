@@ -1,5 +1,6 @@
 import type { AppData, EventRecord, TyreSet, KartComponent } from "./types";
 import { isRecord, validAppRecords } from "./validation";
+import { storedLoggerPhoto } from "./logger-photo";
 
 const DB_NAME = "kart-data-recorder";
 const DB_VERSION = 2;
@@ -28,7 +29,7 @@ function migrateRuns(events: EventRecord[]): EventRecord[] {
     ...event,
     sessions: (event.sessions ?? []).map((session) => ({
       ...session,
-      runs: (session.runs ?? []).map((run) => ({ ...run, maxRpm: run.maxRpm ?? "" })),
+      runs: (session.runs ?? []).map((run) => ({ ...run, maxRpm: run.maxRpm ?? "", ...(run.loggerPhoto ? { loggerPhoto: storedLoggerPhoto(run.loggerPhoto) } : {}) })),
     })),
   }));
 }
