@@ -18,6 +18,7 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Save or cancel open component and service forms before leaving or opening another record.": "请先保存或取消已打开的部件和保养表单，再离开页面或打开其他记录。",
   "Components in this backup: {count}": "此备份中的部件：{count}",
   "Logger photos in this backup: {count}": "此备份中的记录仪照片：{count}",
   "Part usage, service records and your maintenance reminders": "部件使用量、保养历史和您设置的保养提醒",

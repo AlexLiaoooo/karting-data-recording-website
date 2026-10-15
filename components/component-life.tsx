@@ -8,6 +8,7 @@ import { lapCount, tyreRunHistory } from "@/lib/tyre-sets";
 import type { AppData, ComponentKind, KartComponent, RunRecord } from "@/lib/types";
 import type { RecordedRun } from "@/lib/experiments";
 import { ComponentServices } from "./component-services";
+import { ComponentDrafts, useComponentDraft } from "./component-drafts";
 
 const kinds: ComponentKind[] = ["Engine", "Chain", "Sprocket", "Brake"];
 type Draft = Omit<KartComponent, "initialLaps" | "serviceIntervalLaps"> & { initialLaps: string; serviceIntervalLaps: string };
@@ -28,14 +29,20 @@ export function RunComponents({ run, components, onUpdate }: { run: RunRecord; c
   </details>;
 }
 
-export function ComponentLifeNotebook({ data, onSave, onOpen }: { data: AppData; onSave: (component: KartComponent) => void; onOpen: (run: RecordedRun) => void }) {
+type NotebookProps = { data: AppData; onSave: (component: KartComponent) => void; onOpen: (run: RecordedRun) => void };
+export function ComponentLifeNotebook({ onBusyChange, ...props }: NotebookProps & { onBusyChange?: (busy: boolean) => void }) {
+  return <ComponentDrafts onBusyChange={onBusyChange}><ComponentNotebook {...props} /></ComponentDrafts>;
+}
+
+function ComponentNotebook({ data, onSave, onOpen }: NotebookProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Draft | null>(null); const [invalid, setInvalid] = useState(false);
+  const busy = useComponentDraft(draft !== null);
   const history = useMemo(() => tyreRunHistory(data), [data]);
   const edit = (component: KartComponent) => { setDraft({ ...component, initialLaps: String(component.initialLaps), serviceIntervalLaps: component.serviceIntervalLaps === null ? "" : String(component.serviceIntervalLaps) }); setInvalid(false); };
   return <div className="page-content component-notebook">
     <p className="lead">{t("Track engines, chains, sprockets and brakes through recorded Runs and service history.")}</p>
-    <button type="button" className="button button-primary button-block" onClick={() => { const now = new Date().toISOString(); edit({ id: crypto.randomUUID(), name: "", kind: "Engine", notes: "", initialLaps: 0, serviceIntervalLaps: null, retired: false, services: [], createdAt: now, updatedAt: now }); }}><Plus />{t("Add component")}</button>
+    <button type="button" className="button button-primary button-block" disabled={draft !== null} onClick={() => { const now = new Date().toISOString(); edit({ id: crypto.randomUUID(), name: "", kind: "Engine", notes: "", initialLaps: 0, serviceIntervalLaps: null, retired: false, services: [], createdAt: now, updatedAt: now }); }}><Plus />{t("Add component")}</button>
     {draft && <form className="summary-card component-form" onSubmit={event => {
       event.preventDefault(); const initialLaps = lapCount(draft.initialLaps); const interval = draft.serviceIntervalLaps.trim() ? lapCount(draft.serviceIntervalLaps) : null;
       if (!draft.name.trim() || initialLaps === null || (draft.serviceIntervalLaps.trim() && (interval === null || interval === 0))) { setInvalid(true); return; }
@@ -64,9 +71,9 @@ export function ComponentLifeNotebook({ data, onSave, onOpen }: { data: AppData;
         {usage.missingLaps > 0 && <p className="help-text">{t("{count} completed Runs have missing or invalid lap counts; the lap total is incomplete.", { count: usage.missingLaps })}</p>}
         {usage.state === "check" && <p className="form-error">{t("A service counter exceeds recorded usage, or the total is too large. Check starting usage and service records.")}</p>}
         {component.notes && <p className="component-notes">{component.notes}</p>}
-        <div className="component-actions"><button type="button" className="button button-secondary" onClick={() => edit(component)}>{t("Edit component")}</button><button type="button" className="button button-soft" onClick={() => onSave({ ...component, retired: !component.retired, updatedAt: new Date().toISOString() })}>{component.retired ? t("Reactivate component") : t("Retire component")}</button></div>
+        <div className="component-actions"><button type="button" className="button button-secondary" disabled={draft !== null} onClick={() => edit(component)}>{t("Edit component")}</button><button type="button" className="button button-soft" onClick={() => onSave({ ...component, retired: !component.retired, updatedAt: new Date().toISOString() })}>{component.retired ? t("Reactivate component") : t("Retire component")}</button></div>
         <ComponentServices component={component} totalLaps={usage.totalLaps} onSave={onSave} />
-        <details><summary>{t("Assigned Run history")} · {entries.length}</summary><div className="item-list">{[...entries].reverse().map(entry => <button type="button" className="list-item" key={entry.run.id} onClick={() => onOpen(entry)}><span className="list-copy"><strong>{entry.eventName} · {entry.sessionName} · Run {String(entry.run.number).padStart(2, "0")}</strong><span>{entry.date} · {entry.run.laps || "—"} {t("Laps")} · {entry.run.completed ? t("Completed") : t("Unfinished")}</span></span></button>)}</div></details>
+        <details><summary>{t("Assigned Run history")} · {entries.length}</summary><div className="item-list">{[...entries].reverse().map(entry => <button type="button" className="list-item" disabled={busy} key={entry.run.id} onClick={() => onOpen(entry)}><span className="list-copy"><strong>{entry.eventName} · {entry.sessionName} · Run {String(entry.run.number).padStart(2, "0")}</strong><span>{entry.date} · {entry.run.laps || "—"} {t("Laps")} · {entry.run.completed ? t("Completed") : t("Unfinished")}</span></span></button>)}</div></details>
       </article>;
     })}
     <p className="help-text">{t("Reminders use your interval and recorded laps only. Due soon means within 10% of the interval. Retiring a part preserves its history.")}</p>

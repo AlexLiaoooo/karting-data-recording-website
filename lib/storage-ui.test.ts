@@ -222,6 +222,23 @@ describe("Run logger photo integration", () => {
 });
 
 describe("component notebook Run integration", () => {
+  it("keeps a component draft on Back until it is explicitly saved or canceled", async () => {
+    await render(); await act(async () => button("Component-life notebook").click());
+    await act(async () => button("Add component").click());
+    const name = container.querySelector<HTMLInputElement>(".component-form input")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(name, "Draft engine");
+      name.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(container.querySelector(".save-status")!.textContent).toContain("Not saved");
+    await act(async () => button("Back").click());
+    expect(container.querySelector<HTMLInputElement>(".component-form input")!.value).toBe("Draft engine");
+    await act(async () => container.querySelector(".component-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(container.querySelector(".component-form")).toBeNull();
+    expect(container.querySelector(".save-unsaved")).toBeNull();
+    await act(async () => button("Back").click());
+    expect(container.textContent).toContain("Start your first event");
+  });
   const component = { id: "chain-a", name: "Chain A", kind: "Chain" as const, notes: "", initialLaps: 20, serviceIntervalLaps: 30, retired: false, services: [], createdAt: "stamp", updatedAt: "stamp" };
   it("offers a backup reminder for a component-only library", async () => {
     vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [], lastEventId: null, components: [component] }));

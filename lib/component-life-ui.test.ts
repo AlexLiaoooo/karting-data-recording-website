@@ -19,6 +19,20 @@ async function fill(name: string, value: string) { const label = [...container.q
 async function submit(selector: string) { await act(async () => container.querySelector(selector)!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))); }
 
 describe("component notebook controls", () => {
+  it("keeps an open component draft when another record is requested and guards unload until cancellation", async () => {
+    await render(); await click("Edit component"); await fill("Component notes", "Unsaved engine adjustment");
+    await click("Add component"); await click("Edit component");
+    const input = container.querySelector<HTMLTextAreaElement>(".component-form textarea")!;
+    expect(input.value).toBe("Unsaved engine adjustment");
+    expect(container.querySelector<HTMLButtonElement>(".component-card .list-item")!.disabled).toBe(true);
+    const blocked = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(blocked);
+    expect(blocked.defaultPrevented).toBe(true);
+    await click("Cancel");
+    expect(container.querySelector<HTMLButtonElement>(".component-card .list-item")!.disabled).toBe(false);
+    const allowed = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(allowed);
+    expect(allowed.defaultPrevented).toBe(false);
+    expect(current.components[0].notes).toBe("");
+  });
   it("creates components only with whole starting usage and a valid optional interval", async () => {
     await render(makeAppData({ components: [] })); await click("Add component"); await fill("Component name", "Chain A"); await fill("Service interval (laps)", "0"); await submit(".component-form");
     expect(current.components).toEqual([]); expect(container.textContent).toContain("positive whole interval");

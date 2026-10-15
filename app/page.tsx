@@ -242,6 +242,7 @@ export default function HomePage() {
   const [screen, setScreen] = useState<Screen>("home");
   const [debriefBusy, setDebriefBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [componentBusy, setComponentBusy] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
@@ -1148,7 +1149,10 @@ export default function HomePage() {
   } else if (screen === "tyres") {
     content = <><TopBar title={t("Tyre-set history")} onBack={() => setScreen("home")} /><TyreSetLibrary data={data} onSave={set => setData(current => ({ ...current, tyreSets: current.tyreSets.some(item => item.id === set.id) ? current.tyreSets.map(item => item.id === set.id ? set : item) : [...current.tyreSets, set] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("tyres"); setScreen("run"); }} /></>;
   } else if (screen === "components") {
-    content = <><TopBar title={t("Component-life notebook")} onBack={() => setScreen("home")} /><ComponentLifeNotebook data={data} onSave={component => setData(current => ({ ...current, components: current.components.some(item => item.id === component.id) ? current.components.map(item => item.id === component.id ? component : item) : [...current.components, component] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("components"); setScreen("run"); }} /></>;
+    content = <><TopBar title={t("Component-life notebook")} action={componentBusy ? <span className="save-status save-unsaved"><span />{t("Not saved")}</span> : undefined} onBack={() => {
+      if (componentBusy) flash(t("Save or cancel open component and service forms before leaving or opening another record."));
+      else setScreen("home");
+    }} /><ComponentLifeNotebook data={data} onBusyChange={setComponentBusy} onSave={component => setData(current => ({ ...current, components: current.components.some(item => item.id === component.id) ? current.components.map(item => item.id === component.id ? component : item) : [...current.components, component] }))} onOpen={entry => { setEventId(entry.eventId); setSessionId(entry.sessionId); setRunId(entry.run.id); setRunBack("components"); setScreen("run"); }} /></>;
   } else if (screen === "briefing" && selectedEvent) {
     content = <><TopBar title={t("Returning-to-track briefing")} subtitle={selectedEvent.name} onBack={() => setScreen(briefingBack)} /><TrackBriefing events={data.events} event={selectedEvent} session={briefingBack === "session" ? selectedSession : undefined} maps={trackMapData} /></>;
   } else if (screen === "journal") {
