@@ -4,6 +4,13 @@ beforeEach(() => { localStorage.clear(); vi.resetModules(); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("optional preference storage", () => {
+  it("also survives a security error while accessing the storage object itself", async () => {
+    const { readPreference, writePreference } = await import("./preferences");
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => { throw new DOMException("Storage access denied", "SecurityError"); });
+    expect(readPreference("kart-data-language")).toBeNull();
+    expect(() => writePreference("kart-data-language", "zh")).not.toThrow();
+    expect(readPreference("kart-data-language")).toBe("zh");
+  });
   it("reads saved choices and persists changes when storage is available", async () => {
     const { readPreference, writePreference } = await import("./preferences");
     localStorage.setItem("kart-data-language", "zh");
