@@ -6,6 +6,7 @@ import type { MapAsset, TrackMapData, TrackMarkerType } from "@/lib/track-map/ty
 import type { GearingRun } from "@/lib/gearing";
 import type { PressureRun } from "@/lib/pressure";
 import { LanguageToggle, useTranslation } from "@/lib/i18n";
+import { writePreference } from "@/lib/preferences";
 
 export type SessionContext = {
   eventId: string;
@@ -57,7 +58,7 @@ export function ThemeButton() {
   function toggleTheme() {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
-    localStorage.setItem("kart-data-theme", next);
+    writePreference("kart-data-theme", next);
   }
   return (
     <button className="icon-button theme-toggle" type="button" aria-label={t("Switch light or dark mode")} onClick={toggleTheme}>

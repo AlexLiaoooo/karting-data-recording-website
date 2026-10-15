@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
+import { readPreference, writePreference } from "@/lib/preferences";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, emptyExperiment, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
 import { recordedRuns, type RecordedRun as HistoricalRun } from "@/lib/experiments";
@@ -159,7 +160,7 @@ function ThemeToggle() {
   useLayoutEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const applyTheme = () => {
-      const savedTheme = localStorage.getItem(themeStorageKey);
+      const savedTheme = readPreference(themeStorageKey);
       const theme = savedTheme === "light" || savedTheme === "dark"
         ? savedTheme
         : mediaQuery.matches ? "dark" : "light";
@@ -174,7 +175,7 @@ function ThemeToggle() {
   function toggleTheme() {
     const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = nextTheme;
-    localStorage.setItem(themeStorageKey, nextTheme);
+    writePreference(themeStorageKey, nextTheme);
   }
 
   return (
