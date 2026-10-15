@@ -37,19 +37,20 @@ export async function optimiseMapImage(file: File): Promise<MapAsset> {
   context.drawImage(image, 0, 0, width, height);
 
   let blob = await canvasToBlob(canvas, "image/webp", 0.86);
-  let mimeType = "image/webp";
   if (!blob) {
     blob = await canvasToBlob(canvas, "image/jpeg", 0.88);
-    mimeType = "image/jpeg";
   }
-  if (!blob) throw new Error("The map image could not be saved.");
+  if (!blob?.size || !["image/webp", "image/png", "image/jpeg"].includes(blob.type)) {
+    throw new Error("The map image could not be saved.");
+  }
 
   return {
     id: crypto.randomUUID(),
     blob,
     width,
     height,
-    mimeType,
+    // Unsupported canvas encoders can return PNG instead of the requested format.
+    mimeType: blob.type,
     size: blob.size,
     updatedAt: new Date().toISOString(),
   };
