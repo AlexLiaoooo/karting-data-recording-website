@@ -1,6 +1,7 @@
 import { openKartDatabase, transactionDone, writeTransaction } from "@/lib/database";
 import type { AppData } from "../types";
 import { validStoredTrackMap } from "../validation";
+import { mapAssetMimeType } from "./asset-format";
 import { legacyMarkerTypes, MapAsset, Track, TrackLayout, TrackMapData, TrackVisit } from "./types";
 
 /**
@@ -20,7 +21,7 @@ const ASSETS_STORE = "mapAssets";
 let lastAssetSignature = "";
 
 function assetSignature(assets: MapAsset[]) {
-  return assets.map((asset) => `${asset.id}:${asset.updatedAt}:${asset.size}`).sort().join("|");
+  return assets.map((asset) => `${asset.id}:${asset.updatedAt}:${asset.size}:${asset.mimeType}`).sort().join("|");
 }
 
 function readAll<T>(transaction: IDBTransaction, storeName: string): Promise<T[]> {
@@ -104,10 +105,13 @@ export async function loadTrackMapData(): Promise<TrackMapData> {
       readAll<MapAsset>(transaction, ASSETS_STORE),
       transactionDone(transaction),
     ]);
-    const data = { version: 1, tracks, layouts, visits, assets };
+    const repairedAssets = assets.map(asset => asset && typeof asset.mimeType === "string" && Object.prototype.toString.call(asset.blob) === "[object Blob]"
+      ? { ...asset, mimeType: mapAssetMimeType(asset.mimeType, asset.blob.type) } : asset);
+    const data = { version: 1, tracks, layouts, visits, assets: repairedAssets };
     if (!validStoredTrackMap(data)) throw new Error("Saved Track Maps could not be read safely");
+    // Include MIME in the signature so a repaired label is written back on the next save.
     lastAssetSignature = assetSignature(assets);
-    return { version: 1, tracks, layouts: migrateMarkerTypes(layouts), visits, assets };
+    return { version: 1, tracks, layouts: migrateMarkerTypes(layouts), visits, assets: repairedAssets };
   } finally {
     database.close();
   }

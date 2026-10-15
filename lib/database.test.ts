@@ -45,6 +45,23 @@ function storedTrackMaps() {
 }
 
 describe("safe startup reads", () => {
+  it("reopens legacy PNG fallback maps and persists repaired metadata without changing bytes", async () => {
+    const maps = storedTrackMaps();
+    const original = maps.assets[0];
+    const blob = new NodeBlob([new Uint8Array([1, 2, 3, 4, 250, 251, 252, 253])], { type: "image/png" });
+    maps.assets[0] = { ...original, blob: blob as unknown as Blob };
+    await restoreFullData(makeAppData(), maps);
+    const reopened = await loadTrackMapData();
+    expect(reopened.assets[0].mimeType).toBe("image/png");
+    expect(reopened.layouts).toEqual(maps.layouts);
+    expect(Array.from(new Uint8Array(await reopened.assets[0].blob.arrayBuffer()))).toEqual([1, 2, 3, 4, 250, 251, 252, 253]);
+    await saveTrackMapData(reopened);
+    const db = await openKartDatabase();
+    const request = db.transaction("mapAssets").objectStore("mapAssets").get(original.id);
+    const saved = await new Promise<{ mimeType: string }>(resolve => { request.onsuccess = () => resolve(request.result); });
+    db.close();
+    expect(saved.mimeType).toBe("image/png");
+  });
   it("saves original photo bytes as a native Blob through later Run edits and reload", async () => {
     const data = makeAppData();
     data.events[0].sessions[0].runs[0].loggerPhoto = { capturedAt: "2026-10-13T09:00:00.000Z", sourceName: "logger.png", mimeType: "image/png", size: 4, width: 1200, height: 800, blob: new NodeBlob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" }) as unknown as Blob };

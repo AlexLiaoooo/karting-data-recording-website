@@ -5,6 +5,7 @@ import { emptyTrackMapData, MapAsset, TrackMapData } from "./types";
 import { validPortableTrackMap } from "../validation";
 import { loggerPhotoBlob } from "../logger-photo";
 import { mediaDataUrl } from "../portable-media";
+import { mapAssetMimeType } from "./asset-format";
 
 type PortableMapAsset = Omit<MapAsset, "blob"> & { dataUrl: string };
 
@@ -75,7 +76,7 @@ export function parseFullBackup(value: unknown): ParsedBackup | null {
         throw new Error("Invalid map asset");
       }
       const blob = dataUrlToBlob(asset.dataUrl);
-      if (blob.type !== asset.mimeType.toLowerCase()) throw new Error("Map image type does not match its metadata");
+      if (blob.type !== mapAssetMimeType(asset.mimeType.toLowerCase(), blob.type)) throw new Error("Map image type does not match its metadata");
       return {
         id: asset.id,
         blob,

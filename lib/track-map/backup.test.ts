@@ -11,6 +11,14 @@ async function roundTrip() {
 }
 
 describe("full backup round-trip", () => {
+  it.each(["image/webp", "image/jpeg"])("restores a legacy PNG fallback labelled %s without dropping evidence or markers", async declared => {
+    const maps = makeTrackMapData();
+    maps.assets[0] = { ...maps.assets[0], mimeType: declared, blob: new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" }), size: 4 };
+    const restored = parseFullBackup(JSON.parse(await buildFullBackup(makeAppData(), maps)))!;
+    expect(restored.trackMapData.assets[0].mimeType).toBe("image/png");
+    expect(await bytes(restored.trackMapData.assets[0].blob)).toEqual([1, 2, 3, 4]);
+    expect(restored.trackMapData.layouts).toEqual(maps.layouts);
+  });
   it("restores events, sessions and runs unchanged", async () => {
     const { appData, restored } = await roundTrip();
     expect(restored.appData).toEqual(appData);
