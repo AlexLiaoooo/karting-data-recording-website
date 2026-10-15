@@ -56,6 +56,9 @@ A mobile-first, local-first web application for recording competition karting ty
   parts to Runs, and track completed laps plus starting usage. Record/edit service history at a
   lifetime lap counter, choose your own lap interval, and see near-due/due or incomplete counters.
   Retirement preserves history; Run corrections/deletions recalculate usage without rewriting services.
+  Open component/service forms show Not saved and protect Back, source-Run navigation and
+  refresh/close. Save or explicitly cancel every open form before leaving; changing records
+  cannot silently replace an unfinished draft.
 - Performance and driver feedback recording, including the maximum RPM seen on the data logger.
 - Gear ratio derived from the two sprockets rather than stored, so it cannot disagree with them. It updates live under the fields in the Run editor and appears in the comparison, the saved setup templates and the CSV. A comparison reports the change as a percentage and in words — "-7.7% longer" — since which way 6.67 to 6.15 went is the only reason to show it.
 - Lap times in either notation: 52.400 or 1:02.500. Both are read wherever a lap is counted, and a lap the app cannot read says so beneath the field rather than being dropped in silence.
@@ -75,6 +78,11 @@ A mobile-first, local-first web application for recording competition karting ty
   exist, CSV adds component inventory and service-history tables. Image bytes stay in JSON.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
 - Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
+- Optional language/theme storage failures fall back to choices kept for the current page;
+  settings errors do not block recording or either theme control.
+- Run lap counts use the same nonnegative whole-number rules as tyre/component usage.
+  Invalid text stays saved for correction, with an input warning, and cannot distort Session
+  totals. Missing counts and totals above the safe integer range are clearly flagged.
 - Save failures remain visible on every screen, with retry and full export of the current in-memory records. Pending saves cannot overwrite a newer restore.
 - Full-backup reminders after the first records and every seven days after export, with a 24-hour dismissal and export history in settings.
 - Reusable chassis setup templates.
@@ -84,6 +92,8 @@ A mobile-first, local-first web application for recording competition karting ty
 - Light and dark display modes with system-theme detection and a locally remembered manual toggle. The built-in maps carry no theme of their own, so they follow the toggle rather than the device setting.
 - English and Simplified Chinese, switched from a button in every top bar and remembered in the browser. Dates follow the chosen language. Record values stay in English so data does not change with the interface.
 - Integrated Track Map Notebook with reusable Tracks and Layouts, uploaded map images, pinch/ctrl-scroll zoom and pan, permanent In/Mid/Out/Brake/Gas/Others marker notes, general notes per Layout, and Session-specific observations.
+- Uploaded maps retain the encoder's actual PNG/WebP/JPEG type. Legacy PNG maps with an
+  incorrect WebP/JPEG label recover on startup or backup restore while retaining bytes and notes.
 - Numbered corner labels on every built-in circuit map, in lap order. A marker can be placed on a corner by name instead of aiming at the map, and can still be tapped anywhere for anything between corners.
 - A marker placed on a corner stores the corner rather than a copy of its label, so renumbering a circuit renames every marker on it. A name typed by hand takes precedence and is never overwritten.
 - Optional saved Track Layout selection on each Event and direct Track notes access from its Sessions.
@@ -138,7 +148,14 @@ data rather than looking wrong:
 - **Run recording** (`lib/run-recording.test.ts`, `lib/storage-ui.test.ts`) — old records infer
   their view without changing measurements; explicit phases survive backup round-trip; switching
   views preserves tyres, setup and results; Session shortcuts target the latest unfinished Run;
-  completed/copy workflows keep their correct status and blank new results.
+  completed/copy workflows keep their correct status and blank new results; strict lap totals,
+  incomplete/overflow reporting and accessible input warnings preserve legacy text and valid zero.
+- **Preferences** (`lib/preferences.test.ts`, `lib/language-preferences.test.ts`,
+  `lib/theme-preferences.test.ts`) — denied reads/writes, unavailable APIs, startup, language
+  notifications, both theme controls and manual choices across system appearance changes.
+- **Map image formats** (`lib/track-map/image-processing.test.ts`, `lib/database.test.ts`,
+  `lib/track-map/backup.test.ts`) — actual PNG/WebP/JPEG encoder output, null/invalid output,
+  recovery of legacy PNG fallback labels, byte-preserving backups and persisted repairs.
 - **Backup reminders** (`lib/backup-reminder.test.ts`) — weekly timing, one-day dismissal,
   corrupt preferences and unavailable preference storage.
 - **Setup experiments** (`lib/experiments.test.ts`, `lib/storage-ui.test.ts`) — validated notes
@@ -171,7 +188,8 @@ data rather than looking wrong:
   `lib/component-life-ui.test.ts`, `lib/storage-ui.test.ts`) — migration, service/assignment
   validation, completed-only counters, interval boundaries, missing laps, overflow/inconsistent
   service counters, retirement, service editing/removal, metadata edits preserving new service
-  history, backup reminders and source-Run return navigation.
+  history, backup reminders and source-Run return navigation; component/service draft guards,
+  multiple simultaneous forms, explicit cancellation and guard release after saving.
 - **Built-in maps** (`lib/track-map/built-in-maps.test.ts`) — corrected artwork replaces the
   copy already stored on a device, a map the user uploaded is never overwritten, marker
   positions survive the swap, and the asset size is read from the file's own viewBox. Also that

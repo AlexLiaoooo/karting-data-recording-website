@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.30 (committed and pushed to GitHub)
-**Last updated:** 2026-10-13
+**Document status:** Implemented prototype v1.31 (committed and pushed to GitHub)
+**Last updated:** 2026-10-16
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -644,6 +644,31 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.31 — 2026-10-16
+
+- Applied approved review options 1–4 in small committed/pushed checkpoints.
+- Map optimization records the encoder's actual PNG/WebP/JPEG MIME type. Legacy PNG Blobs
+  labelled WebP/JPEG recover on startup and full-backup restore; the corrected label persists
+  without changing bytes, geometry, markers or notes. Other metadata mismatches remain invalid.
+- Optional language/theme reads and writes catch unavailable storage. New choices stay in
+  memory for the page session, including manual appearance choices across system changes and
+  both the main and Track Library theme controls. IndexedDB recovery behavior is unchanged.
+- A shared component-form registry protects every open component/service editor. Not saved
+  remains visible, Back and source-Run navigation stay guarded, and refresh/close gets a browser
+  warning where supported. Same-editor replacement/removal controls cannot discard its draft.
+  Saving or canceling one form releases only its guard; other open forms remain protected.
+- Session lap totals now share tyre/component whole-lap parsing, flag missing/invalid counts
+  and safe-integer overflow, and retain the recorded text. A linked, translated Run-input warning
+  explains invalid values. Blank entries and zero remain allowed; saving/completion stay flexible.
+- Verification: 565 tests across 40 files, lint, type checking and the production build pass.
+  Real production-browser checks confirmed denied preference reads/writes, both theme controls,
+  language switching, simultaneous drafts, Back protection, lap correction and 390px layouts.
+  A forced PNG encoder fallback uploaded successfully; deliberately restoring the old wrong label
+  recovered and persisted the PNG metadata, reopened the 1600px map and survived offline reload.
+  The downloaded JSON retained all 88,895 map bytes exactly, service history and the corrected
+  12-lap Run. No browser runtime errors were reported.
+  Physical iPhone behavior remains outside this local-browser check.
 
 ### Implemented prototype v1.30 — 2026-10-13
 

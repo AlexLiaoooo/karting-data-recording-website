@@ -45,6 +45,19 @@ remain unverified. Multi-tab protection, shared dialog accessibility, update han
 dependency advisories and the maintenance follow-ups below remain separate proposals.
 Approved changes are committed and pushed to GitHub; a live deployment was not inspected.
 
+## Follow-up — 16 October 2026
+
+The owner approved the first four options from the 15 October review. Implemented map encoder
+format detection and legacy PNG-label recovery, safe optional preference storage, protection for
+unfinished component/service forms, and consistent Run/Session lap-count handling. The design
+changelog v1.31 records behavior and verification. All 565 tests across 40 files, lint, type
+checking and the production build pass; isolated production-browser checks covered these flows.
+
+The preference-storage maintenance finding below is now resolved. Multi-tab coordination,
+shared dialog accessibility, safe service-worker update handoff, CSV text handling, the local
+preview script and GitHub CI remain separate proposals. Dependency advisory figures in earlier
+sections are historical; this follow-up did not run a fresh audit.
+
 ## Small improvements applied
 
 | Improvement | Reason | Files |
@@ -161,8 +174,8 @@ do not establish that the deployed site was exploitable.
 - Split `app/page.tsx` into recording screens and shared form primitives as
   those parts next change. A broad rewrite would add risk without fixing a
   current trackside problem.
-- Handle unavailable localStorage in the theme/language helpers. IndexedDB is
-  the record store, so a failed preference write should not crash the interface.
+- Resolved 16 October: theme/language helpers tolerate unavailable localStorage and retain
+  choices for the page session. IndexedDB remains the independent record store.
 - Decide how CSV should treat free text beginning with spreadsheet formula
   characters. Quoting escapes delimiters but does not force literal text in
   spreadsheet applications; preserve negative numeric measurements.
