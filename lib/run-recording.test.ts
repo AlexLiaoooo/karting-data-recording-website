@@ -1,10 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { createRun } from "./types";
-import { runRecordingPhase } from "./run-recording";
+import { runLapTotal, runRecordingPhase } from "./run-recording";
 import { normalizeAppData } from "./database";
 import { makeAppData, makeEvent, makeRun, makeSession } from "./test-fixtures";
 import { buildFullBackup, parseFullBackup } from "./track-map/backup";
 import { emptyTrackMapData } from "./track-map/types";
+
+describe("recorded lap totals", () => {
+  it("counts whole laps, whitespace and genuine zero", () => {
+    expect(runLapTotal([{ laps: "12" }, { laps: "0" }, { laps: " 003 " }])).toEqual({ laps: 15, missing: 0 });
+  });
+  it.each(["", " ", "-5", "2.5", "not recorded", "1e2", "0x10", "Infinity", "9007199254740992"])("keeps invalid %j out of totals without rewriting the record", laps => {
+    const run = { laps };
+    expect(runLapTotal([{ laps: "12" }, run])).toEqual({ laps: 12, missing: 1 });
+    expect(run.laps).toBe(laps);
+  });
+  it("flags overflow rather than presenting an imprecise total", () => {
+    expect(runLapTotal([{ laps: String(Number.MAX_SAFE_INTEGER) }, { laps: "1" }])).toEqual({ laps: null, missing: 0 });
+    expect(runLapTotal([])).toEqual({ laps: 0, missing: 0 });
+  });
+});
 
 describe("Run recording phases", () => {
   it("starts both blank and copied Runs in preparation without inheriting the old phase or results", () => {

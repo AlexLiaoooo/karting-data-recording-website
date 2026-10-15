@@ -1,4 +1,16 @@
 import type { RunRecord, RunRecordingPhase } from "./types";
+import { lapCount } from "./tyre-sets";
+
+/** Match component/tyre counters while keeping unfinished and legacy Run text intact. */
+export function runLapTotal(runs: ReadonlyArray<Pick<RunRecord, "laps">>) {
+  let laps: number | null = 0; let missing = 0;
+  for (const run of runs) {
+    const count = lapCount(run.laps);
+    if (count === null) missing += 1;
+    else if (laps !== null) laps = Number.isSafeInteger(laps + count) ? laps + count : null;
+  }
+  return { laps, missing };
+}
 
 /** Older Runs need no destructive migration: use the measurements already on record. */
 export function runRecordingPhase(run: RunRecord): RunRecordingPhase {

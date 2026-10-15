@@ -18,6 +18,8 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Missing or invalid lap counts: {count}. The total is incomplete.": "缺失或无效的圈数记录：{count}。累计圈数不完整。",
+  "The lap total is too large. Check the recorded lap counts.": "累计圈数过大，请核对各 Run 的圈数记录。",
   "Save or cancel open component and service forms before leaving or opening another record.": "请先保存或取消已打开的部件和保养表单，再离开页面或打开其他记录。",
   "Components in this backup: {count}": "此备份中的部件：{count}",
   "Logger photos in this backup: {count}": "此备份中的记录仪照片：{count}",

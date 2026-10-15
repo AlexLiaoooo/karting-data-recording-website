@@ -51,7 +51,7 @@ import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
 import { loadTrackMapData, restoreFullData, saveTrackMapData } from "@/lib/track-map/database";
 import { SaveQueue, type SaveKind, type SaveStatus } from "@/lib/save-queue";
-import { runRecordingPhase } from "@/lib/run-recording";
+import { runLapTotal, runRecordingPhase } from "@/lib/run-recording";
 import { backupIsDue, type BackupHistory, ONE_DAY, readBackupHistory, writeBackupHistory } from "@/lib/backup-reminder";
 import { buildFullBackup, ParsedBackup, parseFullBackup } from "@/lib/track-map/backup";
 import { emptyTrackMapData, TrackMapData } from "@/lib/track-map/types";
@@ -122,10 +122,6 @@ function bestLap(session: SessionRecord) {
 function lapText(value: string) {
   const seconds = parseLapTime(value);
   return seconds === null ? value || "—" : formatLapTime(seconds);
-}
-
-function totalLaps(session: SessionRecord) {
-  return session.runs.reduce((total, run) => total + (Number(run.laps) || 0), 0);
 }
 
 function getCurrentPosition() {
@@ -1031,6 +1027,7 @@ export default function HomePage() {
     );
   } else if (screen === "session" && selectedEvent && selectedSession) {
     const unfinishedRun = [...selectedSession.runs].reverse().find((run) => !run.completed);
+    const lapTotal = runLapTotal(selectedSession.runs);
     content = (
       <>
         <TopBar
@@ -1049,10 +1046,12 @@ export default function HomePage() {
             <div className="card-head"><div><p className="eyebrow">{t("SESSION SUMMARY")}</p><h1>{t("{count} recorded runs", { count: selectedSession.runs.length })}</h1></div><span className="badge">{t(selectedSession.type)}</span></div>
             <div className="stat-grid">
               <Stat label={t("Best")} value={bestLap(selectedSession)} />
-              <Stat label={t("Laps")} value={String(totalLaps(selectedSession))} />
+              <Stat label={t("Laps")} value={lapTotal.laps === null ? "—" : String(lapTotal.laps)} />
               <Stat label={t("Start")} value={selectedSession.startTime || "—"} />
             </div>
             <SessionConditionsLine event={selectedEvent} session={selectedSession} />
+            {lapTotal.missing > 0 && <p className="help-text">{t("Missing or invalid lap counts: {count}. The total is incomplete.", { count: lapTotal.missing })}</p>}
+            {lapTotal.laps === null && <p className="field-warning">{t("The lap total is too large. Check the recorded lap counts.")}</p>}
           </article>
           <div className="action-stack">
             <button className="button button-soft button-block" onClick={() => { setBriefingBack("session"); setScreen("briefing"); }}><BookOpen /> {t("Returning-to-track briefing")}</button>

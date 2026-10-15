@@ -462,6 +462,14 @@ async function openRecordedRun(data: AppData) {
 }
 
 describe("before/after Run recording", () => {
+  it("excludes invalid lap counts from Session totals and explains incomplete history", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ laps: "12" }), makeRun({ id: "run-2", number: 2, laps: "-5" }), makeRun({ id: "run-3", number: 3, laps: "2.5" })] })] })] }));
+    await render(); await act(async () => button("Resume recording").click());
+    await act(async () => container.querySelector<HTMLButtonElement>("button.list-item")!.click());
+    const stat = [...container.querySelectorAll(".stat-grid > div")].find(element => element.textContent?.startsWith("Laps"))!;
+    expect(stat.textContent).toBe("Laps12");
+    expect(container.textContent).toContain("Missing or invalid lap counts: 2. The total is incomplete.");
+  });
   it("offers a direct return shortcut for the latest unfinished Run while displaying each Run's phase", async () => {
     const before = createRun(2);
     const after = { ...createRun(3), recordingPhase: "after" as const };
