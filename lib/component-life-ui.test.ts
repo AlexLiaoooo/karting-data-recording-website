@@ -19,6 +19,30 @@ async function fill(name: string, value: string) { const label = [...container.q
 async function submit(selector: string) { await act(async () => container.querySelector(selector)!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))); }
 
 describe("component notebook controls", () => {
+  it("keeps the guard active until all component and service drafts have closed", async () => {
+    await render(); await click("Edit component"); await click("Record service");
+    await fill("Service performed", "Unfinished top-end inspection");
+    await fill("Component notes", "New notes"); await submit(".component-form");
+    expect(container.querySelector<HTMLTextAreaElement>(".component-service-form textarea")!.value).toBe("Unfinished top-end inspection");
+    expect(container.querySelector<HTMLButtonElement>(".component-card .list-item")!.disabled).toBe(true);
+    const blocked = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(blocked);
+    expect(blocked.defaultPrevented).toBe(true);
+    await submit(".component-service-form");
+    expect(current.components[0].services[0].notes).toBe("Unfinished top-end inspection");
+    expect(container.querySelector<HTMLButtonElement>(".component-card .list-item")!.disabled).toBe(false);
+    const allowed = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(allowed);
+    expect(allowed.defaultPrevented).toBe(false);
+  });
+  it("does not replace or remove a service while its edit draft is open", async () => {
+    await render(makeAppData({ components: [{ ...part, services: [{ id: "s", date: "2026-10-10", lapsAtService: 100, notes: "Original service" }] }] }));
+    await click("Edit service"); await fill("Service performed", "Unfinished correction");
+    await click("Edit service"); await click("Remove service");
+    expect(container.querySelector<HTMLTextAreaElement>(".component-service-form textarea")!.value).toBe("Unfinished correction");
+    expect(current.components[0].services[0].notes).toBe("Original service");
+    await click("Cancel");
+    expect(current.components[0].services[0].notes).toBe("Original service");
+    expect(container.querySelector(".component-service-form")).toBeNull();
+  });
   it("keeps an open component draft when another record is requested and guards unload until cancellation", async () => {
     await render(); await click("Edit component"); await fill("Component notes", "Unsaved engine adjustment");
     await click("Add component"); await click("Edit component");

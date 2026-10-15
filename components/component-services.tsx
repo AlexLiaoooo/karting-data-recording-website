@@ -5,12 +5,14 @@ import { localDate } from "@/lib/format";
 import { lapCount } from "@/lib/tyre-sets";
 import type { ComponentService, KartComponent } from "@/lib/types";
 import { useTranslation } from "@/lib/i18n";
+import { useComponentDraft } from "./component-drafts";
 
 type Draft = Omit<ComponentService, "lapsAtService"> & { lapsAtService: string };
 export function ComponentServices({ component, totalLaps, onSave }: { component: KartComponent; totalLaps: number | null; onSave: (component: KartComponent) => void }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [invalid, setInvalid] = useState(false); const [removing, setRemoving] = useState<string | null>(null);
+  useComponentDraft(draft !== null);
   function edit(service: ComponentService) { setDraft({ ...service, lapsAtService: String(service.lapsAtService) }); setInvalid(false); setRemoving(null); }
   return <section className="component-services">
     <h3>{t("Service history")}</h3>
@@ -33,7 +35,7 @@ export function ComponentServices({ component, totalLaps, onSave }: { component:
     </form>}
     <div className="component-service-list">{[...component.services].sort((a, b) => b.lapsAtService - a.lapsAtService || b.date.localeCompare(a.date)).map(service => <article className="component-service-entry" key={service.id}>
       <strong>{service.date} · {t("{count} lifetime laps", { count: service.lapsAtService })}</strong><p>{service.notes}</p>
-      {removing === service.id ? <div role="group" aria-label={t("Remove service record?")}><p>{t("Removing this service will recalculate the reminder.")}</p><div className="action-stack"><button type="button" className="button button-danger button-block" ref={element => { element?.focus(); }} onClick={() => { onSave({ ...component, services: component.services.filter(record => record.id !== service.id), updatedAt: new Date().toISOString() }); setRemoving(null); }}>{t("Confirm removal")}</button><button type="button" className="button button-secondary button-block" onClick={() => setRemoving(null)}>{t("Cancel")}</button></div></div> : <div className="component-actions"><button type="button" className="button button-secondary" onClick={() => edit(service)}>{t("Edit service")}</button><button type="button" className="button button-soft" onClick={() => { setRemoving(service.id); setDraft(null); }}>{t("Remove service")}</button></div>}
+      {removing === service.id ? <div role="group" aria-label={t("Remove service record?")}><p>{t("Removing this service will recalculate the reminder.")}</p><div className="action-stack"><button type="button" className="button button-danger button-block" ref={element => { element?.focus(); }} onClick={() => { onSave({ ...component, services: component.services.filter(record => record.id !== service.id), updatedAt: new Date().toISOString() }); setRemoving(null); }}>{t("Confirm removal")}</button><button type="button" className="button button-secondary button-block" onClick={() => setRemoving(null)}>{t("Cancel")}</button></div></div> : <div className="component-actions"><button type="button" className="button button-secondary" disabled={draft !== null} onClick={() => edit(service)}>{t("Edit service")}</button><button type="button" className="button button-soft" disabled={draft !== null} onClick={() => { setRemoving(service.id); setDraft(null); }}>{t("Remove service")}</button></div>}
     </article>)}</div>
     {!component.services.length && <p className="help-text">{t("No service recorded yet.")}</p>}
   </section>;

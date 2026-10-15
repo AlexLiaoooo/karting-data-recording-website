@@ -222,6 +222,19 @@ describe("Run logger photo integration", () => {
 });
 
 describe("component notebook Run integration", () => {
+  it("keeps service notes on Back and releases navigation after explicit cancellation", async () => {
+    const data = makeAppData({ components: [{ id: "engine-a", name: "Engine A", kind: "Engine", notes: "", initialLaps: 0, serviceIntervalLaps: 100, retired: false, services: [], createdAt: "stamp", updatedAt: "stamp" }] });
+    vi.mocked(loadData).mockResolvedValue(data); await render();
+    await act(async () => button("Component-life notebook").click());
+    await act(async () => button("Record service").click());
+    const notes = container.querySelector<HTMLTextAreaElement>(".component-service-form textarea")!;
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(notes, "Work in progress"); notes.dispatchEvent(new Event("input", { bubbles: true })); });
+    await act(async () => button("Back").click());
+    expect(container.querySelector<HTMLTextAreaElement>(".component-service-form textarea")!.value).toBe("Work in progress");
+    expect(container.querySelector(".save-status")!.textContent).toBe("Not saved");
+    await act(async () => button("Cancel").click()); await act(async () => button("Back").click());
+    expect(container.querySelector(".component-notebook")).toBeNull();
+  });
   it("keeps a component draft on Back until it is explicitly saved or canceled", async () => {
     await render(); await act(async () => button("Component-life notebook").click());
     await act(async () => button("Add component").click());
