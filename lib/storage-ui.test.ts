@@ -462,6 +462,24 @@ async function openRecordedRun(data: AppData) {
 }
 
 describe("before/after Run recording", () => {
+  it("explains invalid lap counts beside the input and removes the warning for zero or blank", async () => {
+    await openRecordedRun(recordWith(makeRun({ recordingPhase: "after" })));
+    for (const value of ["-5", "2.5", "bad count", "1e2"]) {
+      await editInput("Number of laps", value);
+      const input = inputNamed("Number of laps");
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(document.getElementById(input.getAttribute("aria-describedby")!)!.textContent).toContain("excluded from lap totals");
+      expect(input.value).toBe(value);
+    }
+    for (const value of ["0", "", "12"]) {
+      await editInput("Number of laps", value);
+      expect(inputNamed("Number of laps").hasAttribute("aria-invalid")).toBe(false);
+      expect(container.textContent).not.toContain("excluded from lap totals");
+    }
+    await editInput("Number of laps", "-5");
+    await act(async () => button("Done").click());
+    expect(container.textContent).toContain("Missing or invalid lap counts: 1");
+  });
   it("excludes invalid lap counts from Session totals and explains incomplete history", async () => {
     vi.mocked(loadData).mockResolvedValue(makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ laps: "12" }), makeRun({ id: "run-2", number: 2, laps: "-5" }), makeRun({ id: "run-3", number: 3, laps: "2.5" })] })] })] }));
     await render(); await act(async () => button("Resume recording").click());

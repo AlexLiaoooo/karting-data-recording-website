@@ -34,7 +34,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
 import { readPreference, writePreference } from "@/lib/preferences";
 import { buildCsv } from "@/lib/csv";
@@ -45,7 +45,7 @@ import { SessionTimeline } from "@/components/session-timeline";
 import { TrackBriefing } from "@/components/track-briefing";
 import { RunTyreSet, TyreSetLibrary } from "@/components/tyre-sets";
 import { MechanicHandover } from "@/components/mechanic-handover";
-import { tyreUsageByRun, type TyreUsage } from "@/lib/tyre-sets";
+import { lapCount, tyreUsageByRun, type TyreUsage } from "@/lib/tyre-sets";
 import type { TemperatureView, TimelineMetric } from "@/lib/session-timeline";
 import { TrackMapFeature } from "@/components/track-map/TrackMapFeature";
 import type { RunHistory } from "@/components/track-map/shared";
@@ -1682,6 +1682,8 @@ function TyreReference({ cold, gain, unit }: { cold: string; gain: number | null
 
 function RunEditor({ run, session, saveState, templates, tyreSets, components, tyreAge, pressureHint, entry, historicalRuns, onCompare, onBack, onUpdate, onDelete, onComplete, onSaveTemplate, onApplyTemplate, onHandover, onDebrief, onLoggerPhoto }: { run: RunRecord; session: SessionRecord; saveState: string; templates: SetupTemplate[]; tyreSets: AppData["tyreSets"]; components: AppData["components"]; tyreAge?: TyreUsage; pressureHint: PressureHint | null; entry: HistoricalRun; historicalRuns: HistoricalRun[]; onCompare: (baselineId: string, testId: string) => void; onBack: () => void; onUpdate: (updater: (run: RunRecord) => RunRecord) => void; onDelete: () => void; onComplete: () => void; onSaveTemplate: () => void; onApplyTemplate: () => void; onHandover: () => void; onDebrief: () => void; onLoggerPhoto: () => void }) {
   const { t } = useTranslation();
+  const lapCountWarningId = useId();
+  const invalidLapCount = run.laps.trim() !== "" && lapCount(run.laps) === null;
   const phase = runRecordingPhase(run);
   const beforeButton = useRef<HTMLButtonElement>(null);
   const afterButton = useRef<HTMLButtonElement>(null);
@@ -1792,7 +1794,10 @@ function RunEditor({ run, session, saveState, templates, tyreSets, components, t
             <summary><span><Timer /> {t("Performance")}</span><ChevronRight /></summary>
             <div className="editor-body form-grid">
               <Field label={t("Run label")}><TextInput placeholder={t("Optional")} value={run.label} onChange={(event) => setField("label", event.target.value)} /></Field>
-              <Field label={t("Number of laps")}><TextInput inputMode="numeric" value={run.laps} onChange={(event) => setField("laps", event.target.value)} /></Field>
+              <Field label={t("Number of laps")}>
+                <TextInput inputMode="numeric" value={run.laps} aria-invalid={invalidLapCount || undefined} aria-describedby={invalidLapCount ? lapCountWarningId : undefined} onChange={(event) => setField("laps", event.target.value)} />
+                {invalidLapCount && <small id={lapCountWarningId} className="field-warning" role="status">{t("Use a whole number of laps (0 or more). This entry is saved but excluded from lap totals until corrected.")}</small>}
+              </Field>
               <Field label={t("Fastest lap")}>
                 <NumberInput unit="s" value={run.fastestLap} onChange={(event) => setField("fastestLap", event.target.value)} />
                 <LapWarning value={run.fastestLap} />
