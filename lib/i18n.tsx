@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
+import { readPreference, writePreference } from "./preferences";
 
 export type Language = "en" | "zh";
 
@@ -807,7 +808,7 @@ const languageListeners = new Set<() => void>();
 
 function readLanguage(): Language {
   if (currentLanguage) return currentLanguage;
-  const stored = typeof localStorage === "undefined" ? null : localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  const stored = readPreference(LANGUAGE_STORAGE_KEY);
   currentLanguage = stored === "zh" || stored === "en" ? stored : "en";
   return currentLanguage;
 }
@@ -823,7 +824,7 @@ function subscribeToLanguage(listener: () => void) {
 
 function writeLanguage(next: Language) {
   currentLanguage = next;
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+  writePreference(LANGUAGE_STORAGE_KEY, next);
   languageListeners.forEach((listener) => listener());
 }
 
