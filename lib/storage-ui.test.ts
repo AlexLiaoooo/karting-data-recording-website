@@ -67,6 +67,17 @@ async function render() {
 }
 
 describe("record form keyboard dialogs", () => {
+  it("starts deletion on Cancel, describes the consequences and leaves data intact on Escape", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData()); await render();
+    await act(async () => button("Resume recording").click());
+    const trigger = button("Delete event"); trigger.focus(); await act(async () => trigger.click());
+    const dialog = container.querySelector('dialog[role="alertdialog"]')!;
+    expect(document.activeElement).toBe(button("Cancel"));
+    expect(document.getElementById(dialog.getAttribute("aria-describedby")!)!.textContent).toContain("every session and run");
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(document.activeElement).toBe(trigger);
+    expect(button("Delete event")).toBe(trigger); expect(container.textContent).toContain("Practice 1");
+  });
   it("focuses template fields and restores their trigger after cancellation", async () => {
     const data = recordWith(makeRun({ recordingPhase: "before" }));
     data.setupTemplates = [{ id: "template-1", name: "Dry setup", setup: data.events[0].sessions[0].runs[0].setup, createdAt: "stamp", updatedAt: "stamp" }];

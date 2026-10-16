@@ -3,6 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TrackEditor, LayoutEditor } from "../../components/track-map/editors";
 import { LanguageProvider } from "../i18n";
+import { ConfirmDeleteDialog } from "../../components/track-map/shared";
 
 let root: Root; let container: HTMLDivElement; let opener: HTMLButtonElement;
 beforeEach(() => {
@@ -13,6 +14,15 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); opener.remove(); vi.unstubAllGlobals(); });
 
 describe("Track Map editor dialogs", () => {
+  it("starts map deletion on Cancel and never confirms on Escape", async () => {
+    const cancel = vi.fn(); const confirm = vi.fn();
+    await act(async () => root.render(createElement(LanguageProvider, null, createElement(ConfirmDeleteDialog, { title: "Delete map?", detail: "Marker notes will be removed.", onCancel: cancel, onConfirm: confirm }))));
+    const dialog = container.querySelector('dialog[role="alertdialog"]')!;
+    expect(document.activeElement!.textContent).toBe("Cancel");
+    expect(document.getElementById(dialog.getAttribute("aria-describedby")!)!.textContent).toContain("Marker notes");
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(cancel).toHaveBeenCalledOnce(); expect(confirm).not.toHaveBeenCalled();
+  });
   it.each(["track", "layout"])("names the %s editor, focuses its name and keeps Tab inside", async kind => {
     const close = vi.fn(); const save = vi.fn();
     const editor = kind === "track" ? createElement(TrackEditor, { onClose: close, onSave: save }) : createElement(LayoutEditor, { onClose: close, onSave: save });

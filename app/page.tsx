@@ -1627,17 +1627,17 @@ function DeleteModal({ target, onCancel, onConfirm }: { target: DeleteTarget; on
   const { t } = useTranslation();
   const nested = target.kind === "event" ? t("This also deletes every session and run inside it.") : target.kind === "session" ? t("This also deletes every run inside it.") : "";
   return (
-    <div className="modal-backdrop modal-centered">
-      <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title">
+    <Modal labelledBy="delete-title" describedBy="delete-description" onDismiss={onCancel} centered role="alertdialog">
+      <section className="confirm-dialog">
         <span className="danger-icon"><Trash2 /></span>
-        <h2 id="delete-title">Delete {target.name}?</h2>
-        <p>{nested} This action cannot be undone.</p>
+        <h2 id="delete-title">{t("Delete {name}?", { name: target.name })}</h2>
+        <p id="delete-description">{nested} {t("This action cannot be undone.")}</p>
         <div className="action-stack">
           <button className="button button-danger button-block" onClick={onConfirm}>{t("Delete permanently")}</button>
-          <button className="button button-secondary button-block" onClick={onCancel}>{t("Cancel")}</button>
+          <button className="button button-secondary button-block" data-dialog-initial-focus onClick={onCancel}>{t("Cancel")}</button>
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }
 

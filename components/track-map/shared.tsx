@@ -7,6 +7,7 @@ import type { GearingRun } from "@/lib/gearing";
 import type { PressureRun } from "@/lib/pressure";
 import { LanguageToggle, useTranslation } from "@/lib/i18n";
 import { writePreference } from "@/lib/preferences";
+import { Modal } from "../modal";
 
 export type SessionContext = {
   eventId: string;
@@ -112,17 +113,17 @@ export function ConfirmDeleteDialog({ title, detail, onCancel, onConfirm }: { ti
   const { t } = useTranslation();
   useModalViewport(true);
   return (
-    <div className="modal-backdrop modal-centered">
-      <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="track-map-delete-title">
+    <Modal labelledBy="track-map-delete-title" describedBy="track-map-delete-description" onDismiss={onCancel} centered role="alertdialog">
+      <section className="confirm-dialog">
         <span className="danger-icon"><Trash2 /></span>
         <h2 id="track-map-delete-title">{title}</h2>
-        <p>{detail ? `${detail} ` : ""}{t("This action cannot be undone.")}</p>
+        <p id="track-map-delete-description">{detail ? `${detail} ` : ""}{t("This action cannot be undone.")}</p>
         <div className="action-stack">
           <button className="button button-danger button-block" onClick={onConfirm}>{t("Delete permanently")}</button>
-          <button className="button button-secondary button-block" onClick={onCancel}>{t("Cancel")}</button>
+          <button className="button button-secondary button-block" data-dialog-initial-focus onClick={onCancel}>{t("Cancel")}</button>
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }
 
