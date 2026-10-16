@@ -40,8 +40,11 @@ export function Modal({ children, labelledBy, describedBy, onDismiss, centered =
         const target = opener.current;
         const activeModal = [...document.querySelectorAll("dialog.modal-backdrop[open]")].at(-1);
         if (activeModal && (!target || !activeModal.contains(target))) return;
-        if (target?.isConnected && !target.matches(":disabled") && !target.closest("[inert]")) target.focus({ preventScroll: true });
-        else if (owner?.isConnected) owner.querySelector<HTMLElement>(".topbar button:not(:disabled)")?.focus({ preventScroll: true });
+        if (target?.isConnected && target !== document.body && target !== document.documentElement && !target.matches(":disabled") && !target.closest("[inert]")) {
+          target.focus({ preventScroll: true });
+          if (document.activeElement === target) return;
+        }
+        if (owner?.isConnected) owner.querySelector<HTMLElement>(".topbar button:not(:disabled)")?.focus({ preventScroll: true });
       });
     };
   }, []);
@@ -58,7 +61,7 @@ export function Modal({ children, labelledBy, describedBy, onDismiss, centered =
     const dialog = event.currentTarget;
     const controls = tabbableControls(dialog);
     const first = controls[0]; const last = controls.at(-1);
-    if (!first) { event.preventDefault(); dialog.focus({ preventScroll: true }); }
+    if (!first) { event.preventDefault(); (dialog.querySelector<HTMLElement>("[data-dialog-busy-focus]") ?? dialog).focus({ preventScroll: true }); }
     else if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement as HTMLElement))) {
       event.preventDefault(); last!.focus();
     } else if (!event.shiftKey && (document.activeElement === last || !controls.includes(document.activeElement as HTMLElement))) {
