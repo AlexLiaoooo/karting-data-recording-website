@@ -1594,10 +1594,10 @@ function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data:
   const runCount = data.appData.events.reduce((sum, event) => sum + event.sessions.reduce((count, session) => count + session.runs.length, 0), 0);
   const markerCount = data.trackMapData.layouts.reduce((sum, layout) => sum + layout.markers.length, 0);
   return (
-    <div className="modal-backdrop modal-centered">
-      <section className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="restore-title">
+    <Modal labelledBy="restore-title" onDismiss={onCancel} centered busy={busy} role="alertdialog">
+      <section className="confirm-dialog">
         <span className="danger-icon"><Upload /></span>
-        <h2 id="restore-title">{t("Replace current data?")}</h2>
+        <h2 id="restore-title" tabIndex={-1} data-dialog-busy-focus>{t("Replace current data?")}</h2>
         {/* Was a bare English sentence: never translated, and it read "1 events" on a backup
             holding one of anything. The counted nouns stay English on purpose; see lib/format.ts. */}
         <p>{t("This backup contains {events}, {sessions}, {runs}, {tracks}, {layouts}, {markers} and {images}. Restoring it replaces all data currently stored on this device.", {
@@ -1616,10 +1616,10 @@ function ImportConfirmModal({ data, busy, failed, onCancel, onConfirm }: { data:
         {failed && <p className="restore-error" role="alert">{t("Restore failed. Your saved data was not replaced. Check available device storage and try again.")}</p>}
         <div className="action-stack" aria-busy={busy}>
           <button className="button button-primary button-block" disabled={busy} onClick={onConfirm}>{busy ? t("Restoring…") : t("Restore backup")}</button>
-          <button className="button button-secondary button-block" disabled={busy} onClick={onCancel}>{t("Cancel")}</button>
+          <button className="button button-secondary button-block" data-dialog-initial-focus disabled={busy} onClick={onCancel}>{t("Cancel")}</button>
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }
 

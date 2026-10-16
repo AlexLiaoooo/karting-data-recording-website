@@ -160,6 +160,28 @@ async function selectBackup() {
 }
 
 describe("save and restore recovery", () => {
+  it("starts restore confirmation on Cancel and dismisses safely before any writes", async () => {
+    await render(); await act(async () => button("Data and settings").click());
+    const trigger = button("Restore JSON backup"); trigger.focus(); await selectBackup();
+    expect(document.activeElement).toBe(button("Cancel"));
+    const dialog = container.querySelector("dialog")!;
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(container.querySelector("dialog")).toBeNull(); expect(document.activeElement).toBe(trigger);
+    expect(restoreFullData).not.toHaveBeenCalled();
+  });
+  it("keeps Escape and Tab inside while a restore is in progress", async () => {
+    let finish!: () => void;
+    vi.mocked(restoreFullData).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    await render(); await loadBackup(); await act(async () => button("Restore backup").click());
+    const dialog = container.querySelector("dialog")!;
+    expect(document.activeElement!.id).toBe("restore-title");
+    const cancel = new Event("cancel", { cancelable: true }); dialog.dispatchEvent(cancel);
+    expect(cancel.defaultPrevented).toBe(true); expect(container.querySelector("dialog")).toBe(dialog);
+    expect(dialog.getAttribute("aria-busy")).toBe("true");
+    const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }); document.activeElement!.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    await act(async () => finish()); expect(container.querySelector("dialog")).toBeNull();
+  });
   it("can restore a validated backup directly from a failed startup without enabling edits early", async () => {
     vi.mocked(loadData).mockRejectedValueOnce(new Error("Damaged saved records"));
     await render();
