@@ -1138,6 +1138,20 @@ h2 {
   z-index: 40;
 }
 
+dialog.modal-backdrop {
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  margin: 0;
+  max-height: none;
+  max-width: none;
+  overscroll-behavior: contain;
+  width: 100%;
+}
+
+dialog.modal-backdrop:not([open]) { display: none; }
+dialog.modal-backdrop::backdrop { background: transparent; }
+
 .modal-sheet,
 .confirm-dialog {
   background: var(--surface);
