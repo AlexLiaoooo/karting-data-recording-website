@@ -1540,18 +1540,18 @@ function RunHistoryModal({ runs, onClose, onCopy }: { runs: HistoricalRun[]; onC
   const [runId, setRunId] = useState(runs.at(-1)?.run.id ?? "");
   const selected = runs.find((item) => item.run.id === runId);
   return (
-    <div className="modal-backdrop">
-      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="copy-run-title">
+    <Modal labelledBy="copy-run-title" onDismiss={onClose}>
+      <section className="modal-sheet modal-compact">
         <div className="modal-head"><div><p className="eyebrow">{t("NEW RUN")}</p><h2 id="copy-run-title">{t("Copy a historical run")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
         <p className="help-text">{t("Cold tyre readings and chassis setup will be copied. Hot readings, lap times and driver feedback start blank.")}</p>
         <Field label={t("Source run")} className="field-full">
-          <select className="select" value={runId} onChange={(event) => setRunId(event.target.value)}>
+          <select className="select" data-dialog-initial-focus value={runId} onChange={(event) => setRunId(event.target.value)}>
             {runs.map(({ run, eventName, sessionName }) => <option key={run.id} value={run.id}>{eventName} · {sessionName} · Run {String(run.number).padStart(2, "0")}{run.label ? ` · ${run.label}` : ""}</option>)}
           </select>
         </Field>
         <button className="button button-primary button-block" disabled={!selected} onClick={() => selected && onCopy(selected.run)}><Copy /> {t("Copy into new run")}</button>
       </section>
-    </div>
+    </Modal>
   );
 }
 
@@ -1563,13 +1563,13 @@ function SaveTemplateModal({ run, onClose, onSave }: { run: RunRecord; onClose: 
     if (name.trim()) onSave(name.trim());
   }
   return (
-    <div className="modal-backdrop">
+    <Modal labelledBy="save-template-title" onDismiss={onClose}>
       <form className="modal-sheet modal-compact" onSubmit={submit}>
-        <div className="modal-head"><div><p className="eyebrow">{t("CHASSIS SETUP")}</p><h2>{t("Save setup template")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
-        <Field label={t("Template name")}><TextInput required autoFocus value={name} onChange={(event) => setName(event.target.value)} /></Field>
+        <div className="modal-head"><div><p className="eyebrow">{t("CHASSIS SETUP")}</p><h2 id="save-template-title">{t("Save setup template")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
+        <Field label={t("Template name")}><TextInput required data-dialog-initial-focus value={name} onChange={(event) => setName(event.target.value)} /></Field>
         <button className="button button-primary button-block" type="submit"><Save /> {t("Save template")}</button>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -1577,14 +1577,14 @@ function ApplyTemplateModal({ templates, onClose, onApply }: { templates: SetupT
   const { t } = useTranslation();
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   return (
-    <div className="modal-backdrop">
-      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="apply-template-title">
+    <Modal labelledBy="apply-template-title" onDismiss={onClose}>
+      <section className="modal-sheet modal-compact">
         <div className="modal-head"><div><p className="eyebrow">{t("CHASSIS SETUP")}</p><h2 id="apply-template-title">{t("Apply setup template")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
         <p className="help-text">{t("This replaces every chassis setup field in the current Run. Tyres, performance and feedback are unchanged.")}</p>
-        <Field label={t("Template")}><select className="select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
+        <Field label={t("Template")}><select className="select" data-dialog-initial-focus value={templateId} onChange={(event) => setTemplateId(event.target.value)}>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
         <button className="button button-primary button-block" disabled={!templateId} onClick={() => onApply(templateId)}><Wrench /> {t("Apply template")}</button>
       </section>
-    </div>
+    </Modal>
   );
 }
 

@@ -67,6 +67,30 @@ async function render() {
 }
 
 describe("record form keyboard dialogs", () => {
+  it("focuses template fields and restores their trigger after cancellation", async () => {
+    const data = recordWith(makeRun({ recordingPhase: "before" }));
+    data.setupTemplates = [{ id: "template-1", name: "Dry setup", setup: data.events[0].sessions[0].runs[0].setup, createdAt: "stamp", updatedAt: "stamp" }];
+    await openRecordedRun(data);
+    for (const [triggerName, fieldName] of [["Save as template", "Template name"], ["Apply template", "Template"]]) {
+      const trigger = button(triggerName); trigger.focus(); await act(async () => trigger.click());
+      const dialog = container.querySelector("dialog")!;
+      expect(document.activeElement).toBe(dialog.querySelector("input,select"));
+      expect(dialog.textContent).toContain(fieldName);
+      await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+      expect(container.querySelector("dialog")).toBeNull(); expect(document.activeElement).toBe(trigger);
+    }
+  });
+  it("focuses the historical Run picker and cancels without creating a copy", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData()); await render();
+    await act(async () => button("Resume recording").click());
+    await act(async () => container.querySelector<HTMLButtonElement>("button.list-item")!.click());
+    const trigger = button("Copy a historical run"); trigger.focus(); await act(async () => trigger.click());
+    const dialog = container.querySelector("dialog")!;
+    expect(document.activeElement).toBe(dialog.querySelector("select"));
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(document.activeElement).toBe(trigger);
+    expect(container.querySelectorAll("button.run-card,button.list-item")).toHaveLength(1);
+  });
   it("names and focuses the Event form, contains Tab, and restores its opener on dismissal", async () => {
     await render(); const trigger = button("New event"); trigger.focus();
     await act(async () => trigger.click());
