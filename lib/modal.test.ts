@@ -15,11 +15,11 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); trigger.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 async function render(busy = false, strict = false) {
-  const content = createElement(Modal, { labelledBy: "title", onDismiss: dismiss, busy, children: [
+  const content = createElement(Modal, { labelledBy: "title", onDismiss: dismiss, busy }, [
     createElement("h2", { key: "title", id: "title", tabIndex: -1, "data-dialog-busy-focus": true }, "Confirm"),
     createElement("button", { key: "confirm", disabled: busy }, "Confirm"),
     createElement("button", { key: "cancel", disabled: busy, "data-dialog-initial-focus": true }, "Cancel"),
-  ] });
+  ]);
   await act(async () => root.render(strict ? createElement(StrictMode, null, content) : content));
 }
 const dismiss = vi.fn();

@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 type ModalProps = {
-  children: ReactNode;
+  children?: ReactNode;
   labelledBy: string;
   describedBy?: string;
   onDismiss: () => void;
