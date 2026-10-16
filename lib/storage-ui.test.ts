@@ -66,6 +66,31 @@ async function render() {
   await act(async () => root.render(createElement(LanguageProvider, null, createElement(HomePage))));
 }
 
+describe("record form keyboard dialogs", () => {
+  it("names and focuses the Event form, contains Tab, and restores its opener on dismissal", async () => {
+    await render(); const trigger = button("New event"); trigger.focus();
+    await act(async () => trigger.click());
+    const dialog = container.querySelector("dialog")!;
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)!.textContent).toBe("Create event");
+    expect(document.activeElement).toBe(dialog.querySelector("input"));
+    const close = button("Close"); close.focus();
+    close.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(button("Create event"));
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(container.querySelector("dialog")).toBeNull(); expect(document.activeElement).toBe(trigger);
+  });
+  it("gives Session editing its own accessible name and safe Escape cancellation", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData()); await render();
+    await act(async () => button("Resume recording").click());
+    const trigger = button("Add session"); trigger.focus(); await act(async () => trigger.click());
+    const dialog = container.querySelector("dialog")!;
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)!.textContent).toBe("Add session");
+    expect(document.activeElement).toBe(inputNamed("Session name"));
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(document.activeElement).toBe(trigger);
+  });
+});
+
 describe("startup recovery", () => {
   it.each(["app", "maps"])("blocks edits and autosaving when the %s read fails, then supports retry", async (kind) => {
     const loader = kind === "app" ? loadData : loadTrackMapData;

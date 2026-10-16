@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { ChangeEvent, FocusEvent as ReactFocusEvent, FormEvent, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptyAppData, loadData, saveData } from "@/lib/database";
+import { Modal } from "@/components/modal";
 import { readPreference, writePreference } from "@/lib/preferences";
 import { buildCsv } from "@/lib/csv";
 import { AppData, createRun, emptyExperiment, nextRunNumber, EventRecord, RunRecord, SessionRecord, SetupTemplate, TyreCorner } from "@/lib/types";
@@ -1445,11 +1446,11 @@ function EventModal({ event, trackMapData, onClose, onSave }: { event?: EventRec
   }
 
   return (
-    <div className="modal-backdrop">
+    <Modal labelledBy="event-form-title" onDismiss={onClose}>
       <form className="modal-sheet" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
-        <div className="modal-head"><div><p className="eyebrow">{isEditing ? t("EDIT EVENT") : t("NEW EVENT")}</p><h2>{isEditing ? t("Edit event") : t("Create event")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
+        <div className="modal-head"><div><p className="eyebrow">{isEditing ? t("EDIT EVENT") : t("NEW EVENT")}</p><h2 id="event-form-title">{isEditing ? t("Edit event") : t("Create event")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
-          <Field label={t("Event name")} className="field-full"><TextInput required autoFocus placeholder={t("e.g. Whilton Mill Practice")} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
+          <Field label={t("Event name")} className="field-full"><TextInput required data-dialog-initial-focus placeholder={t("e.g. Whilton Mill Practice")} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label={t("Saved Track Layout")} className="field-full">
             <select
               className="select"
@@ -1484,7 +1485,7 @@ function EventModal({ event, trackMapData, onClose, onSave }: { event?: EventRec
         </div>
         <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? t("Save changes") : t("Create event")}</button>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -1507,11 +1508,11 @@ function SessionModal({ event, session, onClose, onSave }: { event: EventRecord;
     onSave({ ...form, name: form.name.trim() });
   }
   return (
-    <div className="modal-backdrop">
+    <Modal labelledBy="session-form-title" onDismiss={onClose}>
       <form className="modal-sheet modal-compact" onFocusCapture={keepFocusedFieldVisible} onSubmit={submit}>
-        <div className="modal-head"><div><p className="eyebrow">{event.name}</p><h2>{isEditing ? t("Edit session") : t("Add session")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
+        <div className="modal-head"><div><p className="eyebrow">{event.name}</p><h2 id="session-form-title">{isEditing ? t("Edit session") : t("Add session")}</h2></div><IconButton label={t("Close")} onClick={onClose}><X /></IconButton></div>
         <div className="form-grid">
-          <Field label={t("Session name")} className="field-full"><TextInput required autoFocus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
+          <Field label={t("Session name")} className="field-full"><TextInput required data-dialog-initial-focus value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label={t("Type")}><select className="select" value={form.type} onChange={(event) => { const type = event.target.value as SessionRecord["type"]; setForm({ ...form, type, name: isEditing ? form.name : type === "Practice" ? `Practice ${nextPractice}` : type }); }}>{sessionTypes.map((type) => <option key={type} value={type}>{t(type)}</option>)}</select></Field>
           <Field label={t("Start time")}><TextInput type="time" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></Field>
           {/* Conditions default to the Event's and are only recorded here when this Session
@@ -1530,7 +1531,7 @@ function SessionModal({ event, session, onClose, onSave }: { event: EventRecord;
         </div>
         <button className="button button-primary button-block" type="submit">{isEditing ? <Check /> : <Plus />} {isEditing ? t("Save changes") : t("Add session")}</button>
       </form>
-    </div>
+    </Modal>
   );
 }
 
