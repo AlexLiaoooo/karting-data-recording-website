@@ -6,6 +6,7 @@ import type { BuiltInTrack } from "@/lib/track-map/built-in-maps";
 import type { Track, TrackLayout, TrackMapData } from "@/lib/track-map/types";
 import { EmptyMapState, FeatureHeader, useModalViewport } from "./shared";
 import { useTranslation } from "@/lib/i18n";
+import { Modal } from "../modal";
 
 type TrackLibraryViewProps = {
   data: TrackMapData;
@@ -84,11 +85,11 @@ export function BuiltInTrackPicker({ tracks, existing, onClose, onPick }: BuiltI
   const names = new Set(existing.map((track) => track.name.trim().toLowerCase()));
 
   return (
-    <div className="modal-backdrop">
-      <section className="modal-sheet modal-compact" role="dialog" aria-modal="true" aria-labelledby="built-in-track-title">
+    <Modal labelledBy="built-in-track-title" onDismiss={onClose}>
+      <section className="modal-sheet modal-compact">
         <div className="modal-head">
           <div><p className="eyebrow">{t("TRACK LIBRARY")}</p><h2 id="built-in-track-title">{t("Built-in circuits")}</h2></div>
-          <button className="icon-button" type="button" aria-label={t("Close")} onClick={onClose}><X /></button>
+          <button className="icon-button" type="button" data-dialog-initial-focus aria-label={t("Close")} onClick={onClose}><X /></button>
         </div>
         <div className="item-list built-in-list">
           {tracks.map((track) => {
@@ -108,7 +109,7 @@ export function BuiltInTrackPicker({ tracks, existing, onClose, onPick }: BuiltI
         </div>
         <p className="modal-footnote">{t("Maps are drawn from OpenStreetMap geometry. You can replace any of them with your own image later.")}</p>
       </section>
-    </div>
+    </Modal>
   );
 }
 

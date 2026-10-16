@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TrackEditor, LayoutEditor } from "../../components/track-map/editors";
 import { LanguageProvider } from "../i18n";
 import { ConfirmDeleteDialog } from "../../components/track-map/shared";
+import { BuiltInTrackPicker } from "../../components/track-map/TrackLibrary";
+import { BUILT_IN_TRACKS } from "./built-in-maps";
+import { makeTrack } from "../test-fixtures";
 
 let root: Root; let container: HTMLDivElement; let opener: HTMLButtonElement;
 beforeEach(() => {
@@ -14,6 +17,17 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); opener.remove(); vi.unstubAllGlobals(); });
 
 describe("Track Map editor dialogs", () => {
+  it("keeps the built-in picker on enabled rows and cancels without importing", async () => {
+    const close = vi.fn(); const pick = vi.fn();
+    await act(async () => root.render(createElement(LanguageProvider, null, createElement(BuiltInTrackPicker, { tracks: BUILT_IN_TRACKS, existing: [makeTrack({ name: BUILT_IN_TRACKS[0].name })], onClose: close, onPick: pick }))));
+    const dialog = container.querySelector("dialog")!;
+    const closeButton = dialog.querySelector<HTMLButtonElement>('button[aria-label="Close"]')!;
+    expect(document.activeElement).toBe(closeButton);
+    closeButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe([...dialog.querySelectorAll(".list-item:not(:disabled)")].at(-1));
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(close).toHaveBeenCalledOnce(); expect(pick).not.toHaveBeenCalled();
+  });
   it("starts map deletion on Cancel and never confirms on Escape", async () => {
     const cancel = vi.fn(); const confirm = vi.fn();
     await act(async () => root.render(createElement(LanguageProvider, null, createElement(ConfirmDeleteDialog, { title: "Delete map?", detail: "Marker notes will be removed.", onCancel: cancel, onConfirm: confirm }))));

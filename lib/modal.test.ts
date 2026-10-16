@@ -26,6 +26,12 @@ const dismiss = vi.fn();
 function key(shiftKey = false) { const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }); document.activeElement!.dispatchEvent(event); return event; }
 
 describe("shared modal behavior", () => {
+  it("focuses the new screen's toolbar when its original opener no longer exists", async () => {
+    await act(async () => root.render(createElement("main", { className: "app-shell" }, createElement("header", { className: "topbar" }, createElement("button", null, "Back")), createElement(Modal, { labelledBy: "fallback-title", onDismiss: dismiss }, createElement("h2", { id: "fallback-title" }, "Record")))));
+    trigger.remove();
+    await act(async () => root.render(createElement("main", { className: "app-shell" }, createElement("header", { className: "topbar" }, createElement("button", null, "Back")))));
+    expect(document.activeElement!.textContent).toBe("Back");
+  });
   it("opens with a named modal and the explicitly safe initial action", async () => {
     await render();
     expect(container.querySelector("dialog")!.open).toBe(true);
