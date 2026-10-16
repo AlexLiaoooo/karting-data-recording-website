@@ -87,6 +87,10 @@ A mobile-first, local-first web application for recording competition karting ty
 - Full-backup reminders after the first records and every seven days after export, with a 24-hour dismissal and export history in settings.
 - Reusable chassis setup templates.
 - Explicit confirmation for cascading Event, Session and Run deletion.
+- Shared keyboard-accessible dialogs for recording forms, Run copying, setup templates,
+  Track Library and confirmations. Native modality blocks background interaction; Tab and
+  Shift+Tab stay inside, Escape cancels, and focus returns to the opener or the new toolbar.
+  Delete/restore prompts begin on Cancel. A running restore cannot be dismissed.
 - Editable Event and Session details. A Session can record its own track condition and temperatures where it ran in something different from the rest of the Event, such as a wet heat on a dry day; left blank, it inherits the Event's. The Session's condition decides which reference note a map marker shows trackside, and it is what the CSV exports for that Session.
 - One-tap ambient temperature lookup using the device location and Open-Meteo, with manual entry retained as a fallback.
 - Light and dark display modes with system-theme detection and a locally remembered manual toggle. The built-in maps carry no theme of their own, so they follow the toggle rather than the device setting.
@@ -145,6 +149,10 @@ data rather than looking wrong:
   the failed collection is saved successfully, and no premature Saved status during debounces.
 - **Recovery controls** (`lib/storage-ui.test.ts`) — blocked startup, retry, save-error notices,
   atomic restore timing, recovery from blocked startup, and backup export/reminder controls.
+- **Dialogs** (`lib/modal.test.ts`, `lib/track-map/dialogs.test.ts`, `lib/storage-ui.test.ts`) —
+  field/safe-action focus, both Tab boundaries, Escape cancellation, disabled controls during
+  restore, focus restoration after screen changes and Strict Mode replay. jsdom models native
+  open/close calls; production-browser checks verify real modality and background inertness.
 - **Run recording** (`lib/run-recording.test.ts`, `lib/storage-ui.test.ts`) — old records infer
   their view without changing measurements; explicit phases survive backup round-trip; switching
   views preserves tyres, setup and results; Session shortcuts target the latest unfinished Run;

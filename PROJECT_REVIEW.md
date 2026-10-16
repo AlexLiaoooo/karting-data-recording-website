@@ -54,9 +54,22 @@ changelog v1.31 records behavior and verification. All 565 tests across 40 files
 checking and the production build pass; isolated production-browser checks covered these flows.
 
 The preference-storage maintenance finding below is now resolved. Multi-tab coordination,
-shared dialog accessibility, safe service-worker update handoff, CSV text handling, the local
+safe service-worker update handoff, CSV text handling, the local
 preview script and GitHub CI remain separate proposals. Dependency advisory figures in earlier
 sections are historical; this follow-up did not run a fresh audit.
+
+## Follow-up — keyboard dialogs, 16 October 2026
+
+Approved option 5 is implemented in v1.32. Named native modal dialogs contain keyboard focus,
+block background interaction, dismiss on Escape and restore focus to the opener or the new
+toolbar. Deletion and restore prompts initially focus Cancel; an active restore cannot be
+dismissed. Record forms, setup/Run pickers and Track Library share the same behavior.
+
+All 583 tests across 42 files, lint, type checking and production build pass. Isolated browser
+checks exercised real keyboard behavior, native background inertness, English/Chinese phone
+layouts, offline opening and an identical synthetic restore with delayed completion. Physical
+iPhone/VoiceOver and live deployment behavior remain unverified. The dialog-accessibility
+finding below is resolved; its original text is retained as review history.
 
 ## Small improvements applied
 

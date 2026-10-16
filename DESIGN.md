@@ -1,6 +1,6 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.31 (committed and pushed to GitHub)
+**Document status:** Implemented prototype v1.32 (committed and pushed to GitHub)
 **Last updated:** 2026-10-16
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
@@ -644,6 +644,34 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.32 — 2026-10-16
+
+- Applied approved review option 5 through a shared native `<dialog>` wrapper. Event/Session
+  forms, Run copy, setup save/apply, Track/Layout editors, built-in circuits, all record/map
+  deletions and full-backup confirmation have named modal boundaries.
+- Native `showModal()` blocks background interaction, with explicit Tab/Shift+Tab boundary
+  cycling. Escape dismisses through the existing close/cancel action. Fields receive initial
+  focus in forms; delete/restore confirmations start on Cancel. Long restore summaries keep
+  their structure rather than becoming a single description; short deletion consequences use
+  `aria-describedby`. These choices follow the [WAI modal-dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/).
+- On close, focus returns to the original control. Removed, disabled, inert or unfocusable
+  openers fall back to the current toolbar after the new screen commits. Strict Mode replay
+  cannot steal focus from a reopened dialog. Browser testing exposed the unfocused-opener case
+  and it received its own regression check and fix.
+- A busy restore disables both actions, rejects native Escape cancellation, and keeps focus
+  within the modal while its transaction completion is pending. Existing atomic restore,
+  recovery, validation and save ordering are unchanged. Native CSS resets retain the existing
+  mobile sheets and centered confirmations; closed dialogs are hidden before activation.
+- Verification: 583 tests across 42 files, lint, type checking and production build pass.
+  Real-browser checks covered field focus, safe Cancel, both Tab directions, Escape, native
+  background focus blocking and return focus across the recording, template and map dialogs.
+  A deliberately delayed identical synthetic restore recorded native Escape being prevented
+  while busy, then finished with Home toolbar focus. English/Chinese 320px and English 390px
+  dialogs fit, including the focused Cancel control; offline dialog opening also worked.
+- The initial shared-helper checkpoint was pushed before its test-composition lint error was
+  collected. The next checkpoint corrected it; the subsequent full checks pass. Physical
+  iPhone keyboard/VoiceOver behavior and a live deployment remain unverified.
 
 ### Implemented prototype v1.31 — 2026-10-16
 
