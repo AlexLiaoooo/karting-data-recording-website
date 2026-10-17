@@ -7,6 +7,7 @@ import { sessionConditions } from "./conditions";
 import { pressureGain, temperatureGain } from "./pressure";
 import { componentUsage } from "./component-life";
 import type { KartComponent } from "./types";
+import { csvNumber, escapeCsv } from "./csv-cell";
 
 const tyreLabels: Array<[TyreCorner, string]> = [
   ["fl", "FL"],
@@ -32,6 +33,13 @@ const setupFields: Array<[keyof ChassisSetup, string]> = [
   ["wheelType", "Wheel / rim type"],
   ["notes", "Setup notes"],
 ];
+
+// These setup fields accept measurements as well as descriptions such as "2 mm".
+// Only a complete finite decimal gets the numeric exception; names and notes never do.
+const numericSetupFields = new Set<keyof ChassisSetup>([
+  "frontTrack", "rearTrack", "frontRideHeight", "rearRideHeight", "frontToe",
+  "frontCamber", "caster", "rearHub", "frontSprocket", "rearSprocket",
+]);
 
 const eventHeaders = [
   "Event name",
@@ -123,15 +131,15 @@ function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage, components?:
   }
 
   return [
-    run.number,
+    csvNumber(run.number),
     run.label,
     run.recordedAt,
     run.completed ? "Yes" : "No",
-    run.laps,
-    lapSeconds(run.fastestLap),
-    lapSeconds(run.averageLap),
-    run.maxRpm,
-    run.position,
+    csvNumber(run.laps),
+    csvNumber(lapSeconds(run.fastestLap)),
+    csvNumber(lapSeconds(run.averageLap)),
+    csvNumber(run.maxRpm),
+    csvNumber(run.position),
     ...tyreLabels.flatMap(([corner]) => {
       const tyre = run.tyres[corner];
       return [
@@ -141,12 +149,12 @@ function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage, components?:
         tyre.coldTemperature,
         tyre.hotTemperature,
         csvGain(temperatureGain(tyre)),
-      ];
+      ].map(csvNumber);
     }),
-    ...setupFields.map(([field]) => run.setup[field]),
+    ...setupFields.map(([field]) => numericSetupFields.has(field) ? csvNumber(run.setup[field]) : run.setup[field]),
     // Derived rather than stored, and exported for the same reason pressure gain is: the
     // spreadsheet should not have to recompute what the app already knows how to compute.
-    gearRatio(run.setup.frontSprocket, run.setup.rearSprocket)?.toFixed(2) ?? "",
+    csvNumber(gearRatio(run.setup.frontSprocket, run.setup.rearSprocket)?.toFixed(2)),
     run.balance,
     run.grip,
     run.braking,
@@ -161,10 +169,10 @@ function runValues(run?: RunRecord, set?: TyreSet, age?: TyreUsage, components?:
     run.experiment?.outcome ?? "",
     run.tyreSetId ?? "", set?.name ?? "", set?.compound ?? "",
     run.tyreHeatCycle === undefined ? "" : run.tyreHeatCycle ? "Yes" : "No",
-    age?.laps ?? "", age?.heatCycles ?? "", age?.missingLaps ?? "",
-    run.driverDebrief?.recordedAt ?? "", run.driverDebrief ? run.driverDebrief.durationMs / 1000 : "",
-    run.driverDebrief?.mimeType ?? "", run.driverDebrief?.size ?? "",
-    run.loggerPhoto?.capturedAt ?? "", run.loggerPhoto?.sourceName ?? "", run.loggerPhoto?.mimeType ?? "", run.loggerPhoto?.size ?? "", run.loggerPhoto?.width ?? "", run.loggerPhoto?.height ?? "",
+    csvNumber(age?.laps), csvNumber(age?.heatCycles), csvNumber(age?.missingLaps),
+    run.driverDebrief?.recordedAt ?? "", csvNumber(run.driverDebrief ? run.driverDebrief.durationMs / 1000 : ""),
+    run.driverDebrief?.mimeType ?? "", csvNumber(run.driverDebrief?.size),
+    run.loggerPhoto?.capturedAt ?? "", run.loggerPhoto?.sourceName ?? "", run.loggerPhoto?.mimeType ?? "", csvNumber(run.loggerPhoto?.size), csvNumber(run.loggerPhoto?.width), csvNumber(run.loggerPhoto?.height),
     (run.componentIds ?? []).join("; "), (run.componentIds ?? []).map(id => components?.get(id)?.name ?? id).join("; "),
   ];
 }
@@ -180,10 +188,6 @@ function lapSeconds(value: string) {
   if (!value.includes(":")) return value;
   const seconds = parseLapTime(value);
   return seconds === null ? value : String(seconds);
-}
-
-function escapeCsv(value: unknown) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 const markerHeaders = [
@@ -229,7 +233,7 @@ function markerRows(trackMap: TrackMapData) {
     for (const marker of [...layout.markers].sort((a, b) => a.order - b.order)) {
       rows.push([
         ...layoutValues,
-        marker.order,
+        csvNumber(marker.order),
         markerLabel(marker, layout.corners),
         marker.type,
         marker.shortInstruction,
@@ -304,8 +308,8 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
       event.endDate,
       event.type,
       event.weather,
-      event.ambientTemperature,
-      event.trackTemperature,
+      csvNumber(event.ambientTemperature),
+      csvNumber(event.trackTemperature),
       event.condition,
       event.notes,
     ];
@@ -325,8 +329,8 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
         session.startTime,
         session.notes,
         conditions.condition,
-        conditions.ambientTemperature,
-        conditions.trackTemperature,
+        csvNumber(conditions.ambientTemperature),
+        csvNumber(conditions.trackTemperature),
       ];
       if (!session.runs.length) {
         rows.push([...eventValues, ...sessionValues, ...runValues()]);
@@ -346,14 +350,14 @@ export function buildCsv(data: AppData, trackMap: TrackMapData) {
   ];
   if (data.tyreSets.length) tables.push(section("TYRE SETS", ["Tyre set ID", "Name", "Compound", "Notes", "Retired", "Starting laps", "Starting heat cycles", "Recorded total laps", "Recorded total heat cycles", "Completed Runs", "Missing lap counts"], data.tyreSets.map(set => {
     const usage = tyreSetSummary(data, set);
-    return [set.id, set.name, set.compound, set.notes, set.retired ? "Yes" : "No", set.initialLaps, set.initialHeatCycles, usage.laps, usage.heatCycles, usage.completedRuns, usage.missingLaps];
+    return [set.id, set.name, set.compound, set.notes, set.retired ? "Yes" : "No", ...[set.initialLaps, set.initialHeatCycles, usage.laps, usage.heatCycles, usage.completedRuns, usage.missingLaps].map(csvNumber)];
   })));
   if (data.components.length) {
     tables.push(section("COMPONENTS", ["Component ID", "Name", "Type", "Notes", "Retired", "Starting laps", "Service interval (laps)", "Lifetime recorded laps", "Laps since service", "Laps remaining", "Reminder state", "Completed assigned Runs", "Missing lap counts"], data.components.map(component => {
       const usage = componentUsage(data, component);
-      return [component.id, component.name, component.kind, component.notes, component.retired ? "Yes" : "No", component.initialLaps, component.serviceIntervalLaps, usage.totalLaps, usage.sinceService, usage.remainingLaps, usage.state, usage.completedRuns, usage.missingLaps];
+      return [component.id, component.name, component.kind, component.notes, component.retired ? "Yes" : "No", ...[component.initialLaps, component.serviceIntervalLaps, usage.totalLaps, usage.sinceService, usage.remainingLaps].map(csvNumber), usage.state, csvNumber(usage.completedRuns), csvNumber(usage.missingLaps)];
     })));
-    tables.push(section("COMPONENT SERVICES", ["Component ID", "Component name", "Type", "Service ID", "Service date", "Lifetime laps at service", "Service performed"], data.components.flatMap(component => component.services.map(service => [component.id, component.name, component.kind, service.id, service.date, service.lapsAtService, service.notes]))));
+    tables.push(section("COMPONENT SERVICES", ["Component ID", "Component name", "Type", "Service ID", "Service date", "Lifetime laps at service", "Service performed"], data.components.flatMap(component => component.services.map(service => [component.id, component.name, component.kind, service.id, service.date, csvNumber(service.lapsAtService), service.notes]))));
   }
 
   const body = tables

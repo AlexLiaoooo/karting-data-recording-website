@@ -8,6 +8,26 @@ function tables(csv: string) {
 }
 
 describe("buildCsv", () => {
+  it("protects Run text while retaining signed measurements and decimal precision", () => {
+    const run = makeRun({ label: "-2", comments: "=1+1", cornerEntry: "+early", midCorner: "@apex", cornerExit: "－exit", laps: "=3+4", fastestLap: "48.900", averageLap: "+SUM(A1)", maxRpm: "-1+2", position: "@rank" });
+    run.setup.frontCamber = "-1.50";
+    run.setup.frontToe = "-.5";
+    run.setup.axleType = "-2";
+    run.setup.notes = " =setup";
+    run.tyres.fl.coldTemperature = "-2";
+    run.tyres.fl.hotTemperature = "-1";
+    const data = makeAppData({ events: [makeEvent({ name: "=event", notes: "@event", ambientTemperature: "-4.50", sessions: [makeSession({ name: "+session", notes: "-session", trackTemperature: "-3.00", runs: [run] })] })] });
+    const [runs] = tables(buildCsv(data, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+    expect(row).toMatchObject({
+      "Event name": "'=event", "Event notes": "'@event", "Session name": "'+session", "Session notes": "'-session",
+      "Run label": "'-2", "General comments": "'=1+1", "Corner entry": "'+early", "Mid-corner": "'@apex", "Corner exit / traction": "'－exit",
+      "Ambient temperature (C)": "-4.50", "Session track temperature (C)": "-3.00", "FL cold temperature (C)": "-2", "FL hot temperature (C)": "-1", "FL temperature gain (C)": "1.00",
+      "Front camber": "-1.50", "Front toe": "-.5", "Axle type": "'-2", "Setup notes": "' =setup",
+      "Laps": "'=3+4", "Fastest lap (s)": "48.900", "Average lap (s)": "'+SUM(A1)", "Max RPM": "'-1+2", "Position": "'@rank",
+    });
+  });
+
   it("appends audio metadata without putting recordings in spreadsheets and leaves missing notes blank", () => {
     const note = { recordedAt: "2026-10-12T09:00:00.000Z", durationMs: 3500, mimeType: "audio/webm" as const, size: 4, dataUrl: "data:audio/webm;base64,AQIDBA==" };
     const data = makeAppData({ events: [makeEvent({ sessions: [makeSession({ runs: [makeRun({ driverDebrief: note }), makeRun({ id: "other", number: 2 })] }), makeSession({ id: "empty", runs: [] })] })] });
