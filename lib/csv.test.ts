@@ -1,13 +1,88 @@
 import { describe, expect, it } from "vitest";
 import { buildCsv } from "./csv";
 import { emptyTrackMapData } from "./track-map/types";
+import { buildFullBackup, parseFullBackup } from "./track-map/backup";
 import { makeAppData, makeEvent, makeLayout, makeRun, makeSession, makeTrackMapData, parseCsvRow } from "./test-fixtures";
 
 function tables(csv: string) {
-  return csv.replace(/^﻿/, "").split("\r\n\r\n").map((block) => block.split("\r\n").map(parseCsvRow));
+  // Find record separators outside quoted fields, including fields containing blank lines.
+  const text = csv.replace(/^﻿/, "");
+  const lines: string[] = [];
+  let quoted = false;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '"') {
+      if (quoted && text[i + 1] === '"') i += 1;
+      else quoted = !quoted;
+    } else if (!quoted && text.slice(i, i + 2) === "\r\n") {
+      lines.push(text.slice(start, i));
+      i += 1;
+      start = i + 1;
+    }
+  }
+  expect(quoted, "all CSV fields close").toBe(false);
+  lines.push(text.slice(start));
+  const result: string[][][] = [[]];
+  for (const line of lines) {
+    if (line === "") result.push([]);
+    else result.at(-1)!.push(parseCsvRow(line));
+  }
+  return result;
 }
 
 describe("buildCsv", () => {
+  it("protects map labels and notes, including multiline delimiter-like content", () => {
+    const maps = makeTrackMapData();
+    maps.tracks[0].name = "＝track";
+    maps.tracks[0].location = " +location";
+    maps.layouts[0].name = "-5";
+    Object.assign(maps.layouts[0].markers[0], { label: "@marker", shortInstruction: '=turn,"exit"\r\n\r\n@stay in this cell', generalNote: "\t=general", dryNote: "＋dry", wetNote: "－wet" });
+    maps.visits[0].summary = "＠summary";
+    maps.visits[0].observations[0].note = "\n=observation";
+    const [runs, markers, observations] = tables(buildCsv(makeAppData(), maps));
+    expect(runs).toHaveLength(2);
+    expect(markers).toHaveLength(3);
+    expect(markers[2]).toEqual(["'＝track", "' +location", "'-5", "Clockwise", "1", "'@marker", "Brake", '\'=turn,"exit"\r\n\r\n@stay in this cell', "'\t=general", "'＋dry", "'－wet"]);
+    expect(observations).toHaveLength(3);
+    expect(observations[2]).toEqual(["Club Round 4", "Practice 1", "'＝track", "'-5", "2026-08-16", "Dry", "'@marker", "Brake", "'\n=observation", "Better", "'＠summary"]);
+    maps.layouts[0].markers = [];
+    maps.visits[0].observations = [];
+    const [, emptyMarkers, emptyObservations] = tables(buildCsv(makeAppData(), maps));
+    expect(emptyMarkers[2].slice(0, 3)).toEqual(["'＝track", "' +location", "'-5"]);
+    expect(emptyObservations[2].at(-1)).toBe("'＠summary");
+  });
+
+  it("protects linked tyre/component names, IDs, experiments, photo names and service notes", () => {
+    const set = { id: "=tyre", name: "-5", compound: "+compound", notes: "@tyre", initialLaps: 20, initialHeatCycles: 2, retired: false, createdAt: "stamp", updatedAt: "stamp" };
+    const component = { id: "@engine", name: "=engine", kind: "Engine" as const, notes: "-engine", initialLaps: 100, serviceIntervalLaps: 120, retired: false, services: [{ id: "+service", date: "2026-10-10", lapsAtService: 90, notes: "=service" }], createdAt: "stamp", updatedAt: "stamp" };
+    const run = makeRun({ id: "=run", tyreSetId: set.id, componentIds: [component.id], experiment: { baselineRunId: "@baseline", change: "=change", expectation: "+expectation", outcome: "-outcome" }, loggerPhoto: { capturedAt: "2026-10-13T09:00:00.000Z", sourceName: "=photo.png", mimeType: "image/png", size: 4, width: 1200, height: 800, dataUrl: "data:image/png;base64,AQIDBA==" } });
+    const data = makeAppData({ tyreSets: [set], components: [component], events: [makeEvent({ sessions: [makeSession({ runs: [run] })] })] });
+    const [runs, , , tyres, components, services] = tables(buildCsv(data, emptyTrackMapData()));
+    const row = Object.fromEntries(runs[0].map((header, index) => [header, runs[1][index]]));
+    expect(row).toMatchObject({ "Run ID": "'=run", "Baseline Run ID": "'@baseline", "Experiment change": "'=change", "Experiment expectation": "'+expectation", "Experiment outcome": "'-outcome", "Tyre set ID": "'=tyre", "Tyre set name": "'-5", "Tyre compound": "'+compound", "Installed component IDs": "'@engine", "Installed component names": "'=engine", "Logger photo source name": "'=photo.png", "Logger photo size (bytes)": "4", "Recorded tyre laps before Run": "20" });
+    expect(tyres[2]).toEqual(["'=tyre", "'-5", "'+compound", "'@tyre", "No", "20", "2", "32", "2", "1", "0"]);
+    expect(components[2]).toEqual(["'@engine", "'=engine", "Engine", "'-engine", "No", "100", "120", "112", "22", "98", "ok", "1", "0"]);
+    expect(services[2]).toEqual(["'@engine", "'=engine", "Engine", "'+service", "2026-10-10", "90", "'=service"]);
+  });
+
+  it("changes only CSV output; stored records and full JSON backups retain original text", async () => {
+    const data = makeAppData();
+    const maps = makeTrackMapData();
+    data.events[0].name = "=event";
+    data.events[0].sessions[0].runs[0].comments = '+note,"quoted"\r\n\r\nline two';
+    maps.visits[0].summary = "@summary";
+    const originalData = JSON.stringify(data);
+    const originalMaps = JSON.stringify(maps);
+    const csv = buildCsv(data, maps);
+    expect(csv).toContain('"\'=event"');
+    expect(JSON.stringify(data)).toBe(originalData);
+    expect(JSON.stringify(maps)).toBe(originalMaps);
+    const restored = parseFullBackup(JSON.parse(await buildFullBackup(data, maps)));
+    expect(restored?.appData).toEqual(data);
+    expect(restored?.trackMapData.visits).toEqual(maps.visits);
+    expect(buildCsv(restored!.appData, restored!.trackMapData)).toBe(csv);
+  });
+
   it("protects Run text while retaining signed measurements and decimal precision", () => {
     const run = makeRun({ label: "-2", comments: "=1+1", cornerEntry: "+early", midCorner: "@apex", cornerExit: "－exit", laps: "=3+4", fastestLap: "48.900", averageLap: "+SUM(A1)", maxRpm: "-1+2", position: "@rank" });
     run.setup.frontCamber = "-1.50";
