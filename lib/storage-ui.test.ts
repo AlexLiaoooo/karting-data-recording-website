@@ -239,6 +239,40 @@ describe("save and restore recovery", () => {
 });
 
 describe("backup reminder controls", () => {
+  it("downloads protected CSV from settings without counting it as a full backup", async () => {
+    const data = makeAppData();
+    data.events[0].name = "=event";
+    data.events[0].ambientTemperature = "-4.50";
+    data.events[0].sessions[0].runs[0].comments = '+note,"quoted"\r\nline two';
+    const maps = makeTrackMapData();
+    maps.visits[0].summary = "@summary";
+    vi.mocked(loadData).mockResolvedValue(data);
+    vi.mocked(loadTrackMapData).mockResolvedValue(maps);
+    let download = "";
+    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(function (this: HTMLAnchorElement) { download = this.download; });
+    await render();
+    await act(async () => button("Data and settings").click());
+    await act(async () => button("Export Excel-ready CSV").click());
+    expect(container.textContent).toContain("Excel-ready CSV exported");
+    expect(download).toMatch(/^kart-data-\d{4}-\d{2}-\d{2}\.csv$/);
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    expect(blob.type).toBe("text/csv;charset=utf-8");
+    const text = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(blob);
+    });
+    expect(text).toContain('"\'=event"');
+    expect(text).toContain('"-4.50"');
+    expect(text).toContain('"\'+note,""quoted""\r\nline two"');
+    expect(text).toContain('"\'@summary"');
+    expect(container.textContent).toContain("No full backup exported on this device yet.");
+    expect(localStorage.getItem(BACKUP_HISTORY_KEY)).toBeNull();
+    expect(data.events[0].name).toBe("=event");
+    expect(maps.visits[0].summary).toBe("@summary");
+  });
+
   it("offers a backup after records exist and stores a one-day dismissal", async () => {
     vi.mocked(loadData).mockResolvedValue(makeAppData());
     await render();
