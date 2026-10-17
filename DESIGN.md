@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.32 (committed and pushed to GitHub)
-**Last updated:** 2026-10-16
+**Document status:** Implemented prototype v1.33 (committed and pushed to GitHub)
+**Last updated:** 2026-10-17
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -619,6 +619,9 @@ The following decisions remain open and should be resolved before or during the 
 Resolved:
 
 - CSV export uses a single file containing three labelled tables — Events/Sessions/Runs, Track reference markers, and Session track observations — separated by a blank row. Experiment IDs and notes append to the Run table without moving existing measurement columns.
+- CSV formula-like text receives an apostrophe prefix inside the quoted field. Explicit
+  numeric columns allow only complete finite signed decimals to bypass that prefix; stored
+  records and JSON backups retain the original text. See v1.33 for scope and import limits.
 
 ## 14. Future expansion candidates
 
@@ -644,6 +647,32 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.33 — 2026-10-17
+
+- Applied approved review option 6 to CSV export. A shared cell serializer quotes every
+  field, doubles embedded quotes, and prefixes formula-like text beginning with `=`, `+`,
+  `-` or `@`, their full-width variants, or leading tab/newline controls. It also inspects
+  past leading whitespace/control characters. The prefix is an apostrophe within the cell,
+  following the text-prefix convention documented by [OWASP](https://community.owasp.org/attacks/CSV_Injection).
+- Protection covers Event/Session/Run names and notes, feedback, experiments, IDs, source
+  filenames, linked tyre/component names, map reference/observation text, inventories and
+  service records. A numeric-looking name such as `-5` receives text protection too.
+- Explicit measurement/count columns retain complete finite signed decimals, including
+  scientific notation and original trailing zeros. This includes temperatures, gains,
+  performance, numeric chassis dimensions/angles/sprockets, usage counters and media sizes.
+  An expression such as `-2+3` fails that numeric exception and receives text protection.
+  Existing BOM, CRLF separators, table order, column widths and empty cells remain intact.
+- CSV generation does not mutate records. JSON backups retain the original text and restore
+  it unchanged; exporting again after a JSON round trip produces the same CSV. CSV remains
+  for viewing/analysis, not backup restoration.
+- Verification: 618 tests across 43 files, lint, type checking and production build pass.
+  Regression tests include multilingual/full-width prefixes, whitespace and controls, quotes,
+  commas, embedded blank lines, every export section and numeric preservation. A rendered
+  settings-button test inspects the CSV download Blob, filename and unchanged backup history.
+- Spreadsheet applications may display the apostrophe or alter interpretation during import,
+  prefix removal or CSV re-save/reopen. No universal spreadsheet guarantee is claimed.
+  Physical Excel/Numbers/LibreOffice import and a live deployment were not tested this turn.
 
 ### Implemented prototype v1.32 — 2026-10-16
 

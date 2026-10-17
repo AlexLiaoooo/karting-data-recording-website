@@ -76,6 +76,14 @@ A mobile-first, local-first web application for recording competition karting ty
   Audio columns describe recording time, duration, type and size; audio bytes stay in JSON.
   Photo columns contain metadata, and installed-component columns retain IDs/names. When parts
   exist, CSV adds component inventory and service-history tables. Image bytes stay in JSON.
+- CSV prefixes formula-like names, notes, IDs and other text with an apostrophe inside the
+  quoted field, including leading whitespace/control characters and full-width formula
+  prefixes. Valid finite signed decimals in measurement/count columns keep their original
+  precision: a temperature of `-4.50` stays numeric, while a name of `-5` is protected as text.
+  Stored records and full JSON backups keep the original text. Some spreadsheet imports may
+  display the apostrophe; removing it or saving/reopening CSV may change interpretation.
+  This follows the text-prefix approach described by [OWASP](https://community.owasp.org/attacks/CSV_Injection),
+  which explains that no CSV convention works universally across spreadsheet applications.
 - Backup validation checks nested records, unique IDs, map coordinates and image metadata while supporting older backups.
 - Failed startup reads pause editing and autosaving, with retry and validated-backup recovery. Restore commits all records and images together before reporting success.
 - Optional language/theme storage failures fall back to choices kept for the current page;
@@ -136,11 +144,14 @@ data rather than looking wrong:
 - **Backup round-trip** (`lib/track-map/backup.test.ts`) — events, tracks, layouts, markers
   and visits restore unchanged, map image bytes survive exactly, backups predating Track
   Maps still restore, and malformed files are rejected instead of partially applied.
-- **CSV export** (`lib/csv.test.ts`) — the three core tables, optional tyre-set/component inventories
+- **CSV export** (`lib/csv.test.ts`, `lib/csv-cell.test.ts`) — the three core tables, optional tyre-set/component inventories
   and component service history, correct column counts, computed
   pressure/temperature gains left blank wherever the app's screens show none (a mistyped 0
   pressure included), the UTF-8 BOM, and escaping of quotes, commas and line breaks in
-  free-text notes.
+  free-text notes. Formula-like text is protected across every section, signed decimal
+  measurements retain precision, malformed measurement expressions stay text, and original
+  records/JSON round trips remain unchanged. A settings-button integration check in
+  `lib/storage-ui.test.ts` inspects the downloaded Blob, filename and unchanged backup history.
 - **Storage** (`lib/database.test.ts`) — the version 1 to 2 schema upgrade preserves existing
   records while adding the Track Map stores, deletions do not reappear on reload, and app
   data stays separate from Track Map data. Corrupt reads fail safely, and forced clone errors

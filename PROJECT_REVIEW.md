@@ -71,6 +71,27 @@ layouts, offline opening and an identical synthetic restore with delayed complet
 iPhone/VoiceOver and live deployment behavior remain unverified. The dialog-accessibility
 finding below is resolved; its original text is retained as review history.
 
+## Follow-up — CSV text handling, 17 October 2026
+
+Approved option 6 is implemented in v1.33. Formula-like names, notes, IDs, source filenames
+and other text receive an apostrophe prefix inside their quoted CSV cells, across all six
+possible tables. Leading whitespace/control characters and full-width prefixes are covered.
+Numeric columns retain complete finite signed decimals and their original precision, including
+negative temperatures and camber; expressions in those columns receive text protection.
+Stored records and full JSON backups keep the original content.
+
+All 618 tests across 43 files, lint, type checking and production build pass. Coverage includes
+every export section, quotes and embedded blank lines, numeric-looking names, signed numbers,
+unchanged JSON round trips and the settings button's CSV download Blob/filename. CSV export
+still does not count as a full backup. The maintenance finding below is resolved.
+
+Spreadsheet applications may display the prefix or change interpretation after import, manual
+prefix removal or CSV save/reopen. This is an export convention, not a universal spreadsheet
+guarantee; see [OWASP's CSV guidance](https://community.owasp.org/attacks/CSV_Injection).
+Physical spreadsheet imports and the live deployment were not tested. Multi-tab coordination,
+service-worker update handoff, the preview script and CI remain separate proposals. No fresh
+dependency audit was run.
+
 ## Small improvements applied
 
 | Improvement | Reason | Files |
@@ -189,9 +210,9 @@ do not establish that the deployed site was exploitable.
   current trackside problem.
 - Resolved 16 October: theme/language helpers tolerate unavailable localStorage and retain
   choices for the page session. IndexedDB remains the independent record store.
-- Decide how CSV should treat free text beginning with spreadsheet formula
-  characters. Quoting escapes delimiters but does not force literal text in
-  spreadsheet applications; preserve negative numeric measurements.
+- Resolved 17 October: formula-like CSV text receives an apostrophe prefix inside the quoted
+  cell, with explicit finite-decimal exceptions for numeric columns. Negative measurements
+  and JSON originals survive; spreadsheet import/re-save limitations are documented above.
 - Fix the documented preview command: this project exports static files, while
   its `start` script calls `next start`. The review used a static file server.
 
