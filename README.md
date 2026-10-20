@@ -130,6 +130,34 @@ from the pinned Tesseract.js engine and English model. This generated folder is 
 the build includes it in the offline cache. Licenses are copied alongside it. Recognition adds
 worker/model files to the initial cache download, so let the app load online before a circuit day.
 
+## Preview the production build locally
+
+After `npm ci`, stop the development server and run:
+
+```bash
+npm run build
+npm start
+```
+
+Open the local address printed in the terminal, normally [http://localhost:3000](http://localhost:3000).
+This serves the generated `out/` website, including its service worker and offline OCR assets.
+The launcher reports missing or incomplete output with instructions to build first. It skips
+the preview server's online update check, so an existing build can be previewed without internet.
+
+To choose a separate local address:
+
+```bash
+npm start -- --listen tcp://127.0.0.1:4197
+```
+
+If a port is already occupied, the server may choose another; use its printed address.
+Browser records belong to an exact origin: changing `localhost` to `127.0.0.1` or changing
+the port gives you a separate local data store. Keep the same address for your test records,
+or transfer them using a full JSON backup. The live website has its own browser storage too.
+
+This preview serves an existing build and does not watch source edits. After editing, rebuild
+and reload. Use `npm run dev` for development with live updates.
+
 ## Verification
 
 ```bash
