@@ -92,6 +92,26 @@ Physical spreadsheet imports and the live deployment were not tested. Multi-tab 
 service-worker update handoff, the preview script and CI remain separate proposals. No fresh
 dependency audit was run.
 
+## Follow-up — local production preview, 21 October 2026
+
+Approved option 7 is implemented in v1.34. `npm start` now serves the production `out/`
+directory through a pinned local development dependency. The launcher checks the homepage
+and generated worker, reports how to build if either is missing/empty, and skips online
+update checks. README explains default/custom preview addresses, rebuilding after edits and
+the separate browser records associated with each hostname/port. If a port is occupied,
+the server may select another; use its printed address.
+
+All 618 tests across 43 files, lint, type checking and production build pass. The default and
+custom addresses served the current homepage and worker. All 48 production resources matched
+their built bytes, including offline OCR assets; missing pages/assets/source files returned
+404. Missing output or missing/empty worker files exited with build instructions. An isolated
+390px browser cached all 47 precache entries, reloaded offline and opened/closed a form with
+no horizontal overflow or runtime exceptions. No user records were edited.
+
+The preview-command maintenance finding below is resolved. CI, competing-tab protection and
+the service-worker update handoff remain separate proposals. The live deployment, physical
+iPhone behavior and a fresh dependency audit were not checked in this follow-up.
+
 ## Small improvements applied
 
 | Improvement | Reason | Files |
@@ -213,8 +233,8 @@ do not establish that the deployed site was exploitable.
 - Resolved 17 October: formula-like CSV text receives an apostrophe prefix inside the quoted
   cell, with explicit finite-decimal exceptions for numeric columns. Negative measurements
   and JSON originals survive; spreadsheet import/re-save limitations are documented above.
-- Fix the documented preview command: this project exports static files, while
-  its `start` script calls `next start`. The review used a static file server.
+- Resolved 21 October: `npm start` serves the static export, with a build-first check and
+  documented default/custom addresses. The original `next start` mismatch is fixed.
 
 ## Verification
 

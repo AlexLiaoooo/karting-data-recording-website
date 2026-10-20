@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.33 (committed and pushed to GitHub)
-**Last updated:** 2026-10-17
+**Document status:** Implemented prototype v1.34 (committed and pushed to GitHub)
+**Last updated:** 2026-10-21
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -647,6 +647,28 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.34 — 2026-10-21
+
+- Applied approved review option 7: `npm start` previews the static `out/` export through
+  pinned development dependency `serve` 14.2.6, replacing the incompatible `next start`.
+  Production hosting and the `output: "export"` build remain unchanged.
+- The small Node launcher requires nonempty `out/index.html` and `out/sw.js`, otherwise exits
+  with instructions to run `npm run build` first. It disables the server's registry update
+  check and clipboard changes, and forwards command-line options such as `--listen`.
+- README documents development versus production preview, rebuilding after source edits,
+  the default address and an explicit loopback port. The server may select another available
+  port when busy; use the address printed by the server. Browser storage
+  is separate for each hostname/port, including local preview versus the live site.
+- Verification: all 618 tests across 43 files, lint, type checking and production build pass.
+  Both the default address and a custom loopback address served the built homepage/worker.
+  All 48 production resources (47 precached entries plus the worker) matched build bytes;
+  missing page/asset/source paths returned 404 and OCR WebAssembly used `application/wasm`.
+  Isolated missing-output, missing-worker and empty-worker cases exited with build guidance.
+- The production browser registered an active worker with all 47 entries cached. At 390px,
+  an offline reload showed the app, opened/closed a form, had no horizontal overflow and
+  reported no runtime exceptions. No user records were edited. Live deployment, physical iPhone
+  behavior and a two-build service-worker update handoff were not tested.
 
 ### Implemented prototype v1.33 — 2026-10-17
 
