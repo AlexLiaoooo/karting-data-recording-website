@@ -6,7 +6,7 @@
     "dev": "node scripts/prepare-ocr.mjs && next dev",
     "icons": "node scripts/generate-icons.mjs",
     "build": "node scripts/prepare-ocr.mjs && next build && node scripts/generate-sw.mjs",
-    "start": "serve out --no-clipboard --no-port-switching",
+    "start": "node scripts/preview.mjs",
     "lint": "eslint .",
     "test": "vitest run"
   },
