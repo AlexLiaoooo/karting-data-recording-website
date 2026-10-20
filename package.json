@@ -6,7 +6,7 @@
     "dev": "node scripts/prepare-ocr.mjs && next dev",
     "icons": "node scripts/generate-icons.mjs",
     "build": "node scripts/prepare-ocr.mjs && next build && node scripts/generate-sw.mjs",
-    "start": "next start",
+    "start": "serve out --no-clipboard --no-port-switching",
     "lint": "eslint .",
     "test": "vitest run"
   },
@@ -26,6 +26,7 @@
     "eslint-config-next": "16.3.8",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
+    "serve": "14.2.6",
     "sharp": "0.35.5",
     "typescript": "^5.9.0",
     "vitest": "^4.1.10"
