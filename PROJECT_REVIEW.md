@@ -112,6 +112,27 @@ The preview-command maintenance finding below is resolved. CI, competing-tab pro
 the service-worker update handoff remain separate proposals. The live deployment, physical
 iPhone behavior and a fresh dependency audit were not checked in this follow-up.
 
+## Follow-up — GitHub checks, 23 October 2026
+
+Approved option 8 is implemented in v1.35. A GitHub Actions workflow checks pushes to `main`,
+pull requests targeting `main` and manual runs using Node.js 24 on Ubuntu 24.04. Each run
+installs the committed lockfile cleanly, runs lint and the full tests, then builds the static
+website including type checking, OCR assets and the generated worker. Node 24 is also recorded
+in `.nvmrc`; the README has a status badge and links to the check results.
+
+Official actions are pinned to commit hashes, repository access is read-only, checkout does
+not retain credentials, and newer commits cancel superseded runs. The job has a 15-minute
+limit. This adds check reporting; required merge checks remain a separate repository setting.
+
+Verification: fresh local installation, all 618 tests across 43 files, lint and production
+build passed. The actual [first hosted run](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/runs/39812812831)
+passed all steps in 1 minute 17 seconds. Workflow syntax, configured triggers and action
+inputs were checked; separate pull-request/manual runs were not exercised. No browser user
+records, live deployment, physical device or fresh dependency audit were involved.
+
+The CI maintenance finding below is resolved. Competing-tab protection, service-worker update
+handoff and the larger screen/component refactor remain separate proposals.
+
 ## Small improvements applied
 
 | Improvement | Reason | Files |
@@ -223,8 +244,8 @@ do not establish that the deployed site was exploitable.
 
 ### Maintenance follow-ups
 
-- Add CI running clean installation, lint, tests and the production build. No
-  GitHub Actions workflow is committed in this checkout.
+- Resolved 23 October: GitHub Actions runs clean installation, lint, tests and the production
+  build, with a verified successful hosted run and README status badge.
 - Split `app/page.tsx` into recording screens and shared form primitives as
   those parts next change. A broad rewrite would add risk without fixing a
   current trackside problem.

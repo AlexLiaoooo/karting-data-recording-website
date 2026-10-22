@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.34 (committed and pushed to GitHub)
-**Last updated:** 2026-10-21
+**Document status:** Implemented prototype v1.35 (committed and pushed to GitHub)
+**Last updated:** 2026-10-23
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -647,6 +647,29 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.35 — 2026-10-23
+
+- Applied approved review option 8 with `.github/workflows/ci.yml`. Pushes to `main`, pull
+  requests targeting `main` and manual workflow runs perform a clean lockfile installation,
+  lint, the full Vitest suite and the production build on Ubuntu 24.04. The build also checks
+  TypeScript, prepares same-origin OCR assets and generates the service worker.
+- `.nvmrc` records Node.js 24 for both local development and the hosted job. The official
+  checkout/setup-node actions are pinned to full commit hashes. Only npm's download cache
+  is reused; `npm ci --no-audit --no-fund` installs from the lockfile each time.
+- The job has read-only repository permissions, disables checkout credential persistence
+  and Next telemetry, and has a 15-minute timeout. New commits cancel superseded runs for
+  the same branch or pull request. No deployment credentials or personal browser records
+  are used by this workflow.
+- README links a live `main` status badge and explains results, manual runs and local commands;
+  the Chinese guide explains how to view checks. Required checks before merging remain a
+  separate repository setting; this change reports results without altering that policy.
+- Verification: clean local installation, all 618 tests across 43 files, lint and production
+  build passed. Workflow YAML, triggers, action inputs/pins and documented commands were
+  checked. The first actual [GitHub-hosted run](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/runs/39812812831)
+  also passed every step in 1 minute 17 seconds. Push execution is verified; no separate
+  pull request or manual run was created to test those configured triggers. No dependency
+  audit, physical-device test or live deployment check was performed in this follow-up.
 
 ### Implemented prototype v1.34 — 2026-10-21
 
