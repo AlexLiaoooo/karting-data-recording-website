@@ -1,5 +1,7 @@
 # Kart Data
 
+[![CI](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/workflows/ci.yml)
+
 A mobile-first, local-first web application for recording competition karting tyre data, chassis setup, performance and driver feedback at the circuit.
 
 **Live website:** [Open Kart Data](https://karting-data-recording-website.vercel.app)
@@ -118,6 +120,8 @@ A mobile-first, local-first web application for recording competition karting ty
 
 ## Local development
 
+Use Node.js 24, as recorded in `.nvmrc` and used by the GitHub checks.
+
 ```bash
 npm ci
 npm run dev
@@ -165,6 +169,17 @@ npm run lint
 npm test
 npm run build
 ```
+
+GitHub runs these checks after a clean `npm ci --no-audit --no-fund` installation on
+pushes to `main` and pull requests targeting `main`. The workflow uses Ubuntu 24.04 and
+Node.js 24; the production build also checks TypeScript and prepares the offline OCR files
+and generated service worker. Only npm's download cache is reused, so installed dependencies
+still come from the committed lockfile on every run.
+
+Open [CI in GitHub Actions](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/workflows/ci.yml)
+to see results, inspect a failed step, or start a manual run with **Run workflow**.
+New commits cancel older runs for the same branch or pull request. This workflow reports
+check results; requiring a successful check before merging is a separate repository setting.
 
 `npm test` runs Vitest against the data layer and recovery controls — the parts where a silent bug costs recorded
 data rather than looking wrong:
