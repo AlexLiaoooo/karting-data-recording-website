@@ -41,8 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
-        <RegisterServiceWorker />
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider><RegisterServiceWorker />{children}</LanguageProvider>
       </body>
     </html>
   );

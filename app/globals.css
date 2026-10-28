@@ -1152,6 +1152,18 @@ dialog.modal-backdrop {
 dialog.modal-backdrop:not([open]) { display: none; }
 dialog.modal-backdrop::backdrop { background: transparent; }
 
+.app-update-notice {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 14px;
+  margin: 0 auto;
+  max-width: 520px;
+  padding: 12px 16px;
+}
+
+.app-update-notice p { line-height: 1.5; margin: 4px 0 0; }
+
 .modal-sheet,
 .confirm-dialog {
   background: var(--surface);

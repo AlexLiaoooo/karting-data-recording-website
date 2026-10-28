@@ -6,6 +6,7 @@ import { zhDictionary } from "./i18n";
 const ROOT = join(__dirname, "..");
 const SOURCES = [
   "app/page.tsx",
+  "app/register-sw.tsx",
   "components/experiment-journal.tsx",
   "components/session-timeline.tsx",
   "components/track-briefing.tsx",

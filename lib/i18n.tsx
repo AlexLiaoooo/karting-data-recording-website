@@ -18,6 +18,8 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "An app update is ready": "网站新版本已准备就绪",
+  "Finish saving and save or cancel open forms, then close all Kart Data tabs and reopen to update. This page will not reload automatically.": "请等待记录保存，并保存或取消打开的表单，然后关闭所有 Kart Data 标签页并重新打开以更新。此页面不会自动刷新。",
   "Kart Data is open in another tab": "Kart Data 已在另一个标签页中打开",
   "Editing could not be secured": "暂时无法安全开启编辑",
   "Close the other Kart Data tab, then retry. After closing it, editing may take up to 20 seconds to become available.": "请关闭另一个 Kart Data 标签页后重试。关闭后，最多可能需要等待 20 秒才能开启编辑。",
