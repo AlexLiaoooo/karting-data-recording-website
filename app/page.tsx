@@ -69,6 +69,8 @@ import { DebriefPlayback } from "@/components/debrief-playback";
 import { DriverDebriefPanel } from "@/components/driver-debrief";
 import { LoggerPhotoPanel } from "@/components/logger-photo";
 import { ComponentLifeNotebook, RunComponents } from "@/components/component-life";
+import { EditingSession, useEditingSession } from "@/components/editing-session";
+import { WriterConflictError } from "@/lib/writer-lease";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "components" | "handover" | "debrief" | "logger" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
@@ -227,6 +229,11 @@ function EmptyState({ icon, title, text, action }: { icon: ReactNode; title: str
 }
 
 export default function HomePage() {
+  return <EditingSession><Recorder /></EditingSession>;
+}
+
+function Recorder() {
+  const { owner, lost, canWrite, stopEditing } = useEditingSession();
   const { t, language } = useTranslation();
   const dateLocale = language === "zh" ? "zh-CN" : "en-GB";
   const [data, setData] = useState<AppData>(emptyAppData());
@@ -235,7 +242,7 @@ export default function HomePage() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveState, setSaveState] = useState<SaveStatus>("Saved");
-  const [saveQueue] = useState(() => new SaveQueue(setSaveState));
+  const [saveQueue] = useState(() => new SaveQueue(setSaveState, error => { if (error instanceof WriterConflictError) stopEditing(); }));
   const [screen, setScreen] = useState<Screen>("home");
   const [debriefBusy, setDebriefBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -274,9 +281,12 @@ export default function HomePage() {
   const pendingSaves = useRef<{ app?: () => Promise<void>; trackMap?: () => Promise<void> }>({});
 
   const beginSave = useCallback((kind: SaveKind, write: () => Promise<void>) => {
-    if (restoreInProgress.current) return;
-    void saveQueue.save(kind, write);
-  }, [saveQueue]);
+    if (restoreInProgress.current || !canWrite()) return;
+    void saveQueue.save(kind, async () => {
+      if (!canWrite()) throw new WriterConflictError();
+      await write();
+    });
+  }, [saveQueue, canWrite]);
 
   useEffect(() => {
     let cancelled = false;
@@ -308,7 +318,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!hydrated.current) return;
     saveQueue.stage("app");
-    const write = () => saveData(data);
+    const write = () => saveData(data, owner);
     pendingSaves.current.app = write;
     const timer = window.setTimeout(() => {
       if (pendingSaves.current.app !== write) return;
@@ -316,12 +326,12 @@ export default function HomePage() {
       beginSave("app", write);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [data, beginSave, saveQueue]);
+  }, [data, beginSave, saveQueue, owner]);
 
   useEffect(() => {
     if (!hydrated.current) return;
     saveQueue.stage("trackMap");
-    const write = () => saveTrackMapData(trackMapData);
+    const write = () => saveTrackMapData(trackMapData, owner);
     pendingSaves.current.trackMap = write;
     const timer = window.setTimeout(() => {
       if (pendingSaves.current.trackMap !== write) return;
@@ -329,7 +339,7 @@ export default function HomePage() {
       beginSave("trackMap", write);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [trackMapData, beginSave, saveQueue]);
+  }, [trackMapData, beginSave, saveQueue, owner]);
 
   /**
    * Writes anything still waiting on its debounce timer when the app is put away.
@@ -799,7 +809,7 @@ export default function HomePage() {
   }
 
   async function confirmImport() {
-    if (!pendingImport || restoreInProgress.current) return;
+    if (!pendingImport || restoreInProgress.current || !canWrite()) return;
     restoreInProgress.current = true;
     setRestoring(true);
     setRestoreFailed(false);
@@ -807,7 +817,8 @@ export default function HomePage() {
     pendingSaves.current = {};
     try {
       await saveQueue.idle();
-      await restoreFullData(pendingImport.appData, pendingImport.trackMapData);
+      if (!canWrite()) throw new WriterConflictError();
+      await restoreFullData(pendingImport.appData, pendingImport.trackMapData, owner);
       setData(pendingImport.appData);
       setTrackMapData(pendingImport.trackMapData);
       setBackupHistory(readBackupHistory());
@@ -822,7 +833,8 @@ export default function HomePage() {
       setRunId(null);
       setScreen("home");
       flash(t("Backup restored"));
-    } catch {
+    } catch (error) {
+      if (error instanceof WriterConflictError) stopEditing();
       saveQueue.markFailed("app");
       saveQueue.markFailed("trackMap");
       setRestoreFailed(true);
@@ -835,9 +847,21 @@ export default function HomePage() {
   function retrySaving() {
     if (restoreInProgress.current) return;
     pendingSaves.current = {};
-    beginSave("app", () => saveData(data));
-    beginSave("trackMap", () => saveTrackMapData(trackMapData));
+    beginSave("app", () => saveData(data, owner));
+    beginSave("trackMap", () => saveTrackMapData(trackMapData, owner));
   }
+
+  const editingNotice = lost ? <Modal labelledBy="editing-paused-title" onDismiss={() => {}} centered role="alertdialog">
+    <div className="modal-sheet modal-compact">
+      <h2 id="editing-paused-title">{t("Editing paused in this tab")}</h2>
+      <p>{t("Another tab may be editing, or device storage could not be checked. This tab cannot save over newer records. Your current forms remain open behind this notice.")}</p>
+      <p>{t("Export this tab's recorded data before reloading if needed. Unsaved form, photo and recording drafts are not included in that backup; reloading discards those drafts.")}</p>
+      <div className="storage-actions">
+        <button className="button button-primary" data-dialog-initial-focus disabled={exporting} onClick={exportJson}>{t("Export this tab's records")}</button>
+        <button className="button button-secondary" onClick={() => window.location.reload()}>{t("Reload latest records")}</button>
+      </div>
+    </div>
+  </Modal> : null;
 
   if (!ready) {
     return (
@@ -857,6 +881,7 @@ export default function HomePage() {
           </section>
         ) : <p>{t("Loading Kart Data…")}</p>}
         {pendingImport && <ImportConfirmModal data={pendingImport} busy={restoring} failed={restoreFailed} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
+        {editingNotice}
         {toast && <div className="toast" role="status">{toast}</div>}
       </main>
     );
@@ -1299,6 +1324,7 @@ export default function HomePage() {
       {pendingImport && <ImportConfirmModal data={pendingImport} busy={restoring} failed={restoreFailed} onCancel={() => setPendingImport(null)} onConfirm={confirmImport} />}
       {deleteTarget && <DeleteModal target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check /> {toast}</div>}
+      {editingNotice}
     </main>
   );
 }

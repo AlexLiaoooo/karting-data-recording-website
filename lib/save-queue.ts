@@ -8,7 +8,7 @@ export class SaveQueue {
   private dirty = new Set<SaveKind>();
   private failed = new Set<SaveKind>();
 
-  constructor(private report: (status: SaveStatus) => void) {}
+  constructor(private report: (status: SaveStatus) => void, private onError?: (error: unknown) => void) {}
 
   stage(kind: SaveKind) {
     this.dirty.add(kind);
@@ -21,7 +21,7 @@ export class SaveQueue {
     this.notify();
     this.tail = this.tail.then(write).then(
       () => { this.failed.delete(kind); },
-      () => { this.failed.add(kind); },
+      error => { this.failed.add(kind); this.onError?.(error); },
     ).finally(() => {
       this.pending -= 1;
       this.notify();

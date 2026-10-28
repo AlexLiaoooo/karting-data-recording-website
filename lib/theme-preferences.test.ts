@@ -8,6 +8,7 @@ import { LanguageProvider } from "./i18n";
 vi.mock("./database", async original => { const actual = await original<typeof import("./database")>(); return { ...actual, loadData: async () => actual.emptyAppData(), saveData: async () => {} }; });
 vi.mock("./track-map/database", async original => ({ ...await original<typeof import("./track-map/database")>(), loadTrackMapData: async () => ({ version: 1, tracks: [], layouts: [], visits: [], assets: [] }), saveTrackMapData: async () => {}, restoreFullData: async () => {} }));
 vi.mock("./track-map/built-in-maps", () => ({ refreshBuiltInMaps: async (data: unknown) => data }));
+vi.mock("./writer-session", () => ({ claimWriter: async () => true, renewWriter: async () => {}, releaseWriter: async () => {} }));
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("theme without preference storage", () => {

@@ -18,6 +18,16 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "Kart Data is open in another tab": "Kart Data 已在另一个标签页中打开",
+  "Editing could not be secured": "暂时无法安全开启编辑",
+  "Close the other Kart Data tab, then retry. After closing it, editing may take up to 20 seconds to become available.": "请关闭另一个 Kart Data 标签页后重试。关闭后，最多可能需要等待 20 秒才能开启编辑。",
+  "Editing is paused because device storage could not be checked. Allow device storage and retry without clearing browser data.": "由于无法检查设备存储，编辑已暂停。请允许使用设备存储后重试，不要清除浏览器数据。",
+  "Retry opening": "重试打开",
+  "Editing paused in this tab": "此标签页的编辑已暂停",
+  "Another tab may be editing, or device storage could not be checked. This tab cannot save over newer records. Your current forms remain open behind this notice.": "另一个标签页可能正在编辑，或设备存储暂时无法检查。此标签页不能覆盖较新的记录。当前表单仍保留在提示后方。",
+  "Export this tab's recorded data before reloading if needed. Unsaved form, photo and recording drafts are not included in that backup; reloading discards those drafts.": "如有需要，请在刷新前导出此标签页中的记录。未保存的表单、照片和录音草稿不包含在备份中；刷新会丢弃这些草稿。",
+  "Export this tab's records": "导出此标签页的记录",
+  "Reload latest records": "重新加载最新记录",
   "Use a whole number of laps (0 or more). This entry is saved but excluded from lap totals until corrected.": "请填写不小于 0 的整数圈数。此输入仍会保存，但更正前不会计入累计圈数。",
   "Missing or invalid lap counts: {count}. The total is incomplete.": "缺失或无效的圈数记录：{count}。累计圈数不完整。",
   "The lap total is too large. Check the recorded lap counts.": "累计圈数过大，请核对各 Run 的圈数记录。",

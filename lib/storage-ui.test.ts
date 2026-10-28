@@ -1,4 +1,4 @@
-import { act, createElement } from "react";
+import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomePage from "../app/page";
@@ -13,6 +13,8 @@ import { emptyTrackMapData } from "./track-map/types";
 import { handoverImages } from "./handover-image";
 import { captureLoggerPhoto } from "./logger-photo";
 import { readLoggerPhoto } from "./logger-ocr";
+import { claimWriter, releaseWriter, renewWriter } from "./writer-session";
+import { WriterConflictError } from "./writer-lease";
 
 vi.mock("./database", async (original) => ({ ...await original<typeof import("./database")>(), loadData: vi.fn(), saveData: vi.fn() }));
 vi.mock("./track-map/database", async (original) => ({ ...await original<typeof import("./track-map/database")>(), loadTrackMapData: vi.fn(), saveTrackMapData: vi.fn(), restoreFullData: vi.fn() }));
@@ -20,6 +22,7 @@ vi.mock("./track-map/built-in-maps", () => ({ refreshBuiltInMaps: vi.fn((data) =
 vi.mock("./handover-image", async original => ({ ...await original<typeof import("./handover-image")>(), handoverImages: vi.fn() }));
 vi.mock("./logger-photo", async original => ({ ...await original<typeof import("./logger-photo")>(), captureLoggerPhoto: vi.fn() }));
 vi.mock("./logger-ocr", () => ({ readLoggerPhoto: vi.fn() }));
+vi.mock("./writer-session", () => ({ claimWriter: vi.fn(), releaseWriter: vi.fn(), renewWriter: vi.fn() }));
 const debriefRecorder = vi.hoisted(() => ({ callbacks: null as null | { state: (state: "idle" | "recording") => void; complete: (note: DriverDebrief) => void } }));
 vi.mock("./driver-recorder", () => ({
   canRecordDebrief: () => true,
@@ -37,6 +40,9 @@ let container: HTMLDivElement;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(claimWriter).mockResolvedValue(true);
+  vi.mocked(renewWriter).mockResolvedValue();
+  vi.mocked(releaseWriter).mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
   vi.stubGlobal("URL", Object.assign(class extends URL {}, {
@@ -65,6 +71,57 @@ afterEach(async () => {
 async function render() {
   await act(async () => root.render(createElement(LanguageProvider, null, createElement(HomePage))));
 }
+
+describe("editing ownership controls", () => {
+  it("does not load or save records in a competing tab, then reads fresh data after retry", async () => {
+    vi.mocked(claimWriter).mockResolvedValueOnce(false);
+    await render();
+    expect(container.textContent).toContain("Kart Data is open in another tab");
+    expect(loadData).not.toHaveBeenCalled(); expect(saveData).not.toHaveBeenCalled();
+    const fresh = makeAppData(); fresh.events[0].name = "Latest records";
+    vi.mocked(loadData).mockResolvedValue(fresh);
+    await act(async () => button("Retry opening").click());
+    expect(container.textContent).toContain("Latest records");
+    expect(loadData).toHaveBeenCalledOnce();
+  });
+
+  it("pauses after a stale save, keeps a local backup available and blocks queued map writes", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    vi.mocked(saveData).mockRejectedValueOnce(new WriterConflictError());
+    await render();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 600)); });
+    expect(container.textContent).toContain("Editing paused in this tab");
+    expect(saveTrackMapData).not.toHaveBeenCalled();
+    const dialog = [...container.querySelectorAll("dialog")].at(-1)!;
+    await act(async () => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
+    expect(dialog.isConnected).toBe(true);
+    await act(async () => button("Export this tab's records").click());
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(saveData).toHaveBeenCalledOnce();
+    expect(vi.mocked(saveData).mock.calls[0][1]).toBe(vi.mocked(claimWriter).mock.calls[0][0]);
+  });
+
+  it("keeps an open form mounted when ownership is lost on returning to the tab", async () => {
+    await render(); await act(async () => button("New event").click());
+    const form = container.querySelector("dialog")!;
+    const field = form.querySelector("input")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, "Unsaved form");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    vi.mocked(renewWriter).mockRejectedValueOnce(new WriterConflictError());
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(container.textContent).toContain("Editing paused in this tab");
+    expect(form.isConnected).toBe(true); expect(field.value).toBe("Unsaved form");
+    expect(container.querySelectorAll("dialog")).toHaveLength(2);
+  });
+
+  it("opens normally under Strict Mode's setup/cleanup replay", async () => {
+    await act(async () => root.render(createElement(StrictMode, null, createElement(LanguageProvider, null, createElement(HomePage)))));
+    expect(container.textContent).toContain("Start your first event");
+    expect(container.textContent).not.toContain("another tab");
+  });
+});
 
 describe("record form keyboard dialogs", () => {
   it("starts deletion on Cancel, describes the consequences and leaves data intact on Escape", async () => {
@@ -190,7 +247,7 @@ describe("save and restore recovery", () => {
     expect(container.textContent).toContain("Replace current data?");
     expect(saveData).not.toHaveBeenCalled();
     await act(async () => button("Restore backup").click());
-    expect(restoreFullData).toHaveBeenCalledWith(makeAppData(), emptyTrackMapData());
+    expect(restoreFullData).toHaveBeenCalledWith(makeAppData(), emptyTrackMapData(), vi.mocked(claimWriter).mock.calls[0][0]);
     expect(container.textContent).toContain("Backup restored");
     expect(container.textContent).not.toContain("Your records could not be loaded");
   });
@@ -234,7 +291,7 @@ describe("save and restore recovery", () => {
     expect(container.textContent).not.toContain("Backup restored");
     await act(async () => button("Cancel").click());
     await act(async () => button("Retry saving").click());
-    expect(saveData).toHaveBeenLastCalledWith(emptyAppData());
+    expect(saveData).toHaveBeenLastCalledWith(emptyAppData(), vi.mocked(claimWriter).mock.calls[0][0]);
   });
 });
 
