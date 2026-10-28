@@ -5,7 +5,7 @@ import { claimWriter, releaseWriter, renewWriter } from "@/lib/writer-session";
 import { WRITER_HEARTBEAT_MS } from "@/lib/writer-lease";
 import { useTranslation } from "@/lib/i18n";
 
-type EditingContext = { owner: string; lost: boolean; canWrite: () => boolean; stopEditing: () => void };
+type EditingContext = { owner: string; lost: boolean; canWrite: () => boolean; stopEditing: () => void; endEditing: () => Promise<void> };
 const Context = createContext<EditingContext | null>(null);
 
 /** Acquire before reading records; serialize cleanup/acquisition across Strict Mode replay. */
@@ -18,6 +18,17 @@ export function EditingSession({ children }: { children: ReactNode }) {
   const active = useRef(false);
   const stopEditing = useCallback(() => { active.current = false; setState("lost"); }, []);
   const canWrite = useCallback(() => active.current, []);
+  const endEditing = useCallback(async () => {
+    active.current = false;
+    setState("lost");
+    if (owner) await releaseWriter(owner).catch(() => undefined);
+  }, [owner]);
+
+  useEffect(() => {
+    if (state !== "busy" || owner) return;
+    const timer = setTimeout(() => setAttempt(previous => previous + 1), 1_000);
+    return () => clearTimeout(timer);
+  }, [state, owner, attempt]);
 
   useEffect(() => {
     const token = crypto.randomUUID();
@@ -56,7 +67,7 @@ export function EditingSession({ children }: { children: ReactNode }) {
     };
   }, [attempt, stopEditing]);
 
-  const value = useMemo(() => ({ owner: owner ?? "", lost: state === "lost", canWrite, stopEditing }), [owner, state, canWrite, stopEditing]);
+  const value = useMemo(() => ({ owner: owner ?? "", lost: state === "lost", canWrite, stopEditing, endEditing }), [owner, state, canWrite, stopEditing, endEditing]);
   if (owner) return <Context.Provider value={value}>{children}</Context.Provider>;
   return <main className="loading-screen"><section className="storage-recovery" role={state === "opening" ? "status" : "alert"}>
     <h1>{t(state === "busy" ? "Kart Data is open in another tab" : state === "error" ? "Editing could not be secured" : "Loading Kart Data…")}</h1>

@@ -233,7 +233,7 @@ export default function HomePage() {
 }
 
 function Recorder() {
-  const { owner, lost, canWrite, stopEditing } = useEditingSession();
+  const { owner, lost, canWrite, stopEditing, endEditing } = useEditingSession();
   const { t, language } = useTranslation();
   const dateLocale = language === "zh" ? "zh-CN" : "en-GB";
   const [data, setData] = useState<AppData>(emptyAppData());
@@ -360,14 +360,20 @@ function Recorder() {
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") flush();
     };
+    const onPageHide = () => {
+      if (restoreInProgress.current) return;
+      flush();
+      // Release only after pending writes finish. A suspended/killed page falls back to expiry.
+      void saveQueue.idle().then(endEditing);
+    };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pagehide", flush);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("pagehide", onPageHide);
     };
-  }, [beginSave]);
+  }, [beginSave, saveQueue, endEditing]);
 
   useEffect(() => {
     const refreshReminder = () => {

@@ -121,6 +121,24 @@ describe("editing ownership controls", () => {
     expect(container.textContent).toContain("Start your first event");
     expect(container.textContent).not.toContain("another tab");
   });
+
+  it("flushes pending changes before releasing ownership on page exit", async () => {
+    let finish: () => void = () => {};
+    vi.mocked(saveData).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await render();
+    await act(async () => window.dispatchEvent(new Event("pagehide")));
+    expect(saveData).toHaveBeenCalledOnce(); expect(releaseWriter).not.toHaveBeenCalled();
+    await act(async () => finish());
+    expect(releaseWriter).toHaveBeenCalledWith(vi.mocked(claimWriter).mock.calls[0][0]);
+  });
+
+  it("automatically retries a blocked opening and reloads records when editing becomes free", async () => {
+    vi.mocked(claimWriter).mockResolvedValueOnce(false);
+    await render(); expect(loadData).not.toHaveBeenCalled();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 1_100)); });
+    expect(loadData).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Start your first event");
+  });
 });
 
 describe("record form keyboard dialogs", () => {
