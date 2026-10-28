@@ -122,6 +122,16 @@ describe("editing ownership controls", () => {
     expect(container.textContent).not.toContain("another tab");
   });
 
+  it("never exports an empty backup when ownership is lost before records load", async () => {
+    vi.mocked(loadData).mockRejectedValueOnce(new Error("Unread records"));
+    await render();
+    vi.mocked(renewWriter).mockRejectedValueOnce(new WriterConflictError());
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(container.textContent).toContain("Records have not loaded in this tab");
+    expect(button("Export this tab's records").disabled).toBe(true);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
   it("flushes pending changes before releasing ownership on page exit", async () => {
     let finish: () => void = () => {};
     vi.mocked(saveData).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));

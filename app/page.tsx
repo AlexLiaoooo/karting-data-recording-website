@@ -861,9 +861,9 @@ function Recorder() {
     <div className="modal-sheet modal-compact">
       <h2 id="editing-paused-title">{t("Editing paused in this tab")}</h2>
       <p>{t("Another tab may be editing, or device storage could not be checked. This tab cannot save over newer records. Your current forms remain open behind this notice.")}</p>
-      <p>{t("Export this tab's recorded data before reloading if needed. Unsaved form, photo and recording drafts are not included in that backup; reloading discards those drafts.")}</p>
+      <p>{ready ? t("Export this tab's recorded data before reloading if needed. Unsaved form, photo and recording drafts are not included in that backup; reloading discards those drafts.") : t("Records have not loaded in this tab. Reload to retry safely; no backup can be exported from an unread snapshot.")}</p>
       <div className="storage-actions">
-        <button className="button button-primary" data-dialog-initial-focus disabled={exporting} onClick={exportJson}>{t("Export this tab's records")}</button>
+        <button className="button button-primary" data-dialog-initial-focus disabled={!ready || exporting} onClick={exportJson}>{t("Export this tab's records")}</button>
         <button className="button button-secondary" onClick={() => window.location.reload()}>{t("Reload latest records")}</button>
       </div>
     </div>
