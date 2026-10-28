@@ -1,6 +1,7 @@
 import type { AppData, EventRecord, TyreSet, KartComponent } from "./types";
 import { isRecord, validAppRecords } from "./validation";
 import { storedLoggerPhoto } from "./logger-photo";
+import { assertWriter } from "./writer-lease";
 
 const DB_NAME = "kart-data-recorder";
 const DB_VERSION = 2;
@@ -109,20 +110,21 @@ export async function loadData(): Promise<AppData> {
   }
 }
 
-export async function saveData(data: AppData): Promise<void> {
+export async function saveData(data: AppData, owner?: string): Promise<void> {
   await writeTransaction([STORE_NAME], (transaction) => {
     transaction.objectStore(STORE_NAME).put(data, DATA_KEY);
-  });
+  }, owner);
 }
 
 /** Abort queued writes too if preparing any later record throws synchronously. */
-export async function writeTransaction(stores: string[], write: (transaction: IDBTransaction) => void): Promise<void> {
+export async function writeTransaction(stores: string[], write: (transaction: IDBTransaction) => void | Promise<void>, owner?: string): Promise<void> {
   const database = await openKartDatabase();
   try {
-    const transaction = database.transaction(stores, "readwrite");
+    const transaction = database.transaction([...new Set([...stores, ...(owner !== undefined ? ["app"] : [])])], "readwrite");
     const done = transactionDone(transaction);
     try {
-      write(transaction);
+      if (owner !== undefined) await assertWriter(transaction, owner);
+      await write(transaction);
     } catch (error) {
       transaction.abort();
       await done.catch(() => {});

@@ -117,11 +117,11 @@ export async function loadTrackMapData(): Promise<TrackMapData> {
   }
 }
 
-export async function saveTrackMapData(data: TrackMapData): Promise<void> {
+export async function saveTrackMapData(data: TrackMapData, owner?: string): Promise<void> {
   const nextAssetSignature = assetSignature(data.assets);
   const assetsChanged = nextAssetSignature !== lastAssetSignature;
   const storeNames = [TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ...(assetsChanged ? [ASSETS_STORE] : [])];
-  await writeTransaction(storeNames, (transaction) => replaceTrackMaps(transaction, data, assetsChanged));
+  await writeTransaction(storeNames, (transaction) => replaceTrackMaps(transaction, data, assetsChanged), owner);
   if (assetsChanged) lastAssetSignature = nextAssetSignature;
 }
 
@@ -140,10 +140,10 @@ function replaceTrackMaps(transaction: IDBTransaction, data: TrackMapData, inclu
 }
 
 /** All five stores commit together; a failure leaves the entire previous backup intact. */
-export async function restoreFullData(appData: AppData, trackMapData: TrackMapData): Promise<void> {
+export async function restoreFullData(appData: AppData, trackMapData: TrackMapData, owner?: string): Promise<void> {
   await writeTransaction(["app", TRACKS_STORE, LAYOUTS_STORE, VISITS_STORE, ASSETS_STORE], (transaction) => {
     transaction.objectStore("app").put(appData, "primary");
     replaceTrackMaps(transaction, trackMapData, true);
-  });
+  }, owner);
   lastAssetSignature = assetSignature(trackMapData.assets);
 }
