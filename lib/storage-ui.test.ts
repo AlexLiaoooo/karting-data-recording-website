@@ -86,6 +86,8 @@ describe("editing ownership controls", () => {
   });
 
   it("pauses after a stale save, keeps a local backup available and blocks queued map writes", async () => {
+    let filename = "";
+    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(function (this: HTMLAnchorElement) { filename = this.download; });
     vi.mocked(loadData).mockResolvedValue(makeAppData());
     vi.mocked(saveData).mockRejectedValueOnce(new WriterConflictError());
     await render();
@@ -97,6 +99,9 @@ describe("editing ownership controls", () => {
     expect(dialog.isConnected).toBe(true);
     await act(async () => button("Export this tab's records").click());
     expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(filename).toMatch(/^kart-data-local-copy-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(localStorage.getItem(BACKUP_HISTORY_KEY)).toBeNull();
+    expect(container.textContent).toContain("This tab's recorded data exported as a separate copy");
     expect(saveData).toHaveBeenCalledOnce();
     expect(vi.mocked(saveData).mock.calls[0][1]).toBe(vi.mocked(claimWriter).mock.calls[0][0]);
   });

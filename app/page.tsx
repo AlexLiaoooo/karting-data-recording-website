@@ -772,7 +772,11 @@ function Recorder() {
     setExporting(true);
     try {
       const backup = await buildFullBackup(data, trackMapData);
-      downloadFile(`kart-data-backup-${localDate()}.json`, backup, "application/json");
+      downloadFile(`kart-data-${lost ? "local-copy" : "backup"}-${localDate()}.json`, backup, "application/json");
+      if (lost) {
+        flash(t("This tab's recorded data exported as a separate copy"));
+        return;
+      }
       const history = { lastExportAt: Date.now(), dismissedUntil: 0 };
       writeBackupHistory(history);
       setBackupHistory(history);

@@ -18,6 +18,7 @@ const LANGUAGE_STORAGE_KEY = "kart-data-language";
  * English rather than a missing-key placeholder. `{name}` placeholders are filled from params.
  */
 const zh: Record<string, string> = {
+  "This tab's recorded data exported as a separate copy": "已将此标签页中的记录导出为独立副本",
   "Records have not loaded in this tab. Reload to retry safely; no backup can be exported from an unread snapshot.": "此标签页尚未读取记录。请重新加载以安全重试；未读取的数据不能导出为备份。",
   "An app update is ready": "网站新版本已准备就绪",
   "Finish saving and save or cancel open forms, then close all Kart Data tabs and reopen to update. This page will not reload automatically.": "请等待记录保存，并保存或取消打开的表单，然后关闭所有 Kart Data 标签页并重新打开以更新。此页面不会自动刷新。",
