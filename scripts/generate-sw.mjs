@@ -1,4 +1,4 @@
-import { readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 
 const outputDirectory = join(process.cwd(), "out");
@@ -34,49 +34,11 @@ const files = outputFiles
   .filter((file) => file !== "/sw.js" && !file.endsWith(".map"));
 
 const precache = Array.from(new Set(["/", ...files])).sort();
-const serviceWorker = `const CACHE_NAME = "kart-data-${Date.now()}";
-const PRECACHE = ${JSON.stringify(precache, null, 2)};
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key.startsWith("kart-data-") && key !== CACHE_NAME).map((key) => caches.delete(key))),
-    ).then(() => self.clients.claim()),
-  );
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) return;
-
-  if (event.request.destination === "document") {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (!response.ok) {
-            return caches.match(event.request).then(async (cached) => cached || await caches.match("/") || response);
-          }
-          const copy = response.clone();
-          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => undefined));
-          return response;
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/"))),
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request)),
-  );
-});
-`;
+// Keep fallback and generated worker lifecycle/fetch behavior identical.
+const template = await readFile(new URL("../public/sw.js", import.meta.url), "utf8");
+const serviceWorker = template
+  .replace(/^const CACHE_NAME = .*;$/m, `const CACHE_NAME = "kart-data-${Date.now()}";`)
+  .replace(/^const PRECACHE = .*;$/m, `const PRECACHE = ${JSON.stringify(precache, null, 2)};`);
 
 await writeFile(join(outputDirectory, "sw.js"), serviceWorker, "utf8");
 console.log(`Generated service worker with ${precache.length} precached files.`);

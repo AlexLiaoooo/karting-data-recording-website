@@ -17,19 +17,23 @@ function worker(source: string) {
   const cached = { ok: true, name: "saved app shell" };
   const response = { ok: true, status: 200, clone: () => response };
   const put = vi.fn().mockResolvedValue(undefined);
+  const match = vi.fn().mockResolvedValue(cached);
+  const addAll = vi.fn().mockResolvedValue(undefined);
   const cache = {
     keys: vi.fn().mockResolvedValue(["kart-data-old", "other-feature-cache"]),
     delete: vi.fn().mockResolvedValue(true),
     match: vi.fn().mockResolvedValue(cached),
-    open: vi.fn().mockResolvedValue({ put }),
+    open: vi.fn().mockResolvedValue({ put, match, addAll }),
   };
   const fetch = vi.fn().mockResolvedValue(response);
   const claim = vi.fn().mockResolvedValue(undefined);
+  const skipWaiting = vi.fn();
   runInNewContext(source, {
     self: {
       addEventListener: (type: string, callback: (event: unknown) => void) => { listeners[type] = callback; },
       location: { origin: "https://kart.test" },
       clients: { claim },
+      skipWaiting,
     },
     caches: cache, fetch, URL,
   });
@@ -45,13 +49,22 @@ function worker(source: string) {
     await Promise.all(tasks);
     return resolved;
   }
-  return { listeners, cached, response, cache, fetch, put, claim, navigate };
+  return { listeners, cached, response, cache, fetch, put, claim, navigate, match, addAll, skipWaiting };
 }
 
 describe.each([
   ["fallback", readFileSync(resolve("public/sw.js"), "utf8")],
   ["generated production", readFileSync(join(temporaryDirectory, "out", "sw.js"), "utf8")],
 ])("%s service worker", (_name, source) => {
+  it("precaches completely without forcing waiting workers to replace open sessions", async () => {
+    const instance = worker(source);
+    let task: Promise<unknown> | undefined;
+    instance.listeners.install({ waitUntil: (promise: Promise<unknown>) => { task = promise; } });
+    await task;
+    expect(instance.addAll).toHaveBeenCalledOnce();
+    expect(instance.skipWaiting).not.toHaveBeenCalled();
+  });
+
   it("removes only old Kart Data caches and claims clients after cleanup", async () => {
     const instance = worker(source);
     let task: Promise<unknown> | undefined;
@@ -62,18 +75,21 @@ describe.each([
     expect(instance.claim).toHaveBeenCalledOnce();
   });
 
-  it("uses the saved app during a server error without caching the error page", async () => {
+  it("keeps an open build on its own HTML even when a newer build is on the server", async () => {
     const instance = worker(source);
     instance.fetch.mockResolvedValue({ ok: false, status: 503 });
     expect(await instance.navigate()).toBe(instance.cached);
     expect(instance.put).not.toHaveBeenCalled();
+    expect(instance.fetch).not.toHaveBeenCalled();
+    expect(instance.cache.match).not.toHaveBeenCalled();
+    expect(instance.cache.open).toHaveBeenCalledWith(source.match(/const CACHE_NAME = "([^"]+)"/)![1]);
   });
 
   it("returns the server error if no saved shell exists", async () => {
     const instance = worker(source);
     const unavailable = { ok: false, status: 503 };
     instance.fetch.mockResolvedValue(unavailable);
-    instance.cache.match.mockResolvedValue(undefined);
+    instance.match.mockResolvedValue(undefined);
     expect(await instance.navigate()).toBe(unavailable);
   });
 
@@ -85,6 +101,7 @@ describe.each([
 
   it("waits for successful navigation responses to reach the cache", async () => {
     const instance = worker(source);
+    instance.match.mockResolvedValue(undefined);
     expect(await instance.navigate()).toBe(instance.response);
     expect(instance.put).toHaveBeenCalledOnce();
   });
