@@ -1,7 +1,7 @@
 # Karting Data Recording Website — Design Document
 
-**Document status:** Implemented prototype v1.35 (committed and pushed to GitHub)
-**Last updated:** 2026-10-23
+**Document status:** Implemented prototype v1.36 (committed and pushed to GitHub)
+**Last updated:** 2026-10-29
 **Deployment target:** Vercel
 **Primary device:** Mobile phone  
 **Initial storage model:** Local to the current browser/device, without user accounts
@@ -525,6 +525,25 @@ Expected behavior:
 - Clearing browser/site data may remove the records.
 - Private/incognito browsing must not be used for permanent records.
 
+### Editing ownership and updates
+
+One tab edits each browser origin. Before loading records, it claims a short-lived IndexedDB
+lease in the existing `app` store, separate from the `primary` record and all JSON exports.
+Every app/map save and restore checks the owner and renews the lease in its own write transaction.
+Waiting tabs retry and load fresh records only after acquiring ownership. Renew every five
+seconds; expire after twenty. Normal page exits flush queued saves before releasing the claim.
+Suspended stale tabs cannot save after another owner takes over. They keep mounted forms behind
+a blocking recovery notice and can export their loaded in-memory recorded data as a separately
+named local copy, without updating shared full-backup history. Draft form/media state
+is not included in that export, and reload discards it. There is no merge or force-takeover UI.
+
+Service workers wait for natural activation after old clients close. Navigation and assets read
+only the current worker's cache, retaining the old HTML and assets while a newer build waits.
+The update notice asks the user to finish saving, save/cancel forms, close all tabs/app windows
+and reopen. No forced reload or activation message is sent. On the first upgrade to these
+protections, close old tabs once: already-running legacy code has neither the ownership checks
+nor the new cache policy. This applies within one browser origin, not across devices.
+
 ### Backup and recovery
 
 Because there is no cloud account, backup is a first-version requirement rather than an optional enhancement.
@@ -580,7 +599,7 @@ Proposed development and release process:
 6. Test mobile layouts, auto-save, offline behavior, and recovery.
 7. Initialize Git after explicit approval.
 8. Create/connect a GitHub repository after explicit approval.
-9. Commit and push only after explicit approval for each action.
+9. Run appropriate checks, then commit and push each small, self-contained change under the owner's standing authorization in `AGENTS.md`.
 10. Connect the repository to Vercel.
 11. Use Vercel preview deployments for review.
 12. Publish the approved production version.
@@ -647,6 +666,39 @@ had each been used twice and two were never used, so the list read 1.8, 1.7, 1.6
 1.16 … 1.9. The dates were always right and are unchanged; only the numbers moved. What was v1.5
 and v1.6 of 2026-08-19 is now v1.9 and v1.10, what was v1.9 is now v1.11, and what was v1.11 is
 now v1.12.
+
+### Implemented prototype v1.36 — 2026-10-29
+
+- Implemented both larger review follow-ups approved together: competing-tab protection and
+  safe app updates. IndexedDB lease checks share a transaction with all app/map writes and
+  atomic restores, so takeover and saves cannot both win. No schema-version or backup-format
+  change is needed. Metadata remains separate from application records.
+- A shared editing boundary acquires before hydration, handles Strict Mode cleanup, renews
+  while active, retries waiting openings and pauses on renewal failure or stale-write errors.
+  Forms stay mounted on conflict. Recovery exports the loaded local recorded snapshot as a
+  separately named copy without resetting shared backup history; it never
+  writes that snapshot over another tab. Closing flushes queued saves before release;
+  abnormal suspension/termination uses a 20-second expiry fallback.
+- Both workers share one runtime template, fully precache before installation completes,
+  omit forced activation, and scope cache reads to their own build. Cached navigation stays
+  on that build while the next worker waits. A translated update notice announces waiting
+  versions and explains closing all clients after saving; no open page reloads automatically.
+- Verification: all 640 tests across 45 files, lint, type checking and production build pass.
+  New tests cover simultaneous claims, stale app/map/restore writes and image-byte retention,
+  renewal/release, save-versus-takeover races, blocked startup/retry, retained form drafts,
+  exit flush ordering, unread-snapshot export prevention, waiting workers and update-listener cleanup.
+  [GitHub CI also passed for the completed implementation](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/runs/40711741844).
+- Isolated production-browser checks used two tabs and synthetic events. The second tab was
+  blocked, then automatically acquired after freezing the first. Both saved events survived;
+  the resumed old tab paused and retained its unsaved form. With build A open, a distinct
+  build B installed and waited; both caches survived, A's cached HTML and draft stayed intact,
+  and A remained usable offline at 390px. Closing all old tabs activated B, removed A's cache
+  and retained both records. Chinese waiting/recovery screens fit at 320px; no application
+  runtime exceptions were reported.
+- Physical iPhone/PWA lifecycle behavior, real storage exhaustion and a live deployment
+  rollout remain unverified. Close pre-upgrade tabs once; legacy code already running cannot
+  be retrofitted with ownership checks. Broader screen refactoring and dependency advisory
+  review remain separate work.
 
 ### Implemented prototype v1.35 — 2026-10-23
 

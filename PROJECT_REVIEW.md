@@ -10,7 +10,8 @@ The app has a sound foundation for a personal trackside tool: a static,
 account-free deployment; a clear Event → Session → Run model; shared pressure,
 gearing and lap calculations; IndexedDB persistence; portable backups; and
 substantial regression coverage. The review prioritised failure recovery and competing
-writers. The failure-recovery package has since been applied; multi-tab coordination remains open.
+writers. Failure recovery, competing-tab protection and the service-worker handoff have since
+been implemented; the dated follow-ups below record their verification and limits.
 
 Review scope: application shell and forms, recording/comparison workflows,
 data types and migrations, IndexedDB reads/writes, backup/restore, CSV,
@@ -133,6 +134,33 @@ records, live deployment, physical device or fresh dependency audit were involve
 The CI maintenance finding below is resolved. Competing-tab protection, service-worker update
 handoff and the larger screen/component refactor remain separate proposals.
 
+## Follow-up — competing tabs and app updates, 29 October 2026
+
+The owner approved both larger follow-ups in v1.36. One tab claims editing before loading
+records; every app/map save and atomic restore checks ownership inside its write transaction.
+Waiting tabs retry and load fresh data when ownership is available. A stale tab pauses,
+retains mounted forms and offers an export of loaded records as a separately named local copy,
+without resetting backup reminders for newer records. Normal exits flush saves before release;
+a crashed/suspended tab's unrenewed claim expires after 20 seconds. Draft form/media contents
+are excluded from backups and are discarded on reload.
+
+Updates now wait for old clients to close, and workers read only their own build cache. A
+translated notice explains finishing saves/forms and closing every tab/app window before
+reopening. No forced activation or automatic reload interrupts an open session.
+
+All 640 tests across 45 files, lint, type checking and production build pass. In an isolated
+production browser, two tabs and frozen-tab takeover preserved both saved synthetic events
+and the first tab's unsaved form. A second real build waited while the old HTML, cache, draft
+and offline operation survived. Closing all old tabs activated the new build, cleaned up the
+old cache and preserved both records. Chinese waiting/recovery notices fit at 320px.
+[GitHub's hosted CI passed for the completed implementation](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/runs/40711741844).
+
+Both original P2 findings below are resolved for cooperating updated tabs. For the first
+upgrade, finish/save and close all legacy tabs once; already-running older code cannot acquire
+the new checks retroactively. Physical iPhone/PWA lifecycle behavior, real quota exhaustion
+and a live deployment rollout remain unverified. Broad component extraction and dependency
+advisory review remain separate work. No fresh dependency audit was run.
+
 ## Small improvements applied
 
 | Improvement | Reason | Files |
@@ -153,7 +181,8 @@ and both the fallback and generated production service workers.
 ## Original findings, in priority order
 
 The three P1 findings below are retained as review history and were resolved on 6 October.
-The P2 and maintenance findings remain open.
+Original findings are retained below; current resolutions and remaining work are recorded in
+the dated follow-ups and maintenance list.
 
 ### P1 — Validate nested backups before offering replacement
 
@@ -201,6 +230,8 @@ restore. This is a persistence change requiring more care than the quick fixes.
 
 ### P2 — Protect records when two tabs or windows are open
 
+Resolved 29 October 2026 through transactional single-editor ownership; see the follow-up above.
+
 Each page loads its own snapshot. `saveData` writes the whole app document,
 and `saveTrackMapData` clears/repopulates its collections. There is no revision
 check or coordination between tabs. A stale tab can therefore replace another
@@ -219,6 +250,9 @@ containment/restoration, dismissal and background inertness. Keep confirmation
 focus on the safe action.
 
 ### P2 — Plan a safe service-worker update handoff
+
+Resolved 29 October 2026 through waiting activation and per-build cache reads, verified with
+two builds and open clients on a local production server; live rollout limits remain above.
 
 Both workers still call `skipWaiting`, and activation removes the old app
 caches while existing pages may be using the preceding build. The complete

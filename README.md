@@ -69,6 +69,12 @@ A mobile-first, local-first web application for recording competition karting ty
 - Compare any two Runs on record, from different Sessions and different Events, across every performance, tyre, setup and feedback field with differences highlighted. Each column names the Event and Session it came from, because two Runs from different Events are both "Run 01". The table opens with what each Run ran in, and a comparison between a dry Run and a wet one is flagged as not like for like beside the lap delta, since that delta says little about the setup.
 - Before Run's Cold tyres section opens with what pressures have done at this circuit in today's condition: each axle's past gain and the one Run nearest today's track temperature. Marked as not a recommendation, and it never offers the Run being edited as its own comparison.
 - Automatic IndexedDB saving without an account. Pending writes are flushed when the app is backgrounded, so an edit made just before the phone is pocketed is not lost to a debounce timer that never fires.
+- One editing tab per browser origin. Other tabs wait and retry automatically; every save and
+  restore checks ownership in the same transaction as its record changes. A resumed stale tab
+  pauses, retains its open forms and offers export of its in-memory records before reloading.
+- App updates wait while current sessions remain open. Each worker reads its own build cache;
+  a notice asks you to finish saving, save/cancel forms, then close all Kart Data tabs and reopen.
+  An update never forces a reload of an open form or recording.
 - Versioned JSON backup/restore with confirmation, including tyre sets and Run assignments.
   Saved debrief audio and logger source photos are embedded with their Run; components and
   service history survive the same atomic restore.
@@ -201,6 +207,13 @@ data rather than looking wrong:
   or transaction aborts roll back all five stores during restore.
 - **Save ordering** (`lib/save-queue.test.ts`) — serialized writes, errors that persist until
   the failed collection is saved successfully, and no premature Saved status during debounces.
+- **Editing ownership** (`lib/writer-session.test.ts`, `lib/storage-ui.test.ts`) — simultaneous
+  claims, expiry/takeover, stale app/map/restore rejection with original image bytes preserved,
+  save/takeover races, draft retention, local-copy backup, fresh loading after retry, Strict Mode
+  cleanup and release only after exit saves complete.
+- **App updates** (`lib/service-worker.test.ts`, `lib/service-worker-updates.test.ts`) — complete
+  precaching without forced activation, reads scoped to the worker's own build, cached HTML
+  during rollout/offline use, waiting-update notices and registration/listener cleanup.
 - **Recovery controls** (`lib/storage-ui.test.ts`) — blocked startup, retry, save-error notices,
   atomic restore timing, recovery from blocked startup, and backup export/reminder controls.
 - **Dialogs** (`lib/modal.test.ts`, `lib/track-map/dialogs.test.ts`, `lib/storage-ui.test.ts`) —
@@ -291,8 +304,23 @@ IndexedDB image bytes, late restore failure rollback, and startup/save recovery.
 Records are stored in IndexedDB in the current browser. There is no account or cloud synchronization in the first version. Export a JSON backup regularly, because clearing site data or losing the device/browser can remove the only copy.
 
 Keep the downloaded JSON file outside the browser. The last-export timestamp records that
-a download was started; the app cannot verify where you retained the file. Use one editing
-tab at a time: coordination between competing tabs remains a separate planned improvement.
+a download was started; the app cannot verify where you retained the file.
+
+Only one tab can edit a given browser origin at a time. Waiting tabs open fresh records once
+editing becomes free. Normal exits flush saves before releasing editing; a crashed or suspended
+tab's claim expires after 20 seconds without renewal. If another tab takes over, the old tab
+pauses and can export its own loaded in-memory records as a `kart-data-local-copy-…json` file.
+This separate copy does not reset the backup reminder for newer records. Open form, photo and recording drafts remain
+mounted but are not part of that backup; reloading discards those drafts. There is no automatic
+merge or forced takeover. Separate browsers/devices still hold separate copies.
+
+When an update is ready, finish saving and save or cancel open forms, then close every Kart Data
+tab/window (including the installed app) and reopen. The current build remains available until
+those sessions close; a simple refresh may keep the current build while a worker still controls
+an open client. **For the first upgrade to these protections, finish/save and close all older
+tabs once.** Already-running older code cannot gain the new ownership checks retroactively.
+Real-browser checks covered two tabs, a frozen-tab takeover and two builds on the same local
+origin; physical iPhone lifecycle behavior and a live production rollout remain unverified.
 
 Audio notes remain local and are included in full JSON backups, which grow with saved recordings.
 The app requests the microphone only after Record is pressed and releases it on stop, cancel,
