@@ -148,7 +148,7 @@ Updates now wait for old clients to close, and workers read only their own build
 translated notice explains finishing saves/forms and closing every tab/app window before
 reopening. No forced activation or automatic reload interrupts an open session.
 
-All 640 tests across 45 files, lint, type checking and production build pass. In an isolated
+All 641 tests across 45 files, lint, type checking and production build pass. In an isolated
 production browser, two tabs and frozen-tab takeover preserved both saved synthetic events
 and the first tab's unsaved form. A second real build waited while the old HTML, cache, draft
 and offline operation survived. Closing all old tabs activated the new build, cleaned up the

@@ -71,6 +71,7 @@ import { LoggerPhotoPanel } from "@/components/logger-photo";
 import { ComponentLifeNotebook, RunComponents } from "@/components/component-life";
 import { EditingSession, useEditingSession } from "@/components/editing-session";
 import { WriterConflictError } from "@/lib/writer-lease";
+import { renewWriter } from "@/lib/writer-session";
 
 type Screen = "home" | "events" | "event" | "session" | "run" | "compare" | "journal" | "timeline" | "briefing" | "tyres" | "components" | "handover" | "debrief" | "logger" | "settings" | "track-maps" | "session-track-notes";
 type DeleteTarget = { kind: "event" | "session" | "run" | "template"; id: string; name: string };
@@ -772,8 +773,15 @@ function Recorder() {
     setExporting(true);
     try {
       const backup = await buildFullBackup(data, trackMapData);
-      downloadFile(`kart-data-${lost ? "local-copy" : "backup"}-${localDate()}.json`, backup, "application/json");
-      if (lost) {
+      // Large media backups can finish after another tab takes over. Still export the copy,
+      // but only record a current full backup after rechecking ownership transactionally.
+      let localCopy = !canWrite();
+      if (!localCopy) {
+        try { await renewWriter(owner); }
+        catch { stopEditing(); localCopy = true; }
+      }
+      downloadFile(`kart-data-${localCopy ? "local-copy" : "backup"}-${localDate()}.json`, backup, "application/json");
+      if (localCopy) {
         flash(t("This tab's recorded data exported as a separate copy"));
         return;
       }

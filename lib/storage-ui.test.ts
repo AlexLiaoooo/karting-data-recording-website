@@ -329,6 +329,19 @@ describe("save and restore recovery", () => {
 });
 
 describe("backup reminder controls", () => {
+  it("exports a separate copy if ownership changed while a full backup was being prepared", async () => {
+    vi.mocked(loadData).mockResolvedValue(makeAppData());
+    let filename = "";
+    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(function (this: HTMLAnchorElement) { filename = this.download; });
+    await render();
+    vi.mocked(renewWriter).mockRejectedValueOnce(new WriterConflictError());
+    await act(async () => button("Export full backup").click());
+    expect(filename).toContain("kart-data-local-copy-");
+    expect(localStorage.getItem(BACKUP_HISTORY_KEY)).toBeNull();
+    expect(container.textContent).toContain("Editing paused in this tab");
+    expect(container.textContent).toContain("This tab's recorded data exported as a separate copy");
+  });
+
   it("downloads protected CSV from settings without counting it as a full backup", async () => {
     const data = makeAppData();
     data.events[0].name = "=event";

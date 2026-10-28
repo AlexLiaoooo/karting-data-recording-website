@@ -683,10 +683,12 @@ now v1.12.
   omit forced activation, and scope cache reads to their own build. Cached navigation stays
   on that build while the next worker waits. A translated update notice announces waiting
   versions and explains closing all clients after saving; no open page reloads automatically.
-- Verification: all 640 tests across 45 files, lint, type checking and production build pass.
+- Verification: all 641 tests across 45 files, lint, type checking and production build pass.
   New tests cover simultaneous claims, stale app/map/restore writes and image-byte retention,
   renewal/release, save-versus-takeover races, blocked startup/retry, retained form drafts,
-  exit flush ordering, unread-snapshot export prevention, waiting workers and update-listener cleanup.
+  exit flush ordering, unread-snapshot export prevention, ownership changes during backup
+  preparation, waiting workers and update-listener cleanup. Full backups recheck ownership
+  before updating shared backup history; a lost owner can still download a separate copy.
   [GitHub CI also passed for the completed implementation](https://github.com/AlexLiaoooo/karting-data-recording-website/actions/runs/40711741844).
 - Isolated production-browser checks used two tabs and synthetic events. The second tab was
   blocked, then automatically acquired after freezing the first. Both saved events survived;
