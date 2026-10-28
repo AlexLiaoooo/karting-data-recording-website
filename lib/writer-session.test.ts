@@ -44,6 +44,23 @@ describe("editing ownership", () => {
     await saveData(makeAppData(), "one");
   });
 
+  it("serializes a save racing an expired-lease takeover without permitting both writers", async () => {
+    const now = Date.now(); const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+    const original = makeAppData(); await saveData(original); await claimWriter("one");
+    clock.mockReturnValue(now + WRITER_LEASE_MS + 1);
+    const changed = makeAppData({ events: [] });
+    const [save, takeover] = await Promise.allSettled([saveData(changed, "one"), claimWriter("two")]);
+    expect(takeover.status).toBe("fulfilled");
+    if (save.status === "fulfilled") {
+      expect(takeover).toMatchObject({ value: false });
+      expect(await loadData()).toEqual(changed);
+    } else {
+      expect(save.reason).toBeInstanceOf(WriterConflictError);
+      expect(takeover).toMatchObject({ value: true });
+      expect(await loadData()).toEqual(original);
+    }
+  });
+
   it("cannot release or renew another tab's claim", async () => {
     await claimWriter("one"); await releaseWriter("two");
     await expect(renewWriter("two")).rejects.toBeInstanceOf(WriterConflictError);
